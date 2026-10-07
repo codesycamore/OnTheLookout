@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/OnTheLookout/OnTheLookout.csproj" />
+  </Folder>
+</Solution>
