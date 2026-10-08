@@ -9,8 +9,8 @@ using UnityEngine;
 namespace OnTheLookout.Modules;
 
 /// <summary>
-/// Rule 10: the first runner to reach the safe zone of each (unlit) campfire gets loot rolled from
-/// the ancient-luggage pool (SpawnPool.LuggageAncient), spawned at their feet by the host.
+/// Rule 10: the first runner to reach the safe zone of each (unlit) campfire gets a reward item
+/// (RewardItems, default an energy drink), given by the host.
 /// Rewarded campfires are replicated in <see cref="RoomKey"/> so a new host won't pay out twice.
 /// </summary>
 internal static class RewardSystem
@@ -55,21 +55,21 @@ internal static class RewardSystem
         int spawned = 0;
         try
         {
-            foreach (GameObject prefab in LootData.GetRandomItems(SpawnPool.LuggageAncient, Mathf.Max(1, Plugin.ModConfig.RewardItemCount.Synced())))
+            // One random pick from RewardItems per count (default: one energy drink), into the inventory
+            // if there is room, otherwise at their feet.
+            var pool = ItemCatalog.FindByNames(Plugin.ModConfig.RewardItems.Synced());
+            for (int i = 0; pool.Count > 0 && i < Mathf.Max(1, Plugin.ModConfig.RewardItemCount.Synced()); i++)
             {
-                if (prefab == null) continue;
-                Vector2 jitter = UnityEngine.Random.insideUnitCircle * 0.6f;
-                Vector3 position = runner.Center + new Vector3(jitter.x, 1f, jitter.y);
-                PhotonNetwork.Instantiate("0_Items/" + prefab.name, position, Quaternion.identity, 0);
+                LegLoadout.Give(runner, pool[UnityEngine.Random.Range(0, pool.Count)]);
                 spawned++;
             }
         }
         catch (Exception e)
         {
-            Plugin.Log.LogError($"[OTL][Reward] failed to spawn ancient loot: {e}");
+            Plugin.Log.LogError($"[OTL][Reward] failed to give the reward: {e}");
         }
 
-        Plugin.Log.LogInfo($"[OTL][Reward] HOST: {Net.NameOf(actor)} reached a campfire first; spawned {spawned} item(s).");
+        Plugin.Log.LogInfo($"[OTL][Reward] HOST: {Net.NameOf(actor)} reached a campfire first; gave {spawned} item(s).");
         ModNetwork.Broadcast(Notice.Rewarded, actor, spawned);
     }
 

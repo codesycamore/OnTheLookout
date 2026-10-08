@@ -23,8 +23,6 @@ internal sealed class Hud : MonoBehaviour
 {
     private static readonly Color ChaserRed = new(0.93f, 0.22f, 0.2f);
     private static readonly Color RunnerYellow = new(1f, 0.84f, 0.2f);
-    private static readonly Color FrozenBlue = new(0.55f, 0.85f, 1f);
-    private static readonly Color ImmuneBlue = new(0.78f, 0.92f, 1f, 0.85f);
     private static readonly Color Warm = new(1f, 0.78f, 0.36f);
     private const string IceHex = "#9FDCFF";
 
@@ -39,7 +37,7 @@ internal sealed class Hud : MonoBehaviour
 
     // Attached to PEAK's HUD canvas.
     private Canvas? _hudCanvas;
-    private StaminaTimerBar? _timerBar;
+    private BlowgunCooldownUI? _blowgunCooldown;
     private TextMeshProUGUI? _chaserList;
     private TextMeshProUGUI? _toast;
     private CanvasGroup? _toastGroup;
@@ -131,24 +129,16 @@ internal sealed class Hud : MonoBehaviour
         if (_hudCanvas == gui.hudCanvas && _toast != null)
         {
             if (_chaserList == null) BuildChaserList(_hudCanvas.transform, gui.interactNameText);
-            if (_timerBar is not { IsValid: true }) BuildTimerBar(gui);
             return true;
         }
 
         _hudCanvas = gui.hudCanvas;
-        BuildTimerBar(gui);
         BuildChaserList(_hudCanvas.transform, gui.interactNameText);
         BuildToast(_hudCanvas.transform, gui.interactNameText);
+        _blowgunCooldown?.Destroy();
+        _blowgunCooldown = new BlowgunCooldownUI(_hudCanvas, gui.interactNameText);
         Plugin.Log.LogInfo($"[OTL][UI] HUD built on '{_hudCanvas.name}' (stamina bar found: {gui.bar != null}).");
         return true;
-    }
-
-    private void BuildTimerBar(GUIManager gui)
-    {
-        _timerBar?.Destroy();
-        _timerBar = gui.bar != null && gui.bar.staminaBarOutline != null && gui.bar.staminaBar != null
-            ? new StaminaTimerBar(gui.bar, gui.interactNameText)
-            : null;
     }
 
     private void BuildChaserList(Transform canvas, TextMeshProUGUI fallbackStyle)
@@ -240,7 +230,7 @@ internal sealed class Hud : MonoBehaviour
     {
         UpdateCenter();
         if (!EnsureHud()) return;
-        UpdateTimerBar();
+        if (_blowgunCooldown is { IsValid: true }) _blowgunCooldown.Update(GUIManager.instance);
         if (Time.time >= _nextListRefresh)
         {
             _nextListRefresh = Time.time + 0.25f;
@@ -301,47 +291,6 @@ internal sealed class Hud : MonoBehaviour
         _blind.color = new Color(0f, 0f, 0f, blind);
     }
 
-    private void UpdateTimerBar()
-    {
-        if (_timerBar is not { IsValid: true }) return;
-
-        Character local = Character.localCharacter;
-        string label = "";
-        float fill = -1f;
-        Color color = FrozenBlue;
-
-        if (local != null && Net.InRoom && RoundManager.IsActive && !local.data.dead)
-        {
-            int me = Net.Actor(local);
-            bool chaser = RoleManager.IsChaser(local);
-            var cfg = Plugin.ModConfig;
-
-            if (FreezeState.IsFrozen(me))
-            {
-                label = "FROZEN";
-                fill = FreezeState.FrozenSecondsLeft(me) / Mathf.Max(0.1f, cfg.FreezeDuration.Synced());
-            }
-            else if (chaser && RoundManager.InHold)
-            {
-                label = "FROZEN";
-                fill = RoundManager.HoldSecondsLeft / Mathf.Max(0.1f, RoundManager.HoldTotalSeconds);
-            }
-            else if (chaser && FreezeState.IsOnCooldown(me))
-            {
-                label = "IMMUNE";
-                fill = FreezeState.CooldownSecondsLeft(me) / Mathf.Max(0.1f, cfg.FreezeCooldownSeconds.Synced());
-                color = ImmuneBlue;
-            }
-            else if (!chaser && SafeZoneSystem.IsSafe(local.Center))
-            {
-                label = "SAFE ZONE";
-                color = Warm;
-            }
-        }
-
-        _timerBar.Show(label, fill, color);
-    }
-
     private void UpdateChaserList()
     {
         if (_chaserList == null) return;
@@ -398,7 +347,11 @@ internal sealed class Hud : MonoBehaviour
                 if (a == me) Announce("CHASER", "YOU HAVE JOINED THE CHASERS", ChaserRed, 4f);
                 break;
             case Notice.Rewarded:
-                Toast($"{Net.NameOf(a)} reached the safe zone first - ancient loot!");
+                Toast($"{Net.NameOf(a)} reached the safe zone first - energy drink!");
+                break;
+            case Notice.Restarted:
+                Toast("The host restarted from the last campfire");
+                AdminRestart.OnRestartNotice();
                 break;
             case Notice.MissingMod:
                 Toast($"{Net.NameOf(a)} doesn't have OnTheLookout {Plugin.Version}");

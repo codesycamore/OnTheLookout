@@ -56,6 +56,13 @@ internal static class TagSystem
         else Net.SendToHost(Msg.TagClaim, chaserActor, runnerActor);
     }
 
+    /// <summary>
+    /// Fortified milk applies Affliction_Invincibility with isFromMilk; afflictions are replicated
+    /// to every client (AfflictionSyncData), so the host sees it on remote runners too.
+    /// </summary>
+    public static bool HasMilkProtection(Character c) =>
+        c.refs.afflictions.afflictionList.Exists(a => a is Peak.Afflictions.Affliction_Invincibility { isFromMilk: true });
+
     /// <summary>Host only: validate a capture claim and apply it.</summary>
     public static void HostHandleClaim(int chaserActor, int runnerActor, int sender)
     {
@@ -72,6 +79,12 @@ internal static class TagSystem
         if (runner.data.dead) return;
         if (runner.data.passedOut && !Plugin.ModConfig.TagPassedOutRunners.Synced()) return;
         if (s_LastCapture.TryGetValue(runnerActor, out float last) && Time.time - last < RunnerDebounce) return;
+
+        if (Plugin.ModConfig.MilkProtectsFromCapture.Synced() && HasMilkProtection(runner))
+        {
+            Plugin.Log.LogInfo($"[OTL][Tag] {Net.NameOf(runnerActor)} touched by {Net.NameOf(chaserActor)} but is protected by fortified milk.");
+            return;
+        }
 
         if (SafeZoneSystem.IsSafe(runner.Center))
         {

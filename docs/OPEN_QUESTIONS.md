@@ -131,3 +131,83 @@ Debug keys (host, bottom-left hint): **F7** start or restart a round, **F6** swa
 - [ ] All living runners within 50 m of the next campfire: "ALL RUNNERS ARE SAFE".
 - [ ] A chaser can't light the campfire. A runner can, and that starts the reveal, blindness and head start again.
 - [ ] Scout statue with ghosts: all ghosts revive, one random one as a chaser and appears in the chaser list with "CHASER - YOU HAVE JOINED THE CHASERS". With no ghosts, vanilla behaviour.
+
+## Decided: change list 3 (2026-10-07)
+
+- **Chaser blowgun.** Chasers get one at each leg start and on conversion. Unlimited uses, 30 s cooldown (`BlowgunCooldownSeconds`) with a ring above its hotbar slot. A dart doesn't cause sleep; the runner is marked with red flare smoke for 5 s (`TrackingSmokeSeconds`). Blowguns stay removed from the world, and runners can't hold one.
+- **Chasers can eat.** Food is detected via `Action_RestoreHunger`, food tags, or hunger reduction. Healing is still allowed.
+- **Fog.** 1.5× faster rise **and** 1.5× faster countdown to the rise (`OrbFogHandler.WaitToMove`). Chasers are immune (unchanged).
+- **Freeze duration 6.5 s.**
+- **Scout amulets.** Already banned. PEAK's "scenery" item pickup path (`FakeItemManager`) bypassed every item rule and is now covered. This was the likely cause of chasers picking up anything.
+- **Clown luggage.** During a round only chasers can open it, and it contains food and healing items only.
+- **Runner stamina regen +7%** (`RunnerStaminaRegenMultiplier`).
+- **No revival curse/hunger** during a round. Lighting a campfire clears every negative status, curse included, for players within the safe-zone radius.
+- **Capture boost.** +1% speed for 5 s per capture, and each further capture during the boost adds +0.5% and refreshes the timer. Shown as "SPEED +x%" in the timer bar.
+- **Scoutmaster disabled.**
+- **Leg loadout.** Each living runner gets one random item from Snowball, Banana or Fortified Milk (`RunnerLegItems`).
+- **Fortified milk** protects a runner from capture while its effect is active.
+- **More players.** Compatible by design with PEAK Unlimited (glarmer, GPL-3.0; its patch targets don't overlap ours). Not yet tested together.
+- **Chaser count by lobby size:** `ChasersByPlayerCount = "1:1, 6:2"` (2 chasers at 6+ players).
+
+**To verify in playtest 3:**
+- The `[OTL][Items]` log lines resolve "Snowball", "Banana" and "Fortified Milk". If one logs `no item named ...`, use the name shown in the classification lines.
+- The flare smoke looks right following a runner.
+- Clown luggage is detected. Look for the "clown luggage filled" log line.
+- ~~**Clown luggage 2× (`ClownLuggageMultiplier`).**~~ **Reverted 2026-10-07** (swapping baked map luggage at runtime judged too risky).  Was: PEAK's maps are baked in the editor (`MapGenerator`/`PropSpawner` never run at runtime), so there's no spawn rate to change. Instead, at round start the host turns random plain suitcases into real clown luggage: a copy of an existing clown luggage with its own network view takes the suitcase's place. The count is (multiplier − 1) × the clown luggage already on the map. It's sent as one cached event so late joiners match. If a map has no clown luggage at all, nothing changes.
+- **Chasers can only open clown luggage** (`ChasersOnlyOpenClownLuggage`). Scout statues still work for everyone.
+- **To verify:** chasers get "Chasers can only open clown luggage" on any other luggage; scout statues still work.
+- **Next leg starts after the biome title (2026-10-07).** Before, lighting a campfire started the next leg immediately. PEAK shows the biome title on each player's own screen when they cross the next biome's progress point (`MountainProgressHandler.TriggerReached`, a Z-position check), not when the fire is lit. New order:
+  1. Lighting pauses the chase (state `LegComplete`) and clears statuses.
+  2. The first client to show the title tells the host.
+  3. The next leg (reveal, blind/frozen chasers, head start) starts `BiomeTitleSeconds` (7.5 s) later. If no title is reported, it starts `NoTitleFallbackSeconds` (12 s) after lighting.
+  4. A new host after migration resumes the wait.
+  - **To verify:** where the progress point sits relative to each campfire, which decides whether the title appears at lighting or only once runners walk on. Watch the `[OTL][Round]` lines: "sees the biome title; next leg in 7.5s".
+
+## Decided: change list 4 (2026-10-07)
+
+- **Bug: items not interactable** (snowballs from the leg loadout, Roots mushrooms). The hidden-item detection only counted spawn pools, but many real items are placed by single-item spawners in the level (`Spawner.spawnedObjectPrefab`: shelf shrooms, snow piles, berry bushes). Fix:
+  - The legit set now also includes every item referenced by spawners in the loaded level.
+  - It's rebuilt on every scene load.
+  - Items named in our own settings (`RunnerLegItems`, `ChaserAllowedItems`, `AllowedHiddenItems`) are never hidden.
+  - Scenery items are only hidden for explicit bans, never for "hidden".
+- **Admin quick restart** (host, **F10** = `KeyRestartFromCampfire`, `AdminKeys`):
+  - Everyone goes back to the last campfire the runners lit; before any campfire, PEAK's base-camp spawn.
+  - Dead players are revived, and everyone's statuses are cleared.
+  - A fresh leg starts (reveal, blind chasers, head start). Roles are kept.
+  - It also works after a round has ended.
+- **Jetpacks / rocket packs and gliders** are off by default (`AllowJetpacks`, `AllowGliders`): removed from spawns and unpickable.
+- **To verify:** snowball, banana and milk are pickable and usable; Roots shelf mushrooms are pickable. The log line "N item type(s) are placed by this level's spawners" should appear once per level. F10 restart works mid-leg and after a win.
+
+## Decided: change list 5 (2026-10-08) ("killer" = chaser)
+
+- **Shore spawn lock.** Nothing is interactable while everyone wakes up on the shore and for `SpawnInteractLockSeconds` (7) after the round starts. It only applies when the host runs the mod.
+- **Chasers take 1/3 of negative statuses** (`ChaserStatusMultiplier` = 0.333, applied on top of the vanilla ascent amounts via `CharacterAfflictions.AddStatus`). They never take fall damage or the fall knock-down (`ChaserNoFallDamage`).
+- **Leg complete → chasers teleported** to that campfire (`TeleportChasersOnLegComplete`).
+- **Reward** is now an **energy drink** (`RewardItems = "Energy Drink"`, `RewardItemCount = 1`) given to the first runner into each campfire safe zone. Ancient-luggage loot removed.
+- **Energy drinks cause 1.5× drowsiness** when they wear off (`EnergyDrinkDrowsyMultiplier`, on `Affliction_FasterBoi.drowsyOnEnd`).
+- **Capture → full morale boost** for the chaser: PEAK's morale animation plus a full extra-stamina bar (`CaptureMoraleBoost`).
+- **Blowdart adds 10% drowsiness** to the runner hit (`BlowdartDrowsy`), on top of the tracking smoke.
+- **Zombies ignore chasers.** They don't target them, and bites do nothing to them (`ZombiesIgnoreChasers`).
+- **Runner stamina regen +12%** (saved config updated).
+- **To verify:**
+  - The item name "Energy Drink" resolves. Check for `no item named` in the log.
+  - The morale-boost animation shows for the chaser.
+  - Chasers' injury from a fall is 0, and other statuses build up about 3× slower.
+
+## Decided: change list 6 (2026-10-08)
+
+- **Chasers can't see ghosts** (`ChasersSeeGhosts = false`). On a living chaser's client every other ghost's renderers are switched off, the same mechanism PEAK uses to hide your own ghost (`PlayerGhost.RPCA_InitGhost`). Visual only; ghost voices are left alone (decided).
+- **Chaser hands cleared before a new item.** Before giving a chaser their blowgun, the host tells their client to drop the held item in front of them (vanilla `DropItemRpc` + un-equip). If nothing is held but all slots are full, slot 1 is dropped. Then the item is given.
+- **Banana fix.** The log showed `no item named 'Banana'` every leg: PEAK's fruit isn't called "Banana". Name lookup now falls back to aliases ("banana" → Berrynana, unverified) and then to "name contains", skipping peels. The resolved item is logged, and the full item list (display [prefab]) is logged once per session.
+- **To verify:** the log line `'Banana' resolved to ...`. If it picks the wrong fruit, put the exact name from the item list into `RunnerLegItems`.
+- **Brown Berrynana** replaces "Banana" in the runner leg items: `RunnerLegItems = "Snowball, Brown Berrynana, Fortified Milk"` (default and saved config). Applied to the **runner** list, the one that was missing the banana; chasers only get the blowgun.
+- **Removed:** the custom frozen/immune bar above the stamina bar (`StaminaTimerBar`); it didn't match PEAK's HUD. Remaining freeze feedback: the cold pulses on the body, the frost on the chaser's own screen, and the countdown next to frozen chasers in the chaser list. There's no immunity indicator for now.
+
+## Decided: change list 7 (2026-10-08)
+
+- **Tracking smoke matches the darted runner's skin colour** (`CharacterCustomization.PlayerColor`, the same colour PEAK uses for a player's warp poof).
+- **Fireworks above chasers** every `FireworkIntervalSeconds` (30) of an active chase, `FireworkHeight` (8 m) above each living chaser. Revised: it uses the **rocket pack's mid-air explosion** (`CharacterMovement.explosionPrefab`, spawned by `RocketExplodeRPC`), which looks like fireworks; the dynamite explosion is only a fallback. It's cloned locally with `AOE` (knockback/fall damage), colliders, rigidbodies and camera shake stripped. Every client computes the timing from the shared chase start, so it needs no network traffic.
+- **Scoutmaster sounds** (`ScoutmasterSounds`) while a chaser is within freeze range of a living runner, at random 3–6 s gaps, played at the chaser. The sounds are the ones on the `Character_Scoutmaster` prefab minus those the normal player prefab `Character` also has. Code doesn't name them, so this is **unverified** until playtest. The log lists what was found ("Scoutmaster sounds: …").
+- **To verify:**
+  - The firework looks like a burst and hurts nobody (log: "firework built … N damaging/physics component(s) removed").
+  - The Scoutmaster sound list in the log isn't empty, and the sounds fit.

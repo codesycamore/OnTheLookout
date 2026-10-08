@@ -40,7 +40,7 @@ internal static class RoleManager
     {
         if (!Net.IsHost) return;
         List<int> actors = PhotonNetwork.PlayerList.Select(p => p.ActorNumber).OrderBy(_ => s_Rng.Next()).ToList();
-        int count = Math.Max(0, Math.Min(Plugin.ModConfig.ChaserCount.Value, actors.Count - 1));
+        int count = Math.Max(0, Math.Min(ChasersFor(actors.Count), actors.Count - 1));
 
         s_Roles.Clear();
         for (int i = 0; i < actors.Count; i++)
@@ -50,6 +50,27 @@ internal static class RoleManager
 
         Plugin.Log.LogInfo($"[OTL][Roles] HOST assigned {count} chaser(s): {string.Join(", ", Chasers.Select(Net.NameOf))}");
         Publish();
+    }
+
+    /// <summary>
+    /// Chaser count for a lobby size from <c>ChasersByPlayerCount</c> ("minPlayers:chasers, ..."):
+    /// the entry with the highest minPlayers that is still &lt;= players wins. Defaults to 1.
+    /// </summary>
+    public static int ChasersFor(int players)
+    {
+        int best = 1, bestMin = int.MinValue;
+        foreach (string pair in Plugin.ModConfig.ChasersByPlayerCount.Value.Split(','))
+        {
+            string[] parts = pair.Split(':');
+            if (parts.Length == 2 && int.TryParse(parts[0].Trim(), out int min) && int.TryParse(parts[1].Trim(), out int chasers)
+                && players >= min && min > bestMin)
+            {
+                best = chasers;
+                bestMin = min;
+            }
+        }
+
+        return best;
     }
 
     /// <summary>Host only.</summary>

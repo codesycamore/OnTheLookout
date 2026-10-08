@@ -40,7 +40,21 @@ internal static class SafeZoneSystem
         // Patch target: Campfire.Light_Rpc(bool updateSegment, float) (postfix, [PunRPC] on all clients).
         // Why: lighting a campfire (updateSegment = true) starts the next leg: chasers frozen + blind, runners get a head start.
         bool e = SafePatch.Postfix(harmony, typeof(Campfire), "Light_Rpc", typeof(SafeZoneSystem), nameof(LightPostfix), "Campfire");
-        return a && b && c && d && e;
+
+        // Patch target: MountainProgressHandler.TriggerReached(ProgressPoint, bool isFurthestPoint) (postfix).
+        // Why: this is where PEAK shows the biome title (GUIManager.SetHeroTitle), on each player's own
+        // client when they cross the next biome's progress point. We tell the host so the next leg
+        // starts after the title has played.
+        bool f = SafePatch.Postfix(harmony, typeof(MountainProgressHandler), nameof(MountainProgressHandler.TriggerReached),
+            typeof(SafeZoneSystem), nameof(TitlePostfix), "Campfire");
+        return a && b && c && d && e && f;
+    }
+
+    public static void TitlePostfix(bool isFurthestPoint)
+    {
+        if (!isFurthestPoint || Time.time <= 2f || !RoundManager.IsActive) return; // same conditions as the title itself
+        if (Net.IsHost) RoundManager.HostOnBiomeTitle(Photon.Pun.PhotonNetwork.LocalPlayer.ActorNumber);
+        else Net.SendToHost(Msg.BiomeTitle);
     }
 
     public static bool ChaserCantLightPrefix(Campfire __instance, Character interactor, ref bool __result)
@@ -50,12 +64,23 @@ internal static class SafeZoneSystem
         return false;
     }
 
-    public static void LightPostfix(bool updateSegment)
+    public static void LightPostfix(Campfire __instance, bool updateSegment)
     {
-        if (updateSegment && Net.IsHost && RoundManager.IsActive)
+        if (!updateSegment || !RoundManager.IsActive) return;
+
+        // Every player at the campfire starts the next leg fresh (each client clears its own statuses,
+        // since status values are owned by the local player).
+        Character local = Character.localCharacter;
+        if (local != null && !local.data.dead && Plugin.ModConfig.ClearStatusesAtCampfire.Synced()
+            && Vector3.Distance(local.Center, __instance.transform.position) <= Plugin.ModConfig.CampfireSafeRadius.Synced())
         {
-            RoundManager.HostStartLeg();
+            local.refs.afflictions.ClearAllStatus(excludeCurse: false, excludePetrify: false);
+            Plugin.Log.LogInfo("[OTL][Campfire] cleared local statuses for the new leg.");
         }
+
+        if (!Net.IsHost) return;
+        AdminRestart.HostRememberCampfire(__instance.transform.position);
+        RoundManager.HostOnCampfireLit();
     }
 
     /// <summary>All campfires currently loaded (refreshed every 2 s; inactive segments are excluded).</summary>

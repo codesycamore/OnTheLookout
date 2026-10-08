@@ -28,6 +28,10 @@ internal static class FogSystem
         // Patch targets: OrbFogHandler.Move / Fog.Move (postfixes). Why: they advance the fog by speed*dt each frame.
         ok &= SafePatch.Postfix(harmony, typeof(OrbFogHandler), "Move", typeof(FogSystem), nameof(OrbMovePostfix), m);
         ok &= SafePatch.Postfix(harmony, typeof(Fog), "Move", typeof(FogSystem), nameof(LegacyMovePostfix), m);
+        // OrbFogHandler.WaitToMove (postfix, private). Why: counts up currentWaitTime until the fog starts
+        // rising (maxWaitTime); the multiplier makes the fog start sooner too.
+        ok &= SafePatch.Postfix(harmony, typeof(OrbFogHandler), "WaitToMove", typeof(FogSystem), nameof(OrbWaitPostfix), m);
+
 
         // Patch target: FogSphere.SetSharderVars (transpiler + postfix). Why: the method mixes shader setup
         // with fog damage, so only its CharacterAfflictions.AddStatus call is swapped for a gate.
@@ -48,6 +52,13 @@ internal static class FogSystem
         float extra = Multiplier - 1f;
         if (extra == 0f || !__instance.isMoving) return;
         __instance.currentSize -= __instance.speed * extra * Time.deltaTime;
+    }
+
+    public static void OrbWaitPostfix(OrbFogHandler __instance)
+    {
+        float extra = Multiplier - 1f;
+        if (extra <= 0f || __instance.isMoving || __instance.PlayersAreResting) return;
+        __instance.currentWaitTime += Time.deltaTime * extra;
     }
 
     public static void LegacyMovePostfix(Fog __instance)

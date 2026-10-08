@@ -236,6 +236,6 @@ internal sealed class FreezeSystem : MonoBehaviour
         if (!Plugin.ModConfig.DebugKeys.Value || !Net.InRoom || !PhotonNetwork.IsMasterClient || Character.localCharacter == null) return;
         var cfg = Plugin.ModConfig;
         GUI.Label(new Rect(10, Screen.height - 30, 900, 25),
-            $"[OTL debug] {cfg.KeyStartRound.Value}: start round   {cfg.KeyToggleOwnRole.Value}: swap my role   {cfg.KeySelfFreeze.Value}: freeze me   {cfg.KeyFreezeLookTarget.Value}: freeze looked-at");
+            $"[OTL debug] {cfg.KeyStartRound.Value}: start round   {cfg.KeyToggleOwnRole.Value}: swap my role   {cfg.KeySelfFreeze.Value}: freeze me   {cfg.KeyFreezeLookTarget.Value}: freeze looked-at   {cfg.KeyRestartFromCampfire.Value}: restart from last campfire");
     }
 }

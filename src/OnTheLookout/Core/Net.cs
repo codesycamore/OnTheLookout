@@ -13,6 +13,12 @@ internal enum Msg : byte
 
     /// <summary>host -> all: [Notice, actorA, actorB]</summary>
     Notice = 2,
+
+    /// <summary>client -> host: [] this client just showed a biome title</summary>
+    BiomeTitle = 3,
+
+    /// <summary>host -> one chaser: [] drop whatever is in hand (an item is about to be given)</summary>
+    ClearHands = 4,
 }
 
 internal enum Notice : byte
@@ -21,6 +27,7 @@ internal enum Notice : byte
     Converted = 2, // A became a chaser
     Rewarded = 3, // A reached a campfire first
     MissingMod = 4, // A has no / a different OnTheLookout version (host only)
+    Restarted = 5, // the host (A) restarted from the last campfire
 }
 
 /// <summary>
@@ -61,6 +68,15 @@ internal static class Net
     public static void SendToHost(Msg msg, params object[] args) => Send(msg, ReceiverGroup.MasterClient, args);
 
     public static void SendToAll(Msg msg, params object[] args) => Send(msg, ReceiverGroup.All, args);
+
+    public static void SendToActor(int actor, Msg msg, params object[] args)
+    {
+        if (!InRoom) return;
+        var payload = new object[args.Length + 1];
+        payload[0] = (byte)msg;
+        Array.Copy(args, 0, payload, 1, args.Length);
+        PhotonNetwork.RaiseEvent(EventCode, payload, new RaiseEventOptions { TargetActors = new[] { actor } }, SendOptions.SendReliable);
+    }
 
     private static void Send(Msg msg, ReceiverGroup to, object[] args)
     {

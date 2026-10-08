@@ -59,15 +59,23 @@ public partial class Plugin : BaseUnityPlugin
         bool items = cfg.EnableItemRules.Value && ItemRules.Install(_harmony);
         bool conversion = cfg.EnableConversion.Value && ConversionSystem.Install(_harmony);
         bool speed = ChaserSpeed.Install(_harmony);
+        bool blowgun = BlowgunSystem.Install(_harmony);
+        bool tweaks = Tweaks.Install(_harmony);
+        bool resilience = ChaserResilience.Install(_harmony);
+        LegLoadout.Install();
         RewardSystem.Enabled = cfg.EnableRewards.Value;
 
         var ui = new GameObject("OnTheLookout_UI");
         DontDestroyOnLoad(ui);
         ui.AddComponent<Hud>();
+        ui.AddComponent<GhostVisibility>();
+        ui.AddComponent<ChaseEffects>();
+        root.AddComponent<AdminRestart>();
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded += (_, _) => ItemCatalog.OnSceneLoaded();
 
         Log.LogInfo($"[OTL] {Name} {Version} loaded. round={round} freeze={input && cfg.EnableFreeze.Value} " +
             $"suspend={FreezeSuspendPatch.HooksAvailable} campfire={campfire} tag={tag} fog={fog} items={items} " +
-            $"conversion={conversion} speed={speed} rewards={RewardSystem.Enabled}");
+            $"conversion={conversion} speed={speed} blowgun={blowgun} tweaks={tweaks} resilience={resilience} rewards={RewardSystem.Enabled}");
     }
 
     private static void StartRunPostfix()

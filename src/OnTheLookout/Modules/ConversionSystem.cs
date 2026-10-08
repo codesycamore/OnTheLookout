@@ -45,6 +45,7 @@ internal static class ConversionSystem
         foreach (int actor in converted)
         {
             RoleManager.SetRole(actor, Role.Chaser);
+            LegLoadout.GiveBlowgunLater(actor);
             ModNetwork.Broadcast(Notice.Converted, actor, 0);
         }
 
