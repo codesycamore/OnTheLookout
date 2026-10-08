@@ -7,7 +7,8 @@ namespace OnTheLookout.Modules;
 /// <summary>
 /// Chasers are tougher than runners during a round:
 /// - they take only a fraction (default 1/3) of every negative status they would get in vanilla
-///   (injury, hunger, cold, poison, drowsy, ...; ascent scaling is already in the vanilla amount);
+///   (injury, cold, poison, drowsy, ...; ascent scaling is already in the vanilla amount). Hunger is
+///   left exactly as vanilla, the same as for runners;
 /// - they never take fall damage (or the fall knock-down);
 /// - mushroom zombies ignore them and their bites do nothing to them.
 /// Statuses are owned by each player's own client, so all of this runs on the chaser's client.
@@ -36,7 +37,8 @@ internal static class ChaserResilience
 
     public static void AddStatusPrefix(CharacterAfflictions __instance, CharacterAfflictions.STATUSTYPE statusType, ref float amount, bool fromRPC)
     {
-        if (fromRPC || amount <= 0f || statusType == CharacterAfflictions.STATUSTYPE.Weight) return;
+        // Weight is inventory-driven, and hunger stays the same for everyone.
+        if (fromRPC || amount <= 0f || statusType is CharacterAfflictions.STATUSTYPE.Weight or CharacterAfflictions.STATUSTYPE.Hunger) return;
         Character c = __instance.character;
         if (c == null || !c.IsLocal || !RoleManager.IsChaser(c)) return;
         amount *= Mathf.Clamp01(Plugin.ModConfig.ChaserStatusMultiplier.Synced());

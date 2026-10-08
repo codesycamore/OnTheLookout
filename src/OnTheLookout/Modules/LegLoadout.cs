@@ -22,7 +22,71 @@ internal static class LegLoadout
 
     public static void Install()
     {
-        RoundManager.LegStarted += _ => Schedule(GiveLegItems());
+        RoundManager.LegStarted += newRound =>
+        {
+            Schedule(GiveLegItems());
+            if (newRound) Schedule(GiveRunnerBackpacks());
+        };
+        RoundManager.LegCompleted += () => Schedule(StockCampfireFood());
+    }
+
+    /// <summary>Host, after roles are assigned at round start: every runner without a backpack gets one.</summary>
+    private static IEnumerator GiveRunnerBackpacks()
+    {
+        yield return new WaitForSeconds(1.5f);
+        if (!Net.IsHost || !RoundManager.IsActive || !Plugin.ModConfig.RunnerBackpacks.Synced()) yield break;
+
+        Backpack? backpack = ItemCatalog.PlainBackpack;
+        if (backpack == null)
+        {
+            Plugin.Log.LogWarning("[OTL][Loadout] no backpack item found.");
+            yield break;
+        }
+
+        foreach (Character c in Character.AllCharacters.ToArray())
+        {
+            if (!RoleManager.IsRunner(c) || c.data.dead || c.player == null || !c.player.backpackSlot.IsEmpty()) continue;
+            Give(c, backpack);
+        }
+    }
+
+    /// <summary>
+    /// Host, when the chase of a leg ends (every living runner at the campfire, chasers brought there):
+    /// make sure there is one campfire food item (random pick from CampfireFoodItems, e.g. marshmallow or
+    /// hot dog) per living player lying near the fire, spawning only the shortfall.
+    /// </summary>
+    private static IEnumerator StockCampfireFood()
+    {
+        yield return new WaitForSeconds(2f); // after the chasers have been brought over
+        if (!Net.IsHost || !RoundManager.IsActive) yield break;
+
+        List<Item> foods = ItemCatalog.FindByNames(Plugin.ModConfig.CampfireFoodItems.Synced());
+        if (foods.Count == 0) yield break;
+
+        Campfire? fire = SafeZoneSystem.Campfires
+            .Where(f => f.isActiveAndEnabled && f.state == Campfire.FireState.Off)
+            .OrderBy(f => Character.AllCharacters.Where(c => RoleManager.IsRunner(c) && !c.data.dead)
+                .Select(c => Vector3.Distance(c.Center, f.transform.position)).DefaultIfEmpty(float.MaxValue).Max())
+            .FirstOrDefault();
+        if (fire == null) yield break;
+
+        Vector3 center = fire.transform.position;
+        var foodIds = new HashSet<ushort>(foods.Select(f => f.itemID));
+        int players = Character.AllCharacters.Count(c => c != null && !c.isBot && !c.data.dead);
+        int present = Object.FindObjectsByType<Item>(FindObjectsSortMode.None)
+            .Count(i => i != null && i.itemState == ItemState.Ground && foodIds.Contains(i.itemID)
+                && Vector3.Distance(i.transform.position, center) <= 15f);
+        int missing = players - present;
+
+        for (int i = 0; i < missing; i++)
+        {
+            Item food = foods[Random.Range(0, foods.Count)];
+            float angle = (i * 360f / Mathf.Max(1, missing) + Random.Range(-10f, 10f)) * Mathf.Deg2Rad;
+            Vector3 spot = center + new Vector3(Mathf.Cos(angle) * 2.5f, 1f, Mathf.Sin(angle) * 2.5f);
+            PhotonNetwork.Instantiate("0_Items/" + food.gameObject.name, spot, Quaternion.identity, 0);
+        }
+
+        Plugin.Log.LogInfo($"[OTL][Loadout] HOST campfire food: {players} player(s), {present} already there, spawned {Mathf.Max(0, missing)}.");
     }
 
     private static void Schedule(IEnumerator routine)

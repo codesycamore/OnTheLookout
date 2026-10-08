@@ -211,3 +211,7 @@ Debug keys (host, bottom-left hint): **F7** start or restart a round, **F6** swa
 - **To verify:**
   - The firework looks like a burst and hurts nobody (log: "firework built … N damaging/physics component(s) removed").
   - The Scoutmaster sound list in the log isn't empty, and the sounds fit.
+- **Hunger is not reduced for chasers** (2026-10-08): `ChaserStatusMultiplier` now skips hunger, so hunger works the same for chasers and runners.
+- **Runner backpacks** (`RunnerBackpacks`, 2026-10-08): after roles are assigned at round start, every runner without a backpack gets the ordinary backpack (not fanny/jet/rocket pack) in their backpack slot.
+- **Campfire food** (`CampfireFoodItems = "Marshmallow, Glizzy"`; Glizzy is PEAK's prefab name for the Hot Dog, which has a cattail variant too): when a leg's chase ends at a campfire, the host counts marshmallows and hot dogs on the ground within 15 m and spawns only the shortfall, so there's one per living player (random pick each). Hot Dog was in the "hidden" list, so items in this setting are now exempt from the hidden-item ban.
+- **To verify:** the log line "campfire food: N player(s), M already there, spawned K". It's unknown whether the campfire's own food spawner adds more when the fire is lit; if so there may be extra food.

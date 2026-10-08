@@ -75,7 +75,7 @@ internal static class ItemCatalog
     private static bool AlwaysLegit(Item item)
     {
         var cfg = Plugin.ModConfig;
-        return MatchesList(item, cfg.AllowedHiddenItems.Synced()) || MatchesList(item, cfg.RunnerLegItems.Synced())
+        return MatchesList(item, cfg.AllowedHiddenItems.Synced()) || MatchesList(item, cfg.RunnerLegItems.Synced()) || MatchesList(item, cfg.CampfireFoodItems.Synced())
             || MatchesList(item, cfg.ChaserAllowedItems.Synced());
     }
 
@@ -104,7 +104,7 @@ internal static class ItemCatalog
         var cfg = Plugin.ModConfig;
         string stamp = string.Join("|", cfg.BanAmulets.Synced(), cfg.BanGems.Synced(), cfg.BanRescueClaws.Synced(),
             cfg.BanHiddenItems.Synced(), cfg.AllowedHiddenItems.Synced(), cfg.BannedItems.Synced(), cfg.AllowJetpacks.Synced(), cfg.AllowGliders.Synced(),
-            cfg.RunnerLegItems.Synced(), cfg.ChaserAllowedItems.Synced());
+            cfg.RunnerLegItems.Synced(), cfg.ChaserAllowedItems.Synced(), cfg.CampfireFoodItems.Synced());
         if (stamp != s_Stamp)
         {
             s_Cache.Clear();
@@ -161,6 +161,9 @@ internal static class ItemCatalog
     }
 
     public static Item? Blowgun => AllItems().FirstOrDefault(i => Has<Action_RaycastDart>(i));
+
+    /// <summary>The ordinary backpack (not a fanny pack, jetpack or rocket pack).</summary>
+    public static Backpack? PlainBackpack => AllItems().OfType<Backpack>().FirstOrDefault(b => b.backpackType == BackpackSlot.BackpackType.Backpack);
 
     public static Flare? FlarePrefab => AllItems().Select(i => i.GetComponentInChildren<Flare>(true)).FirstOrDefault(f => f != null);
 

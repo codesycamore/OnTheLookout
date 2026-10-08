@@ -42,6 +42,8 @@ internal sealed class ModConfig
     public ConfigEntry<float> CaptureBoostSeconds { get; }
     public ConfigEntry<float> RunnerStaminaRegenMultiplier { get; }
     public ConfigEntry<string> RunnerLegItems { get; }
+    public ConfigEntry<bool> RunnerBackpacks { get; }
+    public ConfigEntry<string> CampfireFoodItems { get; }
     public ConfigEntry<bool> ClearStatusesAtCampfire { get; }
     public ConfigEntry<bool> NoReviveCurse { get; }
     public ConfigEntry<bool> DisableScoutmaster { get; }
@@ -149,7 +151,7 @@ internal sealed class ModConfig
         BiomeTitleSeconds = Synced(round, "BiomeTitleSeconds", 7.5f, "After a campfire is lit, the next leg (role reveal, blind chasers, head start) starts this long after the first player sees the new biome title, so it plays after the title.");
         NoTitleFallbackSeconds = Synced(round, "NoTitleFallbackSeconds", 12f, "If nobody sees a biome title after a campfire is lit, the next leg starts this long after lighting anyway.");
         SpawnInteractLockSeconds = Synced(round, "SpawnInteractLockSeconds", 7f, "At the start of a run on the shore nothing can be interacted with while everyone wakes up and for this many seconds after the round starts.");
-        ChaserStatusMultiplier = Synced(round, "ChaserStatusMultiplier", 0.333f, "Chasers take this fraction of every negative status (injury, hunger, cold, poison, drowsy, ...) they would get in vanilla at the current ascent.");
+        ChaserStatusMultiplier = Synced(round, "ChaserStatusMultiplier", 0.333f, "Chasers take this fraction of every negative status (injury, cold, poison, drowsy, ...) they would get in vanilla at the current ascent. Hunger is not reduced.");
         ChaserNoFallDamage = Synced(round, "ChaserNoFallDamage", true, "Chasers never take fall damage.");
         ZombiesIgnoreChasers = Synced(round, "ZombiesIgnoreChasers", true, "Mushroom zombies don't target or bite chasers.");
         TeleportChasersOnLegComplete = Synced(round, "TeleportChasersOnLegComplete", true, "When every living runner reaches the next campfire's safe zone, living chasers are teleported to that campfire too.");
@@ -161,6 +163,8 @@ internal sealed class ModConfig
         CaptureBoostSeconds = Synced(round, "CaptureBoostSeconds", 5f, "How long the capture boost lasts (refreshed by each capture).");
         RunnerStaminaRegenMultiplier = Synced(round, "RunnerStaminaRegenMultiplier", 1.12f, "Runner stamina regeneration multiplier (1.12 = 12% faster).");
         RunnerLegItems = Synced(round, "RunnerLegItems", "Snowball, Brown Berrynana, Fortified Milk", "At the start of each leg every runner gets ONE random item from this list (prefab or display names, comma separated). Empty = off.");
+        RunnerBackpacks = Synced(round, "RunnerBackpacks", true, "After roles are assigned at the start of a round, every runner without a backpack gets one.");
+        CampfireFoodItems = Synced(round, "CampfireFoodItems", "Marshmallow, Glizzy", "When the chase of a leg ends at a campfire, the host makes sure there is one of these per living player near the fire (random pick each; spawns only what is missing). Glizzy = the hot dog. Empty = off.");
         ClearStatusesAtCampfire = Synced(round, "ClearStatusesAtCampfire", true, "When a campfire is lit, every player near it is cleared of negative statuses (incl. curse).");
         NoReviveCurse = Synced(round, "NoReviveCurse", true, "Revived players don't get the revival curse / hunger.");
         DisableScoutmaster = Synced(round, "DisableScoutmaster", true, "Don't spawn the Scoutmaster (he hunts the runner furthest from the group).");
