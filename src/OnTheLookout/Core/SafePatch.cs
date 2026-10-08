@@ -5,44 +5,45 @@ using HarmonyLib;
 namespace OnTheLookout.Core;
 
 /// <summary>
-/// Applies a single Harmony patch, logging and returning false instead of throwing
-/// when the target can't be found (e.g. after a game update), so only the owning module is disabled.
+/// Applies Harmony patches one target at a time, logging and returning false instead of throwing
+/// when a target can't be found or patched (e.g. after a game update), so only the owning module is disabled.
 /// </summary>
 internal static class SafePatch
 {
-    public static bool Postfix(Harmony harmony, Type type, string method, Type patchClass, string patchMethod, string module) =>
-        Apply(harmony, type, method, patchClass, patchMethod, module, prefix: false);
+    public static bool Postfix(Harmony harmony, Type type, string method, Type patchClass, string patchMethod, string module, Type[]? args = null) =>
+        Apply(harmony, type, method, args, module, postfix: Hook(patchClass, patchMethod));
 
-    public static bool Prefix(Harmony harmony, Type type, string method, Type patchClass, string patchMethod, string module) =>
-        Apply(harmony, type, method, patchClass, patchMethod, module, prefix: true);
+    public static bool Prefix(Harmony harmony, Type type, string method, Type patchClass, string patchMethod, string module, Type[]? args = null) =>
+        Apply(harmony, type, method, args, module, prefix: Hook(patchClass, patchMethod));
 
-    private static bool Apply(Harmony harmony, Type type, string method, Type patchClass, string patchMethod, string module, bool prefix)
+    public static bool Transpiler(Harmony harmony, Type type, string method, Type patchClass, string patchMethod, string module, Type[]? args = null) =>
+        Apply(harmony, type, method, args, module, transpiler: Hook(patchClass, patchMethod));
+
+    private static HarmonyMethod Hook(Type patchClass, string patchMethod) =>
+        new(AccessTools.Method(patchClass, patchMethod)
+            ?? throw new MissingMethodException(patchClass.Name, patchMethod));
+
+    private static bool Apply(Harmony harmony, Type type, string method, Type[]? args, string module,
+        HarmonyMethod? prefix = null, HarmonyMethod? postfix = null, HarmonyMethod? transpiler = null)
     {
-        MethodInfo? target = AccessTools.Method(type, method);
-        if (target is null)
-        {
-            Plugin.Log.LogError($"[OTL][{module}] hook {type.Name}.{method} not found - module disabled.");
-            return false;
-        }
-
+        string label = $"{type.Name}.{method}";
         try
         {
-            var patch = new HarmonyMethod(AccessTools.Method(patchClass, patchMethod));
-            if (prefix)
+            MethodInfo? target = AccessTools.Method(type, method, args);
+            if (target is null)
             {
-                harmony.Patch(target, prefix: patch);
-            }
-            else
-            {
-                harmony.Patch(target, postfix: patch);
+                Plugin.Log.LogError($"[OTL][{module}] hook {label} not found - module disabled.");
+                return false;
             }
 
-            Plugin.Log.LogInfo($"[OTL][{module}] patched {type.Name}.{method} ({(prefix ? "prefix" : "postfix")}).");
+            harmony.Patch(target, prefix, postfix, transpiler);
+            string kind = prefix is not null ? "prefix" : postfix is not null ? "postfix" : "transpiler";
+            Plugin.Log.LogInfo($"[OTL][{module}] patched {label} ({kind}).");
             return true;
         }
         catch (Exception e)
         {
-            Plugin.Log.LogError($"[OTL][{module}] failed to patch {type.Name}.{method} - module disabled.\n{e}");
+            Plugin.Log.LogError($"[OTL][{module}] failed to patch {label} - module disabled.\n{e}");
             return false;
         }
     }

@@ -1,3 +1,4 @@
+using OnTheLookout.Core;
 using UnityEngine;
 
 namespace OnTheLookout.Freeze;
@@ -7,7 +8,8 @@ namespace OnTheLookout.Freeze;
 /// Why: Sample is the single place the LOCAL player's input is read each frame
 /// (called from CharacterMovement.Update only when character.IsLocal). Everything else
 /// (walking, climbing, jumping, item use, interact) consumes the fields it fills, and movement
-/// is owner-simulated, so blocking here freezes the player for everyone.
+/// is owner-simulated, so blocking here holds the player in place for everyone.
+/// Used for both the freeze (rules 3-5) and the chasers' head-start hold (rule 2).
 /// </summary>
 internal static class FreezeInputPatch
 {
@@ -21,25 +23,20 @@ internal static class FreezeInputPatch
             return;
         }
 
-        int actor = local.view.Owner.ActorNumber;
-        bool frozen = FreezeState.IsFrozen(actor);
+        bool frozen = Net.InRoom && FreezeState.IsFrozen(Net.Actor(local));
+        bool heldByHeadStart = RoundManager.InHeadStart && RoleManager.IsChaser(local);
 
-        if (frozen)
+        if (frozen && !s_WasFrozen)
         {
-            if (!s_WasFrozen)
-            {
-                FreezeSystem.OnLocalFreezeStarted(local);
-            }
-
-            Block(__instance);
+            FreezeSystem.OnLocalFreezeStarted(local);
         }
-        else if (s_WasFrozen)
+        else if (!frozen && s_WasFrozen)
         {
             FreezeSystem.OnLocalFreezeEnded(local);
 
             // We swallowed the grab-button release while frozen (to keep the grip). If the player is
             // no longer holding grab, deliver that release now so they drop like they would have.
-            if (Plugin.ModConfig.FreezeHoldGrip.Value && local.data.isClimbing
+            if (Plugin.ModConfig.FreezeHoldGrip.Synced() && local.data.isClimbing
                 && !CharacterInput.action_usePrimary.IsPressed())
             {
                 __instance.usePrimaryWasReleased = true;
@@ -47,6 +44,11 @@ internal static class FreezeInputPatch
         }
 
         s_WasFrozen = frozen;
+
+        if (frozen || heldByHeadStart)
+        {
+            Block(__instance);
+        }
     }
 
     private static void Block(CharacterInput input)
@@ -58,12 +60,12 @@ internal static class FreezeInputPatch
         // Clearing usePrimaryWasReleased is what keeps a climbing player on the wall.
         input.ResetInput();
 
-        if (!Plugin.ModConfig.FreezeBlockLook.Value)
+        if (!Plugin.ModConfig.FreezeBlockLook.Synced())
         {
             input.lookInput = look;
         }
 
-        if (!Plugin.ModConfig.FreezeHoldGrip.Value)
+        if (!Plugin.ModConfig.FreezeHoldGrip.Synced())
         {
             input.usePrimaryWasReleased = released;
         }

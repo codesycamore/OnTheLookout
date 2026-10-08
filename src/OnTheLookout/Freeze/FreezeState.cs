@@ -102,4 +102,11 @@ internal static class FreezeState
     }
 
     public static void Clear() => s_Entries.Clear();
+
+    /// <summary>Host: new round, nobody is frozen or on cooldown.</summary>
+    public static void HostReset()
+    {
+        s_Entries.Clear();
+        Publish();
+    }
 }

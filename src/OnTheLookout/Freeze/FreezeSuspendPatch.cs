@@ -1,3 +1,4 @@
+using OnTheLookout.Core;
 using UnityEngine;
 
 namespace OnTheLookout.Freeze;
@@ -23,7 +24,7 @@ internal static class FreezeSuspendPatch
         CharacterData d = local.data;
         bool airborne = !d.isGrounded && !d.isClimbing && !d.isRopeClimbing && !d.isVineClimbing
             && d.currentClimbHandle == null;
-        if (!HooksAvailable || !Plugin.ModConfig.FreezeSuspendInAir.Value || !airborne)
+        if (!HooksAvailable || !Plugin.ModConfig.FreezeSuspendInAir.Synced() || !airborne)
         {
             return;
         }
@@ -71,7 +72,7 @@ internal static class FreezeSuspendPatch
         // Pull the whole body back toward the anchor; kills jump momentum and any drift from
         // animation forces while still letting the ragdoll hold its pose.
         Vector3 hip = character.GetBodypart(BodypartType.Hip).Rig.position;
-        Vector3 pull = (s_Anchor.Value - hip) * Plugin.ModConfig.FreezeSuspendStiffness.Value;
+        Vector3 pull = (s_Anchor.Value - hip) * Plugin.ModConfig.FreezeSuspendStiffness.Synced();
         foreach (Bodypart part in character.refs.ragdoll.partList)
         {
             if (part == null || part.Rig == null) continue;

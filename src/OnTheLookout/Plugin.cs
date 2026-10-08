@@ -3,12 +3,15 @@ using BepInEx.Logging;
 using HarmonyLib;
 using OnTheLookout.Core;
 using OnTheLookout.Freeze;
+using OnTheLookout.Modules;
+using OnTheLookout.UI;
 using UnityEngine;
 
 namespace OnTheLookout;
 
 /// <summary>
-/// The BepInEx plugin class of OnTheLookout.
+/// The BepInEx plugin class of OnTheLookout: a host-authoritative chasers-vs-runners mode.
+/// Every module installs its own patches and is disabled on its own if a hook is missing.
 /// </summary>
 [BepInAutoPlugin]
 public partial class Plugin : BaseUnityPlugin
@@ -23,25 +26,51 @@ public partial class Plugin : BaseUnityPlugin
         Log = Logger;
         ModConfig = new ModConfig(Config);
         _harmony = new Harmony(Id);
+        var cfg = ModConfig;
 
-        // Freeze module (proof of concept). If the hook is missing, only this module is disabled.
-        bool freezeOk = SafePatch.Postfix(_harmony, typeof(CharacterInput), nameof(CharacterInput.Sample),
+        var root = new GameObject("OnTheLookout");
+        DontDestroyOnLoad(root);
+        root.hideFlags = HideFlags.HideAndDontSave;
+        root.AddComponent<ModNetwork>();
+
+        // Round start (rule 1). Patch target: RunManager.StartRun() (postfix). Why: called once when a run begins.
+        bool round = SafePatch.Postfix(_harmony, typeof(RunManager), nameof(RunManager.StartRun), typeof(Plugin), nameof(StartRunPostfix), "Round");
+
+        // Input hold for head start (rule 2) and freeze (rules 3-5).
+        bool input = SafePatch.Postfix(_harmony, typeof(CharacterInput), nameof(CharacterInput.Sample),
             typeof(FreezeInputPatch), nameof(FreezeInputPatch.SamplePostfix), "Freeze");
-        if (freezeOk)
+        if (input)
         {
-            // Mid-air suspension is optional polish: if these hooks break, freezing still works on the ground/walls.
-            bool gravityOk = SafePatch.Prefix(_harmony, typeof(Bodypart), nameof(Bodypart.Gravity),
-                typeof(FreezeSuspendPatch), nameof(FreezeSuspendPatch.GravityPrefix), "Freeze.Suspend");
-            bool fixedOk = gravityOk && SafePatch.Postfix(_harmony, typeof(CharacterMovement), "FixedUpdate",
-                typeof(FreezeSuspendPatch), nameof(FreezeSuspendPatch.FixedUpdatePostfix), "Freeze.Suspend");
-            FreezeSuspendPatch.HooksAvailable = fixedOk;
+            root.AddComponent<FreezeSystem>();
+            FreezeSystem.LookChecksEnabled = cfg.EnableFreeze.Value;
 
-            var host = new GameObject("OnTheLookout");
-            DontDestroyOnLoad(host);
-            host.hideFlags = HideFlags.HideAndDontSave;
-            host.AddComponent<FreezeSystem>();
+            // Mid-air suspension is optional polish: if these hooks break, freezing still works on the ground/walls.
+            bool gravity = SafePatch.Prefix(_harmony, typeof(Bodypart), nameof(Bodypart.Gravity),
+                typeof(FreezeSuspendPatch), nameof(FreezeSuspendPatch.GravityPrefix), "Freeze.Suspend");
+            FreezeSuspendPatch.HooksAvailable = gravity && SafePatch.Postfix(_harmony, typeof(CharacterMovement), "FixedUpdate",
+                typeof(FreezeSuspendPatch), nameof(FreezeSuspendPatch.FixedUpdatePostfix), "Freeze.Suspend");
         }
 
-        Log.LogInfo($"[OTL] Plugin {Name} {Version} loaded. Freeze module: {(freezeOk ? "enabled" : "DISABLED")}.");
+        // Campfire rules always apply during a round (otherwise runners can't light campfires while chasers are away).
+        bool campfire = SafeZoneSystem.Install(_harmony, cfg.EnableSafeZones.Value);
+        bool tag = cfg.EnableTag.Value && TagSystem.Install(_harmony);
+        bool fog = cfg.EnableFog.Value && FogSystem.Install(_harmony);
+        bool items = cfg.EnableItemRules.Value && ItemRules.Install(_harmony);
+        bool conversion = cfg.EnableConversion.Value && ConversionSystem.Install(_harmony);
+        RewardSystem.Enabled = cfg.EnableRewards.Value;
+
+        root.AddComponent<Hud>();
+
+        Log.LogInfo($"[OTL] {Name} {Version} loaded. round={round} freeze={input && cfg.EnableFreeze.Value} " +
+            $"suspend={FreezeSuspendPatch.HooksAvailable} campfire={campfire} tag={tag} fog={fog} items={items} " +
+            $"conversion={conversion} rewards={RewardSystem.Enabled}");
+    }
+
+    private static void StartRunPostfix()
+    {
+        if (Net.InRoom && Net.IsHost && ModConfig.AutoStartRound.Value)
+        {
+            RoundManager.HostStartRound();
+        }
     }
 }

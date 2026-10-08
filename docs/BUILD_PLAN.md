@@ -34,6 +34,8 @@ Rules for every module:
 
 ## Phases
 
+> **Status 2026-10-07:** Phases 0–1 skipped by decision. The freeze PoC was proven in-game, then all rules plus the HUD were implemented in one pass (see `src/OnTheLookout/Core`, `Freeze`, `Modules`, `UI`). Next: run the full-mode test plan in OPEN_QUESTIONS.md.
+
 **Phase 0: Hello world on the current build (½ day)**
 - Copy `Config.Build.user.props` from the template and point it at the game and the r2modman `Default` profile's plugins folder.
 - Build, then launch through r2modman and confirm `Plugin OnTheLookout is loaded!` appears in `LogOutput.log` on **build 25739797**. This also re-confirms that BepInEx and PEAKLib still load after the 2026-10-06 update.

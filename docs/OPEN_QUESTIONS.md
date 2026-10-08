@@ -72,3 +72,27 @@ Code: `src/OnTheLookout/Freeze/`. Config file: `BepInEx/config/codesycamore.OnTh
 - [ ] **Host F10 (HostIsChaserTest ON), friend looks at the host**: the host freezes. This tests the friend's replicated look direction being judged on the host, which is rules 3–5 end to end. Turn on `LogLookChecks` to see the distances and angles.
 - [ ] Friend keeps staring after the freeze ends: no re-freeze until the cooldown expires.
 - [ ] Host quits mid-freeze: the friend's timer continues and the new master logs `master switched`.
+
+## Full mode: test plan (first build of all rules, 2026-10-07)
+
+Debug keys (host, bottom-left hint): **F7** start or restart a round, **F6** swap your own role (solo testing as chaser), **F8** freeze yourself, **F9** freeze the player you're looking at. Look in `LogOutput.log` for `[OTL]` lines. The first line lists which modules loaded.
+
+**Solo (F6 to become chaser, F7 to restart)**
+- [ ] The round starts automatically when the run starts, and "YOU ARE A RUNNER / CHASER" shows as the hero title.
+- [ ] Head start: as a chaser you can't move. A "RELEASED IN" ring and countdown show, then release.
+- [ ] Freeze (F8): you pulse icy blue, fast at first and slower near the end. Screen frost with stamina unchanged. Then the "FROZEN" ring, then the "FREEZE IMMUNE" ring.
+- [ ] HUD: the ring looks like PEAK's own item ring and scales with resolution. The chaser list sits under the ascent label (top right). Check with ascent 0 and with ascent > 0.
+- [ ] Fog as a chaser: no cold damage, and `[OTL][Fog] gated 1 fog damage call(s)` appears in the log. Fog visibly faster (`FogSpeedMultiplier`).
+- [ ] Items as a chaser: picking up a non-healing item is denied (the item pops back). Bandages and first-aid can be picked up and used. The log shows `classified ...` lines; copy them here to finalise the lists.
+- [ ] Amulets and gems are denied for everyone.
+- [ ] As a runner, a campfire can be lit while the chaser is far away (no "can't light" message naming the chaser).
+
+**Two or more players**
+- [ ] A runner looking at a chaser freezes them. The chaser pulses on the runner's screen too. No re-freeze during immunity.
+- [ ] Chaser runs into a runner: the runner dies, and every client shows "X was caught by Y!". Not possible inside a campfire safe zone (runner sees "SAFE").
+- [ ] A passed-out runner can still be revived or carried by teammates (and is capturable if `TagPassedOutRunners`).
+- [ ] Lighting a campfire: after `ConversionDelaySeconds`, one dead runner revives near the fire as a chaser ("X has joined the chasers"), and the chaser list updates.
+- [ ] The first runner into an unlit campfire's radius gets ancient-loot items at their feet ("reached the campfire first").
+- [ ] All runners dead shows "THE CHASERS WIN". A runner at the peak shows "THE RUNNERS ESCAPED".
+- [ ] A friend without the mod: the host sees "X doesn't have OnTheLookout".
+- [ ] Host leaves mid-round: roles, freezes and the round continue under the new host.
