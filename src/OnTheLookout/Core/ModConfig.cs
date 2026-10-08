@@ -141,7 +141,7 @@ internal sealed class ModConfig
         EnableFog = Local(mod, "EnableFog", true, "Faster fog that only hurts runners.");
         EnableItemRules = Local(mod, "EnableItemRules", true, "Chaser item restrictions and banned items.");
         EnableConversion = Local(mod, "EnableConversion", true, "Using a scout statue turns one random ghost into a chaser.");
-        EnableRewards = Local(mod, "EnableRewards", true, "First runner into each campfire safe zone gets ancient-luggage loot.");
+        EnableRewards = Local(mod, "EnableRewards", true, "First runner into each campfire safe zone gets a reward item (see 9. Rewards).");
 
         const string round = "2. Round";
         ChasersByPlayerCount = Synced(round, "ChasersByPlayerCount", "1:1, 6:2", "How many chasers to pick for a given lobby size, as \"minPlayers:chasers\" pairs. \"1:1, 6:2\" = 1 chaser, 2 once there are 6+ players. Add e.g. \", 10:3\" for bigger lobbies. Always leaves at least one runner.");
@@ -244,7 +244,7 @@ internal sealed class ModConfig
         CaptureSound = Local(ui, "CaptureSound", true, "Play an explosion sound when a runner is captured.");
 
         const string debug = "12. Debug";
-        DebugKeys = Local(debug, "DebugKeys", true, "Enable host debug keys.");
+        DebugKeys = Local(debug, "DebugKeys", false, "Enable host debug/testing keys (F6-F9). Off in normal play.");
         KeyToggleOwnRole = Local(debug, "KeyToggleOwnRole", Key.F6, "HOST: switch your own role between runner and chaser.");
         KeyStartRound = Local(debug, "KeyStartRound", Key.F7, "HOST: start / restart a round (re-rolls roles).");
         KeySelfFreeze = Local(debug, "KeySelfFreeze", Key.F8, "HOST: freeze yourself.");
