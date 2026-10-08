@@ -1,0 +1,152 @@
+using System.Collections.Generic;
+using DG.Tweening;
+using OnTheLookout.Core;
+using TMPro;
+using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.UI;
+
+namespace OnTheLookout.UI;
+
+/// <summary>
+/// Airport-only menu (KeyChaserOdds, "-" by default) where each player picks their chaser odds for the
+/// next run: want to be a chaser / no preference / rather run. Only the player sees their own choice; it
+/// goes privately to the host (<see cref="ChaserPreference"/>). A small hint is shown while in the airport.
+/// Same PEAK-style building blocks as the host menu (<see cref="PeakMenuKit"/>).
+/// </summary>
+internal sealed class ChaserOddsMenu : MonoBehaviour
+{
+    private static readonly Color Selected = new(1f, 0.84f, 0.2f);
+
+    public static bool IsOpen { get; private set; }
+
+    private Canvas? _canvas;
+    private RectTransform? _panel;
+    private Canvas? _hintCanvas;
+    private TextMeshProUGUI? _hint;
+    private readonly Dictionary<ChaserPref, (TextMeshProUGUI Label, string Text)> _options = new();
+
+    private void Update()
+    {
+        ChaserPreference.LocalTick();
+        bool available = ChaserPreference.Available && GUIManager.instance != null;
+        if (IsOpen && !available) Close();
+        UpdateHint(available);
+        if (!available) return;
+
+        Keyboard? kb = Keyboard.current;
+        if (kb == null) return;
+        if (kb[Plugin.ModConfig.KeyChaserOdds.Value].wasPressedThisFrame)
+        {
+            if (IsOpen) Close();
+            else Open();
+        }
+        else if (IsOpen && kb.escapeKey.wasPressedThisFrame)
+        {
+            Close();
+        }
+    }
+
+    // ---------- Hint ----------
+
+    private void UpdateHint(bool available)
+    {
+        bool show = available && !IsOpen && !HostMenu.IsOpen;
+        if (show && _hintCanvas == null) BuildHint();
+        if (_hintCanvas != null && _hintCanvas.gameObject.activeSelf != show) _hintCanvas.gameObject.SetActive(show);
+        if (show && _hint != null)
+        {
+            _hint.text = $"PRESS {KeyName()} TO CHOOSE YOUR CHASER ODDS";
+        }
+    }
+
+    private void BuildHint()
+    {
+        GUIManager gui = GUIManager.instance;
+        _hintCanvas = PeakMenuKit.CreateCanvas("OTL_ChaserOddsHint", transform, gui, 20);
+        _hintCanvas.GetComponent<GraphicRaycaster>().enabled = false; // never blocks clicks
+        // Bright PEAK yellow with a thick dark outline so it reads on snow, sky and dark airport floors alike.
+        _hint = PeakMenuKit.AddText(_hintCanvas.transform, "", gui.interactNameText, 34f, new Color(1f, 0.84f, 0.2f, 1f), 50f);
+        RectTransform rt = _hint.rectTransform;
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0f);
+        rt.sizeDelta = new Vector2(1400f, 50f);
+        rt.anchoredPosition = new Vector2(0f, 40f);
+        _hint.outlineWidth = 0.3f;
+        _hint.outlineColor = new Color32(10, 12, 20, 255);
+    }
+
+    private static string KeyName()
+    {
+        Keyboard? kb = Keyboard.current;
+        string name = kb != null ? kb[Plugin.ModConfig.KeyChaserOdds.Value].displayName : "";
+        return string.IsNullOrWhiteSpace(name) ? Plugin.ModConfig.KeyChaserOdds.Value.ToString().ToUpperInvariant() : name.ToUpperInvariant();
+    }
+
+    // ---------- Menu ----------
+
+    private void Open()
+    {
+        if (!Build()) return;
+        IsOpen = true;
+        _canvas!.gameObject.SetActive(true);
+        RefreshSelection();
+        RectTransform panel = _panel!;
+        panel.DOKill();
+        panel.localScale = Vector3.one * 0.9f;
+        panel.DOScale(1f, 0.2f).SetEase(Ease.OutBack);
+    }
+
+    private void Close()
+    {
+        IsOpen = false;
+        if (_canvas != null) _canvas.gameObject.SetActive(false);
+    }
+
+    private bool Build()
+    {
+        if (_canvas != null) return true;
+        GUIManager gui = GUIManager.instance;
+        Button? template = PeakMenuKit.ButtonTemplate(gui);
+        if (template == null)
+        {
+            Plugin.Log.LogWarning("[OTL][Odds] PEAK's pause menu button not found; can't build the menu.");
+            return false;
+        }
+
+        _canvas = PeakMenuKit.CreateCanvas("OTL_ChaserOdds", transform, gui, 50);
+        _panel = PeakMenuKit.CreatePanel(_canvas, template, new Vector2(720f, 600f));
+        TextMeshProUGUI titleFont = gui.heroText != null ? gui.heroText : gui.interactNameText;
+        PeakMenuKit.AddText(_panel, "CHASER ODDS", titleFont, 64f, Color.white, 80f);
+        PeakMenuKit.AddText(_panel, "ONLY YOU CAN SEE THIS  -  RESETS EVERY RUN", gui.interactNameText, 22f, new Color(1f, 1f, 1f, 0.7f), 32f);
+
+        AddOption(template, ChaserPref.WantChaser, "I WANT TO BE A CHASER");
+        AddOption(template, ChaserPref.NoPreference, "NO PREFERENCE");
+        AddOption(template, ChaserPref.RatherRun, "I'D RATHER BE A RUNNER");
+        (Button close, _) = PeakMenuKit.CloneButton(_panel, template, "CLOSE");
+        close.onClick.AddListener(Close);
+
+        _canvas.gameObject.SetActive(false);
+        return true;
+    }
+
+    private void AddOption(Button template, ChaserPref pref, string text)
+    {
+        (Button button, TextMeshProUGUI label) = PeakMenuKit.CloneButton(_panel!, template, text);
+        _options[pref] = (label, text);
+        button.onClick.AddListener(() =>
+        {
+            ChaserPreference.SetLocal(pref);
+            RefreshSelection();
+        });
+    }
+
+    private void RefreshSelection()
+    {
+        foreach (KeyValuePair<ChaserPref, (TextMeshProUGUI Label, string Text)> option in _options)
+        {
+            bool selected = option.Key == ChaserPreference.Local;
+            option.Value.Label.text = selected ? $"> {option.Value.Text} <" : option.Value.Text;
+            option.Value.Label.color = selected ? Selected : Color.white;
+        }
+    }
+}

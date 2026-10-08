@@ -25,6 +25,10 @@ internal sealed class ModConfig
     public ConfigEntry<float> RoleRevealSeconds { get; }
     public ConfigEntry<float> HeadStartSeconds { get; }
     public ConfigEntry<bool> AutoStartRound { get; }
+    public ConfigEntry<bool> ChaserPreferenceEnabled { get; }
+    public ConfigEntry<float> ChaserOddsWantChaser { get; }
+    public ConfigEntry<float> ChaserOddsNoPreference { get; }
+    public ConfigEntry<float> ChaserOddsRatherRun { get; }
     public ConfigEntry<float> BiomeTitleSeconds { get; }
     public ConfigEntry<float> SpawnInteractLockSeconds { get; }
     public ConfigEntry<float> ChaserStatusMultiplier { get; }
@@ -50,6 +54,9 @@ internal sealed class ModConfig
     public ConfigEntry<float> CaptureBoostSeconds { get; }
     public ConfigEntry<float> RunnerStaminaRegenMultiplier { get; }
     public ConfigEntry<string> RunnerLegItems { get; }
+    public ConfigEntry<string> RunnerBiomeItems { get; }
+    public ConfigEntry<float> FortifiedMilkWeightMultiplier { get; }
+    public ConfigEntry<float> FortifiedMilkInvincibilityMultiplier { get; }
     public ConfigEntry<bool> RunnerBackpacks { get; }
     public ConfigEntry<string> CampfireFoodItems { get; }
     public ConfigEntry<bool> ClearStatusesAtCampfire { get; }
@@ -140,6 +147,7 @@ internal sealed class ModConfig
     public ConfigEntry<bool> AdminKeys { get; }
     public ConfigEntry<Key> KeyRestartFromCampfire { get; }
     public ConfigEntry<Key> KeyHostMenu { get; }
+    public ConfigEntry<Key> KeyChaserOdds { get; }
 
     public ModConfig(ConfigFile config)
     {
@@ -159,6 +167,10 @@ internal sealed class ModConfig
         RoleRevealSeconds = Synced(round, "RoleRevealSeconds", 4f, "Seconds the role (CHASER / RUNNER) is shown at the start of each leg. Chasers stay frozen and blind during it.");
         HeadStartSeconds = Synced(round, "HeadStartSeconds", 20f, "Runner head start after the role reveal. Chasers stay frozen and blind until it ends.");
         AutoStartRound = Synced(round, "AutoStartRound", true, "Start a round automatically once everyone has woken up on the beach (host).");
+        ChaserPreferenceEnabled = Synced(round, "ChaserPreferenceEnabled", true, "In the airport, players can choose their chaser odds (want to be a chaser / no preference / rather run). Choices are secret and only affect the initial role draw of the next run.");
+        ChaserOddsWantChaser = Synced(round, "ChaserOddsWantChaser", 3f, "Draw weight for players who want to be a chaser.");
+        ChaserOddsNoPreference = Synced(round, "ChaserOddsNoPreference", 1f, "Draw weight for players with no preference.");
+        ChaserOddsRatherRun = Synced(round, "ChaserOddsRatherRun", 0.25f, "Draw weight for players who would rather run (0 = only picked if needed).");
         BiomeTitleSeconds = Synced(round, "BiomeTitleSeconds", 7.5f, "After a campfire is lit, the next leg (role reveal, blind chasers, head start) starts this long after the first player sees the new biome title, so it plays after the title.");
         NoTitleFallbackSeconds = Synced(round, "NoTitleFallbackSeconds", 12f, "If nobody sees a biome title after a campfire is lit, the next leg starts this long after lighting anyway.");
         SpawnInteractLockSeconds = Synced(round, "SpawnInteractLockSeconds", 7f, "At the start of a run on the shore nothing can be interacted with while everyone wakes up and for this many seconds after the round starts.");
@@ -182,6 +194,9 @@ internal sealed class ModConfig
         CaptureBoostSeconds = Synced(round, "CaptureBoostSeconds", 5f, "How long the capture boost lasts (refreshed by each capture).");
         RunnerStaminaRegenMultiplier = Synced(round, "RunnerStaminaRegenMultiplier", 1.12f, "Runner stamina regeneration multiplier (1.12 = 12% faster).");
         RunnerLegItems = Synced(round, "RunnerLegItems", "Snowball, Brown Berrynana, Fortified Milk", "At the start of each leg every runner gets ONE random item from this list (prefab or display names, comma separated). Empty = off.");
+        RunnerBiomeItems = Synced(round, "RunnerBiomeItems", "Alpine:Heat Pack, Volcano:Sports Drink, Swamp:EarlyWorm, Mesa:Aloe Vera", "Extra item every runner gets at the start of a leg in that biome, as \"Biome:Item\" pairs. Biomes use PEAK's names (Caldera = Volcano; The Gloom is assumed to be Swamp).");
+        FortifiedMilkWeightMultiplier = Synced(round, "FortifiedMilkWeightMultiplier", 2f, "Fortified milk weighs this many times its vanilla weight.");
+        FortifiedMilkInvincibilityMultiplier = Synced(round, "FortifiedMilkInvincibilityMultiplier", 0.35f, "Fortified milk's invincibility lasts this fraction of its vanilla time (0.35 = 65% shorter). Also shortens its capture protection.");
         RunnerBackpacks = Synced(round, "RunnerBackpacks", true, "After roles are assigned at the start of a round, every runner without a backpack gets one.");
         CampfireFoodItems = Synced(round, "CampfireFoodItems", "Marshmallow, Glizzy", "When the chase of a leg ends at a campfire, the host makes sure there is one of these per living player near the fire (random pick each; spawns only what is missing). Glizzy = the hot dog. Empty = off.");
         ClearStatusesAtCampfire = Synced(round, "ClearStatusesAtCampfire", true, "When a campfire is lit, every player near it is cleared of negative statuses (incl. curse).");
@@ -276,6 +291,7 @@ internal sealed class ModConfig
         AdminKeys = Local(admin, "AdminKeys", true, "Enable host admin keys (work even with DebugKeys off).");
         KeyRestartFromCampfire = Local(admin, "KeyRestartFromCampfire", Key.F10, "HOST: quick restart - everyone back to the last lit campfire (or the start), dead players revived, statuses cleared, fresh leg with role reveal + head start. Roles are kept.");
         KeyHostMenu = Local(admin, "KeyHostMenu", Key.Equals, "HOST: open/close the host menu (restart at the airport or previous campfire, teleport everyone to the next campfire, debug hotkeys on/off).");
+        KeyChaserOdds = Local(admin, "KeyChaserOdds", Key.Minus, "EVERYONE, in the airport: open/close the chaser-odds menu.");
 
         config.SettingChanged += (_, _) => ConfigSync.Publish();
     }

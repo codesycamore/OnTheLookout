@@ -83,6 +83,7 @@ internal sealed class ModNetwork : MonoBehaviourPunCallbacks, Photon.Realtime.IO
         FreezeSuspendPatch.End();
         RewardSystem.Clear();
         ZombieHunt.Clear();
+        ChaserPreference.Clear();
     }
 
     public override void OnRoomPropertiesUpdate(Hashtable changed)
@@ -149,6 +150,9 @@ internal sealed class ModNetwork : MonoBehaviourPunCallbacks, Photon.Realtime.IO
             {
                 case Msg.TagClaim when Net.IsHost && data.Length >= 3:
                     TagSystem.HostHandleClaim((int)data[1], (int)data[2], photonEvent.Sender);
+                    break;
+                case Msg.ChaserPreference when Net.IsHost && data.Length >= 2:
+                    ChaserPreference.HostSet(photonEvent.Sender, (ChaserPref)(byte)data[1]);
                     break;
                 case Msg.RefreshSlot when data.Length >= 2:
                     LegLoadout.RefreshLocalSlot((int)data[1]);

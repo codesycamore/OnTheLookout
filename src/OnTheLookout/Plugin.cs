@@ -63,6 +63,7 @@ public partial class Plugin : BaseUnityPlugin
         bool tweaks = Tweaks.Install(_harmony);
         bool resilience = ChaserResilience.Install(_harmony);
         bool shroomberry = ShroomberryRules.Install(_harmony);
+        bool milk = MilkRules.Install(_harmony);
         LegLoadout.Install();
         RewardSystem.Enabled = cfg.EnableRewards.Value;
 
@@ -72,6 +73,7 @@ public partial class Plugin : BaseUnityPlugin
         ui.AddComponent<GhostVisibility>();
         ui.AddComponent<ChaseEffects>();
         ui.AddComponent<HostMenu>();
+        ui.AddComponent<ChaserOddsMenu>();
         HostMenu.Install(_harmony);
         root.AddComponent<AdminRestart>();
         root.AddComponent<ChaserClimbBoost>();
@@ -79,7 +81,7 @@ public partial class Plugin : BaseUnityPlugin
 
         Log.LogInfo($"[OTL] {Name} {Version} loaded. round={round} freeze={input && cfg.EnableFreeze.Value} " +
             $"suspend={FreezeSuspendPatch.HooksAvailable} campfire={campfire} tag={tag} fog={fog} items={items} " +
-            $"conversion={conversion} speed={speed} blowgun={blowgun} tweaks={tweaks} resilience={resilience} shroomberry={shroomberry} rewards={RewardSystem.Enabled}");
+            $"conversion={conversion} speed={speed} blowgun={blowgun} tweaks={tweaks} resilience={resilience} shroomberry={shroomberry} milk={milk} rewards={RewardSystem.Enabled}");
     }
 
     private static void StartRunPostfix()

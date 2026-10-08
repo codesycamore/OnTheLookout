@@ -35,11 +35,15 @@ internal static class RoleManager
 
     public static IEnumerable<int> Chasers => s_Roles.Where(kv => kv.Value == Role.Chaser).Select(kv => kv.Key);
 
-    /// <summary>Host: pick <c>ChaserCount</c> random chasers, always leaving at least one runner.</summary>
+    /// <summary>Host: draw the chasers for a new run (ChasersByPlayerCount, weighted by airport chaser odds), always leaving at least one runner.</summary>
     public static void AssignRandom()
     {
         if (!Net.IsHost) return;
-        List<int> actors = PhotonNetwork.PlayerList.Select(p => p.ActorNumber).OrderBy(_ => s_Rng.Next()).ToList();
+        // Weighted random order (Efraimidis-Spirakis: key = u^(1/weight), highest keys first): airport chaser
+        // odds raise or lower each player's chance; with every weight 1 this is a plain shuffle. Weight 0 = picked last.
+        List<int> actors = PhotonNetwork.PlayerList.Select(p => p.ActorNumber)
+            .OrderByDescending(a => DrawKey(ChaserPreference.WeightOf(a)))
+            .ToList();
         int count = Math.Max(0, Math.Min(ChasersFor(actors.Count), actors.Count - 1));
 
         s_Roles.Clear();
@@ -49,8 +53,12 @@ internal static class RoleManager
         }
 
         Plugin.Log.LogInfo($"[OTL][Roles] HOST assigned {count} chaser(s): {string.Join(", ", Chasers.Select(Net.NameOf))}");
+        ChaserPreference.HostClear(); // odds only count for this draw; the next run starts fresh
         Publish();
     }
+
+    /// <summary>Weighted draw key: higher weight = more likely to come first. Weight 0 = always last.</summary>
+    private static double DrawKey(float weight) => weight <= 0f ? -1.0 : Math.Pow(s_Rng.NextDouble(), 1.0 / weight);
 
     /// <summary>
     /// Chaser count for a lobby size from <c>ChasersByPlayerCount</c> ("minPlayers:chasers, ..."):

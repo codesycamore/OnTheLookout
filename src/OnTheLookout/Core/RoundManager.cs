@@ -146,6 +146,7 @@ internal static class RoundManager
         ConfigSync.Publish();
         Net.SetRoom(RunKey, CurrentRunId);
         RoleManager.AssignRandom();
+        SafeZoneSystem.LastLitSegment = -1;
         FreezeState.HostReset();
         RewardSystem.HostReset();
         AdminRestart.HostForget();

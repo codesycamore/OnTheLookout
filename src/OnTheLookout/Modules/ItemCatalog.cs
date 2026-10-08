@@ -76,7 +76,8 @@ internal static class ItemCatalog
     {
         var cfg = Plugin.ModConfig;
         return NameContainsAny(item, cfg.AllowedHiddenItems.Synced()) || MatchesList(item, cfg.RunnerLegItems.Synced()) || MatchesList(item, cfg.CampfireFoodItems.Synced())
-            || MatchesList(item, cfg.ChaserAllowedItems.Synced());
+            || MatchesList(item, cfg.ChaserAllowedItems.Synced())
+            || LegLoadout.BiomeItemPairs().Any(p => NameMatches(item, p.Item));
     }
 
     /// <summary>True if the item's display or prefab name contains any entry (spaces and case ignored), e.g. "Kingberry" matches "Green Kingberry".</summary>
@@ -113,7 +114,8 @@ internal static class ItemCatalog
         var cfg = Plugin.ModConfig;
         string stamp = string.Join("|", cfg.BanAmulets.Synced(), cfg.BanGems.Synced(), cfg.BanRescueClaws.Synced(),
             cfg.BanHiddenItems.Synced(), cfg.AllowedHiddenItems.Synced(), cfg.BannedItems.Synced(), cfg.AllowJetpacks.Synced(), cfg.AllowGliders.Synced(),
-            cfg.RunnerLegItems.Synced(), cfg.ChaserAllowedItems.Synced(), cfg.CampfireFoodItems.Synced(), cfg.ChaserForbiddenItems.Synced());
+            cfg.RunnerLegItems.Synced(), cfg.ChaserAllowedItems.Synced(), cfg.CampfireFoodItems.Synced(), cfg.ChaserForbiddenItems.Synced(),
+            cfg.RunnerBiomeItems.Synced());
         if (stamp != s_Stamp)
         {
             s_Cache.Clear();

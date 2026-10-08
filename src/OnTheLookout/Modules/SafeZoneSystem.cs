@@ -19,6 +19,9 @@ internal static class SafeZoneSystem
 
     public static bool Enabled { get; private set; }
 
+    /// <summary>The segment the last lit campfire leads into (PEAK's Campfire.advanceToSegment); -1 before any campfire this round.</summary>
+    public static int LastLitSegment { get; set; } = -1;
+
     public static bool Install(Harmony harmony, bool safeZonesEnabled)
     {
         Enabled = safeZonesEnabled;
@@ -67,6 +70,7 @@ internal static class SafeZoneSystem
     public static void LightPostfix(Campfire __instance, bool updateSegment)
     {
         if (!updateSegment || !RoundManager.IsActive) return;
+        LastLitSegment = (int)__instance.advanceToSegment;
 
         // Every player at the campfire starts the next leg fresh (each client clears its own statuses,
         // since status values are owned by the local player).

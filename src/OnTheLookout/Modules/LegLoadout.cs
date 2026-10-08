@@ -104,12 +104,49 @@ internal static class LegLoadout
         foreach (int actor in RoleManager.Chasers.ToArray()) Schedule(GiveBlowgunRoutine(actor, 0f));
 
         List<Item> pool = ItemCatalog.FindByNames(Plugin.ModConfig.RunnerLegItems.Synced());
-        if (pool.Count == 0) yield break;
+        Item? biomeItem = BiomeItemForLeg();
         foreach (Character c in Character.AllCharacters.ToArray())
         {
             if (!RoleManager.IsRunner(c) || c.data.dead) continue;
-            Give(c, pool[Random.Range(0, pool.Count)]);
+            if (pool.Count > 0) Give(c, pool[Random.Range(0, pool.Count)]);
+            if (biomeItem != null) Give(c, biomeItem);
         }
+    }
+
+    /// <summary>
+    /// The biome this leg is played in: the segment the campfire just lit leads into (for the first leg,
+    /// the current segment). Uses MapHandler.MapSegment.biome, which accounts for biome variants.
+    /// </summary>
+    private static Biome.BiomeType? LegBiome()
+    {
+        MapHandler map = Zorro.Core.Singleton<MapHandler>.Instance;
+        if (map == null || map.segments == null) return null;
+        int segment = SafeZoneSystem.LastLitSegment >= 0 ? SafeZoneSystem.LastLitSegment : (int)MapHandler.CurrentSegmentNumber;
+        return segment >= 0 && segment < map.segments.Length ? map.segments[segment].biome : null;
+    }
+
+    /// <summary>"Biome:Item" pairs from RunnerBiomeItems, as (biome, item name).</summary>
+    public static IEnumerable<(string Biome, string Item)> BiomeItemPairs() =>
+        Plugin.ModConfig.RunnerBiomeItems.Synced().Split(',')
+            .Select(p => p.Split(':'))
+            .Where(p => p.Length == 2 && p[0].Trim().Length > 0 && p[1].Trim().Length > 0)
+            .Select(p => (p[0].Trim(), p[1].Trim()));
+
+    /// <summary>The extra item every runner gets for this leg's biome (RunnerBiomeItems), if any.</summary>
+    private static Item? BiomeItemForLeg()
+    {
+        Biome.BiomeType? biome = LegBiome();
+        if (biome == null) return null;
+        foreach ((string key, string itemName) in BiomeItemPairs())
+        {
+            if (!System.Enum.TryParse(key, true, out Biome.BiomeType wanted) || wanted != biome.Value) continue;
+            Item? item = ItemCatalog.FindByNames(itemName).FirstOrDefault();
+            Plugin.Log.LogInfo($"[OTL][Loadout] leg biome {biome.Value}: runners get {(item != null ? ItemCatalog.NameOf(item) : $"nothing ('{itemName}' not found)")}.");
+            return item;
+        }
+
+        Plugin.Log.LogInfo($"[OTL][Loadout] leg biome {biome.Value}: no biome item.");
+        return null;
     }
 
     private static IEnumerator GiveBlowgunRoutine(int actor, float delay)

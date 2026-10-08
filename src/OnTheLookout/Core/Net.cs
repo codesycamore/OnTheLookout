@@ -22,6 +22,9 @@ internal enum Msg : byte
 
     /// <summary>host -> one player: [slotId] an item was just added to this slot; refresh what is in hand</summary>
     RefreshSlot = 5,
+
+    /// <summary>client -> host only: [ChaserPref] this player's chaser odds from the airport (never broadcast)</summary>
+    ChaserPreference = 6,
 }
 
 internal enum Notice : byte

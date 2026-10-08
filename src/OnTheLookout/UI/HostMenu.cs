@@ -41,7 +41,7 @@ internal sealed class HostMenu : MonoBehaviour
 
     public static void WindowStatusPostfix(GUIManager __instance)
     {
-        if (!IsOpen) return;
+        if (!IsOpen && !ChaserOddsMenu.IsOpen) return;
         __instance.windowShowingCursor = true;
         __instance.windowBlockingInput = true;
     }
@@ -97,67 +97,19 @@ internal sealed class HostMenu : MonoBehaviour
     {
         GUIManager gui = GUIManager.instance;
         if (_canvas != null) return true;
-        Button? template = gui.pauseMenuMainPage != null ? gui.pauseMenuMainPage.resumeButton : null;
+        Button? template = PeakMenuKit.ButtonTemplate(gui);
         if (template == null)
         {
             Plugin.Log.LogWarning("[OTL][HostMenu] PEAK's pause menu button not found; can't build the menu.");
             return false;
         }
 
-        // Own canvas above everything, scaled like PEAK's HUD, clickable.
-        var canvasGo = new GameObject("OTL_HostMenu", typeof(RectTransform));
-        canvasGo.transform.SetParent(transform, false);
-        _canvas = canvasGo.AddComponent<Canvas>();
-        _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        _canvas.sortingOrder = (gui.hudCanvas != null ? gui.hudCanvas.sortingOrder : 0) + 50;
-        var scaler = canvasGo.AddComponent<CanvasScaler>();
-        if (gui.hudCanvas != null && gui.hudCanvas.GetComponent<CanvasScaler>() is { } hudScaler)
-        {
-            scaler.uiScaleMode = hudScaler.uiScaleMode;
-            scaler.referenceResolution = hudScaler.referenceResolution;
-            scaler.matchWidthOrHeight = hudScaler.matchWidthOrHeight;
-            scaler.screenMatchMode = hudScaler.screenMatchMode;
-        }
-        else
-        {
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
-            scaler.matchWidthOrHeight = 0.5f;
-        }
-
-        canvasGo.AddComponent<GraphicRaycaster>();
-
-        // Dim the game behind the menu.
-        var dim = NewRect("Dim", canvasGo.transform);
-        dim.anchorMin = Vector2.zero;
-        dim.anchorMax = Vector2.one;
-        dim.offsetMin = dim.offsetMax = Vector2.zero;
-        dim.gameObject.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0.45f);
-
-        // Panel: the pause button's own sprite, darkened, so the frame matches PEAK's UI.
-        _panel = NewRect("Panel", canvasGo.transform);
-        _panel.sizeDelta = new Vector2(720f, 640f);
-        var panelImage = _panel.gameObject.AddComponent<Image>();
-        if (template.GetComponent<Image>() is { sprite: not null } buttonImage)
-        {
-            panelImage.sprite = buttonImage.sprite;
-            panelImage.type = Image.Type.Sliced;
-            panelImage.pixelsPerUnitMultiplier = buttonImage.pixelsPerUnitMultiplier;
-        }
-
-        panelImage.color = new Color(0.13f, 0.11f, 0.09f, 0.96f);
-        var layout = _panel.gameObject.AddComponent<VerticalLayoutGroup>();
-        layout.padding = new RectOffset(40, 40, 30, 30);
-        layout.spacing = 14f;
-        layout.childAlignment = TextAnchor.UpperCenter;
-        layout.childControlWidth = true;
-        layout.childControlHeight = false;
-        layout.childForceExpandWidth = true;
-        layout.childForceExpandHeight = false;
+        _canvas = PeakMenuKit.CreateCanvas("OTL_HostMenu", transform, gui, 50);
+        _panel = PeakMenuKit.CreatePanel(_canvas, template, new Vector2(720f, 640f));
 
         TextMeshProUGUI titleFont = gui.heroText != null ? gui.heroText : gui.interactNameText;
-        AddText("HOST MENU", titleFont, 64f, Color.white, 80f);
-        AddText("ON THE LOOKOUT", gui.interactNameText, 26f, new Color(1f, 0.84f, 0.2f), 36f);
+        PeakMenuKit.AddText(_panel, "HOST MENU", titleFont, 64f, Color.white, 80f);
+        PeakMenuKit.AddText(_panel, "ON THE LOOKOUT", gui.interactNameText, 26f, new Color(1f, 0.84f, 0.2f), 36f);
 
         AddButton(template, "RESTART AT THE AIRPORT", confirm: true, AdminRestart.HostReturnToAirport);
         AddButton(template, "RESTART AT PREVIOUS CAMPFIRE", confirm: true, AdminRestart.HostRestartFromCampfire);
@@ -165,57 +117,16 @@ internal sealed class HostMenu : MonoBehaviour
         _debugLabel = AddButton(template, "", confirm: false, ToggleDebugKeys, closeAfter: false);
         AddButton(template, "CLOSE", confirm: false, () => { });
 
-        canvasGo.SetActive(false);
+        _canvas.gameObject.SetActive(false);
         Plugin.Log.LogInfo("[OTL][HostMenu] built.");
         return true;
-    }
-
-    private static RectTransform NewRect(string name, Transform parent)
-    {
-        var go = new GameObject(name, typeof(RectTransform));
-        go.transform.SetParent(parent, false);
-        return (RectTransform)go.transform;
-    }
-
-    private void AddText(string text, TextMeshProUGUI style, float size, Color color, float height)
-    {
-        RectTransform rt = NewRect("Text", _panel!);
-        rt.sizeDelta = new Vector2(0f, height);
-        var t = rt.gameObject.AddComponent<TextMeshProUGUI>();
-        t.font = style.font;
-        t.fontSharedMaterial = style.fontSharedMaterial;
-        t.fontSize = size;
-        t.color = color;
-        t.alignment = TextAlignmentOptions.Center;
-        t.textWrappingMode = TextWrappingModes.NoWrap;
-        t.raycastTarget = false;
-        t.text = text;
     }
 
     /// <summary>A clone of PEAK's pause-menu button with our label and action.</summary>
     private TextMeshProUGUI AddButton(Button template, string label, bool confirm, Action action, bool closeAfter = true)
     {
-        GameObject go = Instantiate(template.gameObject, _panel!);
-        go.name = "OTL_Button";
-        go.SetActive(true);
-
-        // Keep only Unity UI / TextMesh Pro parts: PEAK's own scripts (localization, page navigation, sounds
-        // wired to the pause page) would fight our label or act on the pause menu.
-        foreach (MonoBehaviour mb in go.GetComponentsInChildren<MonoBehaviour>(true))
-        {
-            string ns = mb.GetType().Namespace ?? "";
-            if (!ns.StartsWith("UnityEngine", StringComparison.Ordinal) && !ns.StartsWith("TMPro", StringComparison.Ordinal)) DestroyImmediate(mb);
-        }
-
-        var button = go.GetComponent<Button>();
-        button.onClick = new Button.ButtonClickedEvent();
-        button.navigation = new Navigation { mode = Navigation.Mode.None };
-        TextMeshProUGUI text = go.GetComponentInChildren<TextMeshProUGUI>(true);
-        text.text = label;
+        (Button button, TextMeshProUGUI text) = PeakMenuKit.CloneButton(_panel!, template, label);
         _labels[text] = label;
-
-        var rt = (RectTransform)go.transform;
-        rt.sizeDelta = new Vector2(0f, Mathf.Max(64f, rt.sizeDelta.y));
 
         button.onClick.AddListener(() =>
         {

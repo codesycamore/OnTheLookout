@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.3.0
+
+### Runners
+- **Biome items:** at the start of each leg every runner also gets an item for the biome ahead: a **heat pack** in the Alpine, a **sports drink** in the Caldera, an **early worm** in the Gloom and **aloe vera** in the Mesa (`RunnerBiomeItems`). These items are never treated as hidden.
+
+### Airport
+- **Chaser odds:** in the airport every player can press **-** to pick *I want to be a chaser* / *no preference* / *I'd rather be a runner*. The choice goes privately to the host's game only and is never shown to anyone, weights the **initial** role draw (`ChaserOddsWantChaser` 3, `ChaserOddsNoPreference` 1, `ChaserOddsRatherRun` 0.25) and is cleared after every draw. Statue conversions stay fully random. The host can switch it off with `ChaserPreferenceEnabled`.
+
+### Items
+- **Fortified milk** is twice as heavy (`FortifiedMilkWeightMultiplier`) and its invincibility (and so its capture protection) lasts 65% less (`FortifiedMilkInvincibilityMultiplier` = 0.35).
+
+
 ## 1.2.0
 
 ### Round flow
@@ -10,6 +22,9 @@
 ### Balance
 - Safe zone radius **50 m → 30 m**, and runners inside a safe zone can no longer freeze chasers.
 - Runner stamina regeneration back to **+12%** (from +18%).
+
+### Airport
+- **Chaser odds:** in the airport every player can press **-** to pick *I want to be a chaser* / *no preference* / *I'd rather be a runner*. The choice goes privately to the host's game only and is never shown to anyone, weights the **initial** role draw (`ChaserOddsWantChaser` 3, `ChaserOddsNoPreference` 1, `ChaserOddsRatherRun` 0.25) and is cleared after every draw. Statue conversions stay fully random. The host can switch it off with `ChaserPreferenceEnabled`.
 
 ### Items
 - **Shroomberries** can be eaten again (runners), but every effect they cause lasts only **1 second** (`ShroomberryEffectSeconds`): timed effects end, knock-downs are cut short and negative statuses are taken back. The hunger they cure is unchanged.
