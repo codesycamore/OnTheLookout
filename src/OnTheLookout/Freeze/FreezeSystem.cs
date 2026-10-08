@@ -82,7 +82,7 @@ internal sealed class FreezeSystem : MonoBehaviour
     /// <summary>Host: rules 3-5 for every chaser/runner pair.</summary>
     private static void HostLookChecks()
     {
-        if (!LookChecksEnabled || !RoundManager.IsActive || RoundManager.InHeadStart) return;
+        if (!LookChecksEnabled || !RoundManager.IsChasing) return;
 
         foreach (Character chaser in Character.AllCharacters)
         {
@@ -201,7 +201,8 @@ internal sealed class FreezeSystem : MonoBehaviour
     private static bool LocalFrozen(out Character local)
     {
         local = Character.localCharacter;
-        return local != null && Net.InRoom && FreezeState.IsFrozen(Net.Actor(local));
+        return local != null && Net.InRoom
+            && (FreezeState.IsFrozen(Net.Actor(local)) || (RoundManager.InHold && RoleManager.IsChaser(local)));
     }
 
     private void LateUpdate()

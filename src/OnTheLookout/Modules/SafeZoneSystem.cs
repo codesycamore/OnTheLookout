@@ -29,7 +29,33 @@ internal static class SafeZoneSystem
             typeof(SafeZoneSystem), nameof(EveryoneInRangePrefix), "Campfire", new[] { typeof(float) });
         bool b = SafePatch.Prefix(harmony, typeof(Campfire), nameof(Campfire.EveryoneInRange),
             typeof(SafeZoneSystem), nameof(EveryoneInRangePrintoutPrefix), "Campfire", new[] { typeof(string).MakeByRefType(), typeof(float) });
-        return a && b;
+
+        // Patch targets: Campfire.IsInteractible / IsConstantlyInteractable (prefixes).
+        // Why: only runners may light a campfire (chasers can still cook on a lit one).
+        bool c = SafePatch.Prefix(harmony, typeof(Campfire), nameof(Campfire.IsInteractible),
+            typeof(SafeZoneSystem), nameof(ChaserCantLightPrefix), "Campfire");
+        bool d = SafePatch.Prefix(harmony, typeof(Campfire), nameof(Campfire.IsConstantlyInteractable),
+            typeof(SafeZoneSystem), nameof(ChaserCantLightPrefix), "Campfire");
+
+        // Patch target: Campfire.Light_Rpc(bool updateSegment, float) (postfix, [PunRPC] on all clients).
+        // Why: lighting a campfire (updateSegment = true) starts the next leg: chasers frozen + blind, runners get a head start.
+        bool e = SafePatch.Postfix(harmony, typeof(Campfire), "Light_Rpc", typeof(SafeZoneSystem), nameof(LightPostfix), "Campfire");
+        return a && b && c && d && e;
+    }
+
+    public static bool ChaserCantLightPrefix(Campfire __instance, Character interactor, ref bool __result)
+    {
+        if (!RoundManager.IsActive || __instance.state != Campfire.FireState.Off || !RoleManager.IsChaser(interactor)) return true;
+        __result = false;
+        return false;
+    }
+
+    public static void LightPostfix(bool updateSegment)
+    {
+        if (updateSegment && Net.IsHost && RoundManager.IsActive)
+        {
+            RoundManager.HostStartLeg();
+        }
     }
 
     /// <summary>All campfires currently loaded (refreshed every 2 s; inactive segments are excluded).</summary>

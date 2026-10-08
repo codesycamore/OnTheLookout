@@ -23,8 +23,8 @@ internal static class FreezeInputPatch
             return;
         }
 
-        bool frozen = Net.InRoom && FreezeState.IsFrozen(Net.Actor(local));
-        bool heldByHeadStart = RoundManager.InHeadStart && RoleManager.IsChaser(local);
+        // A look-freeze, or the start-of-leg hold (role reveal + head start) for chasers: both are a full freeze.
+        bool frozen = Net.InRoom && (FreezeState.IsFrozen(Net.Actor(local)) || (RoundManager.InHold && RoleManager.IsChaser(local)));
 
         if (frozen && !s_WasFrozen)
         {
@@ -45,7 +45,7 @@ internal static class FreezeInputPatch
 
         s_WasFrozen = frozen;
 
-        if (frozen || heldByHeadStart)
+        if (frozen)
         {
             Block(__instance);
         }

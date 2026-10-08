@@ -30,7 +30,7 @@ internal static class RewardSystem
     /// <summary>Host, ~2x per second.</summary>
     public static void HostTick()
     {
-        if (!Enabled || !RoundManager.IsActive || RoundManager.InHeadStart) return;
+        if (!Enabled || !RoundManager.IsActive || RoundManager.InHold) return;
         float radius = Plugin.ModConfig.CampfireSafeRadius.Synced();
 
         foreach (Campfire fire in SafeZoneSystem.Campfires)

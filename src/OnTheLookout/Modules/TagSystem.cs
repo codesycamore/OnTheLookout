@@ -29,7 +29,7 @@ internal static class TagSystem
 
     public static void CollisionPostfix(Bodypart __instance, Collision collision)
     {
-        if (!RoundManager.IsActive || RoundManager.InHeadStart || collision?.collider == null) return;
+        if (!RoundManager.IsChasing || collision?.collider == null) return;
 
         if (s_CharacterLayer < 0) s_CharacterLayer = LayerMask.NameToLayer("Character");
         if (collision.collider.gameObject.layer != s_CharacterLayer) return;
@@ -59,7 +59,7 @@ internal static class TagSystem
     /// <summary>Host only: validate a capture claim and apply it.</summary>
     public static void HostHandleClaim(int chaserActor, int runnerActor, int sender)
     {
-        if (!Net.IsHost || !RoundManager.IsActive || RoundManager.InHeadStart) return;
+        if (!Net.IsHost || !RoundManager.IsChasing) return;
 
         // Only the two players involved (or the host's own simulation) may claim.
         if (sender != chaserActor && sender != runnerActor && sender != PhotonNetwork.LocalPlayer.ActorNumber) return;

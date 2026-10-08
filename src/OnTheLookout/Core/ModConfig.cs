@@ -20,12 +20,14 @@ internal sealed class ModConfig
     public ConfigEntry<bool> EnableConversion { get; }
     public ConfigEntry<bool> EnableRewards { get; }
 
-    // Round & roles (rules 1, 2)
+    // Round & roles
     public ConfigEntry<int> ChaserCount { get; }
+    public ConfigEntry<float> RoleRevealSeconds { get; }
     public ConfigEntry<float> HeadStartSeconds { get; }
     public ConfigEntry<bool> AutoStartRound { get; }
+    public ConfigEntry<float> ChaserSpeedMultiplier { get; }
 
-    // Freeze (rules 3-5)
+    // Freeze
     public ConfigEntry<float> FreezeRange { get; }
     public ConfigEntry<float> FreezeConeDegrees { get; }
     public ConfigEntry<float> FreezeDuration { get; }
@@ -39,32 +41,34 @@ internal sealed class ModConfig
     public ConfigEntry<float> FreezePulseFastInterval { get; }
     public ConfigEntry<float> FreezePulseSlowInterval { get; }
 
-    // Tag / capture
+    // Tag
     public ConfigEntry<float> TagMaxDistance { get; }
     public ConfigEntry<bool> TagPassedOutRunners { get; }
 
-    // Safe zones (rule 8)
+    // Safe zones
     public ConfigEntry<float> CampfireSafeRadius { get; }
     public ConfigEntry<bool> SafeZoneRequiresLit { get; }
 
-    // Fog (rule 7)
+    // Fog
     public ConfigEntry<float> FogSpeedMultiplier { get; }
     public ConfigEntry<bool> FogIgnoresChasers { get; }
 
-    // Items (rules 6, 11)
+    // Items
     public ConfigEntry<string> ChaserAllowedItems { get; }
     public ConfigEntry<bool> ChaserAutoAllowHealing { get; }
     public ConfigEntry<bool> BanAmulets { get; }
     public ConfigEntry<bool> BanGems { get; }
+    public ConfigEntry<bool> BanBlowguns { get; }
+    public ConfigEntry<bool> BanRescueClaws { get; }
+    public ConfigEntry<bool> BanHiddenItems { get; }
+    public ConfigEntry<string> AllowedHiddenItems { get; }
     public ConfigEntry<string> BannedItems { get; }
 
-    // Conversion (rule 9)
-    public ConfigEntry<bool> ConvertOnBiomeChange { get; }
-    public ConfigEntry<int> ConversionsPerBiome { get; }
-    public ConfigEntry<float> ConversionDelaySeconds { get; }
+    // Conversion (statues)
+    public ConfigEntry<int> GhostsConvertedPerStatue { get; }
     public ConfigEntry<bool> ReviveDeadChasers { get; }
 
-    // Rewards (rule 10)
+    // Rewards
     public ConfigEntry<int> RewardItemCount { get; }
 
     // Network
@@ -73,6 +77,8 @@ internal sealed class ModConfig
     // UI (local)
     public ConfigEntry<bool> ShowChaserList { get; }
     public ConfigEntry<bool> FreezeScreenFrost { get; }
+    public ConfigEntry<float> CountdownOpacity { get; }
+    public ConfigEntry<bool> CaptureSound { get; }
 
     // Debug (local)
     public ConfigEntry<bool> DebugKeys { get; }
@@ -87,24 +93,26 @@ internal sealed class ModConfig
         _file = config;
 
         const string mod = "1. Modules";
-        EnableFreeze = Local(mod, "EnableFreeze", true, "Rules 2-5: head start and runner look-freeze.");
+        EnableFreeze = Local(mod, "EnableFreeze", true, "Runners freeze chasers by looking at them.");
         EnableTag = Local(mod, "EnableTag", true, "Chasers capture runners by colliding with them.");
-        EnableSafeZones = Local(mod, "EnableSafeZones", true, "Rule 8: campfires are safe zones; campfire checks ignore chasers.");
-        EnableFog = Local(mod, "EnableFog", true, "Rule 7: faster fog that only hurts runners.");
-        EnableItemRules = Local(mod, "EnableItemRules", true, "Rules 6 and 11: chaser item restrictions and banned items.");
-        EnableConversion = Local(mod, "EnableConversion", true, "Rule 9: dead runners convert to chasers at biome changes.");
-        EnableRewards = Local(mod, "EnableRewards", true, "Rule 10: first runner to each campfire gets ancient-luggage loot.");
+        EnableSafeZones = Local(mod, "EnableSafeZones", true, "Campfires are safe zones.");
+        EnableFog = Local(mod, "EnableFog", true, "Faster fog that only hurts runners.");
+        EnableItemRules = Local(mod, "EnableItemRules", true, "Chaser item restrictions and banned items.");
+        EnableConversion = Local(mod, "EnableConversion", true, "Using a scout statue turns one random ghost into a chaser.");
+        EnableRewards = Local(mod, "EnableRewards", true, "First runner into each campfire safe zone gets ancient-luggage loot.");
 
         const string round = "2. Round";
         ChaserCount = Synced(round, "ChaserCount", 1, "Chasers picked at round start (always leaves at least one runner).");
-        HeadStartSeconds = Synced(round, "HeadStartSeconds", 20f, "Seconds chasers are held in place at round start.");
-        AutoStartRound = Synced(round, "AutoStartRound", true, "Start a round automatically when the run starts (host).");
+        RoleRevealSeconds = Synced(round, "RoleRevealSeconds", 4f, "Seconds the role (CHASER / RUNNER) is shown at the start of each leg. Chasers stay frozen and blind during it.");
+        HeadStartSeconds = Synced(round, "HeadStartSeconds", 20f, "Runner head start after the role reveal. Chasers stay frozen and blind until it ends.");
+        AutoStartRound = Synced(round, "AutoStartRound", true, "Start a round automatically once everyone has woken up on the beach (host).");
+        ChaserSpeedMultiplier = Synced(round, "ChaserSpeedMultiplier", 1.15f, "Chaser movement speed multiplier (they can't use most items).");
 
         const string freeze = "3. Freeze";
-        FreezeRange = Synced(freeze, "FreezeRange", 25f, "Max distance (m) at which a runner looking at a chaser freezes them.");
+        FreezeRange = Synced(freeze, "FreezeRange", 26f, "A runner can only freeze a chaser that is within this distance (m).");
         FreezeConeDegrees = Synced(freeze, "FreezeConeDegrees", 15f, "Half-angle of the look cone (degrees).");
         FreezeDuration = Synced(freeze, "FreezeDuration", 5f, "Seconds a chaser stays frozen. Does not stack or extend.");
-        FreezeCooldownSeconds = Synced(freeze, "FreezeCooldownSeconds", 8f, "Seconds after a freeze ends before that chaser can be frozen again.");
+        FreezeCooldownSeconds = Synced(freeze, "FreezeCooldownSeconds", 8f, "Seconds after a freeze ends before that chaser can be frozen again (immunity).");
         FreezeHoldGrip = Synced(freeze, "FreezeHoldGrip", true, "Frozen while climbing: keep holding the wall.");
         FreezeLockStamina = Synced(freeze, "FreezeLockStamina", true, "Keep stamina constant while frozen.");
         FreezeZeroVelocity = Synced(freeze, "FreezeZeroVelocity", false, "Zero ragdoll velocities while frozen (anti-slide).");
@@ -119,7 +127,7 @@ internal sealed class ModConfig
         TagPassedOutRunners = Synced(tag, "TagPassedOutRunners", true, "Chasers can capture runners who are passed out.");
 
         const string safe = "5. SafeZones";
-        CampfireSafeRadius = Synced(safe, "CampfireSafeRadius", 12f, "Radius (m) around a campfire where runners can't be captured.");
+        CampfireSafeRadius = Synced(safe, "CampfireSafeRadius", 50f, "Radius (m) around a campfire that is a safe zone. A leg ends when every living runner is inside the next campfire's safe zone.");
         SafeZoneRequiresLit = Synced(safe, "SafeZoneRequiresLit", false, "Only lit campfires are safe zones.");
 
         const string fog = "6. Fog";
@@ -128,19 +136,21 @@ internal sealed class ModConfig
 
         const string items = "7. Items";
         ChaserAllowedItems = Synced(items, "ChaserAllowedItems", "", "Extra item names chasers may pick up/use (comma separated, prefab or display name).");
-        ChaserAutoAllowHealing = Synced(items, "ChaserAutoAllowHealing", true, "Chasers may use any item that heals injury.");
-        BanAmulets = Synced(items, "BanAmulets", true, "Nobody can pick up amulets.");
-        BanGems = Synced(items, "BanGems", true, "Nobody can pick up gems.");
+        ChaserAutoAllowHealing = Synced(items, "ChaserAutoAllowHealing", true, "Chasers may pick up and use items that heal injury.");
+        BanAmulets = Synced(items, "BanAmulets", true, "Remove amulets from the game.");
+        BanGems = Synced(items, "BanGems", true, "Remove gems (scout gems, strange gem, healing gem) from the game.");
+        BanBlowguns = Synced(items, "BanBlowguns", true, "Remove blowguns from the game.");
+        BanRescueClaws = Synced(items, "BanRescueClaws", true, "Remove rescue claws from the game.");
+        BanHiddenItems = Synced(items, "BanHiddenItems", true, "Remove hidden items that never spawn in normal PEAK (not in any spawn pool and not produced by another item). Check the log for what was detected.");
+        AllowedHiddenItems = Synced(items, "AllowedHiddenItems", "", "Hidden items to allow anyway (comma separated, prefab or display name).");
         BannedItems = Synced(items, "BannedItems", "", "Extra banned item names (comma separated, prefab or display name).");
 
         const string conv = "8. Conversion";
-        ConvertOnBiomeChange = Synced(conv, "ConvertOnBiomeChange", true, "When a campfire is lit, dead runners may become chasers.");
-        ConversionsPerBiome = Synced(conv, "ConversionsPerBiome", 1, "How many random dead runners convert per campfire.");
-        ConversionDelaySeconds = Synced(conv, "ConversionDelaySeconds", 6f, "Delay after lighting before the conversion happens.");
-        ReviveDeadChasers = Synced(conv, "ReviveDeadChasers", true, "Chasers who died are also revived at the campfire.");
+        GhostsConvertedPerStatue = Synced(conv, "GhostsConvertedPerStatue", 1, "How many of the ghosts (dead runners) revived by a scout statue become chasers; the rest come back as runners.");
+        ReviveDeadChasers = Synced(conv, "ReviveDeadChasers", true, "Chasers who died are also revived when a scout statue is used.");
 
         const string reward = "9. Rewards";
-        RewardItemCount = Synced(reward, "RewardItemCount", 3, "Items rolled from the ancient-luggage pool for the first runner at each campfire.");
+        RewardItemCount = Synced(reward, "RewardItemCount", 3, "Items rolled from the ancient-luggage pool for the first runner into each campfire safe zone.");
 
         const string net = "10. Network";
         KickPlayersWithoutMod = Local(net, "KickPlayersWithoutMod", false, "Host kicks players who don't have the same OnTheLookout version.");
@@ -148,6 +158,8 @@ internal sealed class ModConfig
         const string ui = "11. UI";
         ShowChaserList = Local(ui, "ShowChaserList", true, "Show the chaser list under the ascent label (top right).");
         FreezeScreenFrost = Local(ui, "FreezeScreenFrost", true, "Play PEAK's cold screen effect on your own screen while you are frozen.");
+        CountdownOpacity = Local(ui, "CountdownOpacity", 0.35f, "Opacity of the big head-start countdown on runners' screens (0-1).");
+        CaptureSound = Local(ui, "CaptureSound", true, "Play an explosion sound when a runner is captured.");
 
         const string debug = "12. Debug";
         DebugKeys = Local(debug, "DebugKeys", true, "Enable host debug keys.");

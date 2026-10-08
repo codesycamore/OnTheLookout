@@ -33,7 +33,8 @@ public partial class Plugin : BaseUnityPlugin
         root.hideFlags = HideFlags.HideAndDontSave;
         root.AddComponent<ModNetwork>();
 
-        // Round start (rule 1). Patch target: RunManager.StartRun() (postfix). Why: called once when a run begins.
+        // Round start. Patch target: RunManager.StartRun() (postfix). Why: called once when a run begins; the round
+        // itself starts once everyone has woken up on the beach (RoundManager.HostStartWhenReady).
         bool round = SafePatch.Postfix(_harmony, typeof(RunManager), nameof(RunManager.StartRun), typeof(Plugin), nameof(StartRunPostfix), "Round");
 
         // Input hold for head start (rule 2) and freeze (rules 3-5).
@@ -57,20 +58,23 @@ public partial class Plugin : BaseUnityPlugin
         bool fog = cfg.EnableFog.Value && FogSystem.Install(_harmony);
         bool items = cfg.EnableItemRules.Value && ItemRules.Install(_harmony);
         bool conversion = cfg.EnableConversion.Value && ConversionSystem.Install(_harmony);
+        bool speed = ChaserSpeed.Install(_harmony);
         RewardSystem.Enabled = cfg.EnableRewards.Value;
 
-        root.AddComponent<Hud>();
+        var ui = new GameObject("OnTheLookout_UI");
+        DontDestroyOnLoad(ui);
+        ui.AddComponent<Hud>();
 
         Log.LogInfo($"[OTL] {Name} {Version} loaded. round={round} freeze={input && cfg.EnableFreeze.Value} " +
             $"suspend={FreezeSuspendPatch.HooksAvailable} campfire={campfire} tag={tag} fog={fog} items={items} " +
-            $"conversion={conversion} rewards={RewardSystem.Enabled}");
+            $"conversion={conversion} speed={speed} rewards={RewardSystem.Enabled}");
     }
 
     private static void StartRunPostfix()
     {
         if (Net.InRoom && Net.IsHost && ModConfig.AutoStartRound.Value)
         {
-            RoundManager.HostStartRound();
+            ModNetwork.Instance?.StartCoroutine(RoundManager.HostStartWhenReady());
         }
     }
 }

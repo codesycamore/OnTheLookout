@@ -1,4 +1,4 @@
-using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using HarmonyLib;
 using OnTheLookout.Core;
@@ -8,61 +8,65 @@ using UnityEngine;
 namespace OnTheLookout.Modules;
 
 /// <summary>
-/// Rule 9: when a campfire is lit (the biome advances), one random dead runner (captured or killed
-/// by the environment; passing out doesn't count) becomes a chaser and is revived at that campfire
-/// with the game's own RPCA_ReviveAtPosition. Optionally dead chasers are revived too.
+/// Conversion: when a scout statue (RespawnChest) is used during a round and there are ghosts
+/// (dead runners - captured or killed; passing out doesn't count), the statue revives everyone dead
+/// as in vanilla, and one random revived ghost becomes an extra chaser
+/// (the others come back as runners). Dead chasers are revived too (optional).
+/// With no ghosts, the statue behaves exactly like vanilla (items, or reviving downed players).
 /// </summary>
 internal static class ConversionSystem
 {
     public static bool Install(Harmony harmony) =>
-        // Patch target: Campfire.Light_Rpc(bool updateSegment, float) (postfix, private [PunRPC]).
-        // Why: runs on every client when a campfire is lit; updateSegment=true means the run advances
-        // to the next segment (MapHandler.GoToSegment), and we get the campfire's position for free.
-        SafePatch.Postfix(harmony, typeof(Campfire), "Light_Rpc", typeof(ConversionSystem), nameof(LightPostfix), "Conversion");
+        // Patch target: RespawnChest.SpawnItems(List<Transform>) (prefix, host).
+        // Why: opening a statue calls this on the host; vanilla decides here between spawning items and
+        // RespawnAllPlayersHere() (which revives everyone dead). Hooking here also works on ascents
+        // where statues normally can't revive.
+        SafePatch.Prefix(harmony, typeof(RespawnChest), nameof(RespawnChest.SpawnItems), typeof(ConversionSystem), nameof(SpawnItemsPrefix), "Conversion");
 
-    public static void LightPostfix(Campfire __instance, bool updateSegment)
+    public static bool SpawnItemsPrefix(RespawnChest __instance, ref List<PhotonView> __result)
     {
-        if (!updateSegment || !Net.IsHost || !RoundManager.IsActive || !Plugin.ModConfig.ConvertOnBiomeChange.Synced()) return;
-        ModNetwork.Instance?.StartCoroutine(ConvertLater(__instance.transform.position));
-    }
+        if (!Net.IsHost || !RoundManager.IsActive) return true;
 
-    private static IEnumerator ConvertLater(Vector3 campfire)
-    {
-        yield return new WaitForSeconds(Plugin.ModConfig.ConversionDelaySeconds.Synced());
-        if (!Net.IsHost || !RoundManager.IsActive) yield break;
-
-        int[] pool = PhotonNetwork.PlayerList
-            .Select(p => p.ActorNumber)
+        int[] ghosts = PhotonNetwork.PlayerList.Select(p => p.ActorNumber)
             .Where(a => RoleManager.RoleOf(a) == Role.Runner && Net.CharacterOf(a) is { data.dead: true })
-            .OrderBy(_ => Random.value)
-            .Take(Mathf.Max(0, Plugin.ModConfig.ConversionsPerBiome.Synced()))
             .ToArray();
+        int[] deadChasers = Plugin.ModConfig.ReviveDeadChasers.Synced()
+            ? RoleManager.Chasers.Where(a => Net.CharacterOf(a) is { data.dead: true }).ToArray()
+            : System.Array.Empty<int>();
+        if (ghosts.Length == 0 && deadChasers.Length == 0) return true; // vanilla statue
 
-        foreach (int actor in pool)
+        __instance.photonView.RPC("RemoveSkeletonRPC", RpcTarget.AllBuffered);
+
+        // Everyone dead (or fully passed out) is revived, as in vanilla; then one random revived ghost
+        // (a dead runner) becomes a chaser and the rest come back as runners.
+        int[] converted = ghosts.OrderBy(_ => Random.value)
+            .Take(Mathf.Max(0, Plugin.ModConfig.GhostsConvertedPerStatue.Synced()))
+            .ToArray();
+        foreach (int actor in converted)
         {
             RoleManager.SetRole(actor, Role.Chaser);
-            Revive(actor, campfire);
             ModNetwork.Broadcast(Notice.Converted, actor, 0);
         }
 
-        if (Plugin.ModConfig.ReviveDeadChasers.Synced())
+        int revived = 0;
+        foreach (Character c in Character.AllCharacters)
         {
-            foreach (int actor in RoleManager.Chasers.ToArray())
-            {
-                if (pool.Contains(actor) || Net.CharacterOf(actor) is not { data.dead: true }) continue;
-                Revive(actor, campfire);
-            }
+            if (c.isBot || !(c.data.dead || c.data.fullyPassedOut)) continue;
+            if (RoleManager.RoleOf(Net.Actor(c)) == Role.Chaser && c.data.dead && !converted.Contains(Net.Actor(c))
+                && !Plugin.ModConfig.ReviveDeadChasers.Synced()) continue;
+            Revive(Net.Actor(c), __instance);
+            revived++;
         }
 
-        Plugin.Log.LogInfo($"[OTL][Conversion] HOST converted {pool.Length} runner(s): {string.Join(", ", pool.Select(Net.NameOf))}");
+        Plugin.Log.LogInfo($"[OTL][Conversion] HOST statue: revived {revived}, {ghosts.Length} ghost(s), converted {string.Join(", ", converted.Select(Net.NameOf))}.");
+        __result = new List<PhotonView>();
+        return false;
     }
 
-    private static void Revive(int actor, Vector3 campfire)
+    private static void Revive(int actor, RespawnChest statue)
     {
         Character? c = Net.CharacterOf(actor);
         if (c == null) return;
-        Vector2 offset = Random.insideUnitCircle.normalized * 4f;
-        Vector3 position = campfire + new Vector3(offset.x, 2f, offset.y);
-        c.view.RPC("RPCA_ReviveAtPosition", RpcTarget.All, position, false, -1);
+        c.view.RPC("RPCA_ReviveAtPosition", RpcTarget.All, statue.RandomRevivePoint, false, (int)statue.SegmentNumber);
     }
 }

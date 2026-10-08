@@ -96,3 +96,38 @@ Debug keys (host, bottom-left hint): **F7** start or restart a round, **F6** swa
 - [ ] All runners dead shows "THE CHASERS WIN". A runner at the peak shows "THE RUNNERS ESCAPED".
 - [ ] A friend without the mod: the host sees "X doesn't have OnTheLookout".
 - [ ] Host leaves mid-round: roles, freezes and the round continue under the new host.
+
+## Decided: playtest feedback 1 (2026-10-07)
+
+- **Round flow is campfire-to-campfire legs.** Each leg begins with a 4 s role reveal (red CHASER / yellow RUNNER) and then the head start. Chasers are **frozen and blind** for both; the blackness fades over the last 40%. Runners see a big translucent white countdown.
+- **A leg ends** when every living runner is within **50 m** of the next (unlit) campfire. Everyone sees "ALL RUNNERS ARE SAFE". Captures and freezes pause until the next leg.
+- **Only runners can light campfires.** Lighting one starts the next leg (reveal, blind chasers, head start).
+- **The first round waits** until everyone has woken up on the beach. The old head start ran out during the wake-up animation, which is why chasers could move.
+- **Conversion moved to scout statues.** Using one during a round revives **everyone who is dead** (as in vanilla). One random revived ghost (a dead runner) becomes an extra chaser, and the rest come back as runners. With no ghosts, the statue works as in vanilla.
+- **No captures** inside a safe zone (50 m).
+- **Freeze range 26 m.** A runner can only freeze a chaser within 26 m.
+- **Chasers are 15% faster** (`ChaserSpeedMultiplier`).
+- **Removed from the game:** amulets, gems, blowguns, rescue claws, and hidden items that never spawn in normal play. They're destroyed on spawn and can't be picked up or used by anyone.
+- **Chasers can only use healing items:** blocked at hover, pickup (client and host) and use.
+- **Capture sound:** PEAK's dynamite explosion sound plays at the captured runner.
+- **Timer bar:** a light-blue bar above the stamina bar shows FROZEN and IMMUNE time. The progress ring is gone.
+
+**Assumptions to confirm:**
+- "All live *chasers* made it into the safe zone" was read as **runners**.
+- After a leg completes, captures stay paused until a runner lights the campfire **and the new head start has run out** (confirmed 2026-10-07).
+- ~~Other ghosts stay dead~~ → corrected: everyone is revived and one random ghost becomes a chaser (confirmed 2026-10-07).
+
+## Test plan: playtest 2
+
+- [ ] The round starts about 1 s after the last player wakes up on the beach.
+- [ ] Reveal: red CHASER / yellow RUNNER in the centre for 4 s. Chasers' screens are black.
+- [ ] Countdown: runners see a big translucent number. Chasers see "THE HUNT BEGINS IN" over black that fades near the end. Chasers can't move at all, including mid-air.
+- [ ] Timer bar above the stamina bar: light-blue FROZEN, then paler IMMUNE. Check its position and size on your resolution.
+- [ ] A chaser further than 26 m can't be frozen. Turn on `LogLookChecks` to see distances.
+- [ ] Chasers feel faster than runners.
+- [ ] Items: as a chaser, non-healing items show no pickup prompt and can't be used. Healing items work. **Copy the `[OTL][Items]` log lines**, especially the "hidden" list: if a normal item shows up there, add it to `AllowedHiddenItems`.
+- [ ] No amulets, gems, blowguns or rescue claws in luggage. If one appears, it can't be picked up.
+- [ ] Capture: explosion sound plus toast. No capture within 50 m of a campfire.
+- [ ] All living runners within 50 m of the next campfire: "ALL RUNNERS ARE SAFE".
+- [ ] A chaser can't light the campfire. A runner can, and that starts the reveal, blindness and head start again.
+- [ ] Scout statue with ghosts: all ghosts revive, one random one as a chaser and appears in the chaser list with "CHASER - YOU HAVE JOINED THE CHASERS". With no ghosts, vanilla behaviour.
