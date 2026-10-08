@@ -2,6 +2,8 @@
 
 **Chasers vs Runners for PEAK.** A few scouts are secretly chosen as **chasers** and hunt everyone else up the mountain. **Runners** have to make it from campfire to campfire, and finally to the peak, without getting caught. A runner's best defence is to turn around and **look at a chaser** to freeze them in place.
 
+> **New in 1.1.0:** roles now last for the whole run (dead and converted chasers stay chasers), chasers take 1/4 fall damage and climb 6% faster but can't use energy drinks, lollipops, shroomberries or most Roots fungi, runners regenerate stamina 18% faster, and the blowgun cooldown is a countdown above its slot. See the changelog.
+
 > **Everyone in the lobby needs this mod** (same version). The host runs the game: roles, freezes, captures and rewards are all decided by the host and synced to everyone.
 
 ---
@@ -22,6 +24,7 @@
 
 ### Captures, ghosts and new chasers
 - Captured runners (and runners who die any other way) become **ghosts**. Passing out is **not** death: teammates can still revive or carry a passed-out runner.
+- **Roles last for the whole run.** A chaser who dies is still a chaser when revived, and so is anyone who became a chaser. Roles are only re-rolled when a new run starts from the airport.
 - Using a **scout statue** revives everyone who is dead, as in vanilla, but **one revived ghost is randomly turned into an extra chaser** and gets a blowgun. With no ghosts, the statue works as normal.
 
 ---
@@ -29,14 +32,14 @@
 ## Chasers
 
 **Perks**
-- **15% faster** than runners.
-- **Blowgun** with **unlimited** darts (30 s cooldown, shown as a ring above its hotbar slot). A dart doesn't knock the runner out: it adds **10% drowsiness** and marks them with **flare smoke in their own skin colour** for 5 seconds, so everyone can see where they are.
+- **15% faster** than runners, and **6% faster climbing** (walls, ropes, vines).
+- **Blowgun** with **unlimited** darts (30 s cooldown, counted down above its hotbar slot). A dart doesn't knock the runner out: it adds **10% drowsiness** and marks them with **flare smoke in their own skin colour** for 5 seconds, so everyone can see where they are.
 - **Capture rush:** each capture gives a short **+1% speed** boost (5 s; each further capture during the boost adds +0.5%) and a **full morale boost** (extra-stamina bar).
-- **Tough:** only **1/3** of every negative status (injury, cold, poison, drowsiness, …), **no fall damage**, **immune to fog**, ignored by **mushroom zombies**. *Hunger works the same as for runners.*
+- **Tough:** only **1/3** of every negative status (injury, cold, poison, drowsiness, …), only **1/4 fall damage** (still scaled by the ascent), **immune to fog**, ignored by **mushroom zombies**. *Hunger works the same as for runners.*
 - **Clown luggage** is theirs: only chasers can open it, and it's full of food and healing items.
 
 **Drawbacks**
-- Can only pick up and use **food and healing items** (plus their blowgun).
+- Can only pick up and use **food and healing items** (plus their blowgun), and **never energy drinks, lollipops, shroomberries or the Roots fungi** (Bounce, Cloud, Shelf, Warp; the healing Remedy Fungus is allowed).
 - Can only open **clown luggage** (scout statues still work).
 - **Can't light campfires.**
 - **Can't see ghosts**, since a ghost floats around the runner it spectates.
@@ -50,7 +53,7 @@
 - **Freeze chasers** by looking at them (26 m, 6.5 s; no stacking, 8 s immunity afterwards).
 - **Head start** at every leg.
 - **Safe zones** around every campfire.
-- **12% faster stamina regeneration.**
+- **18% faster stamina regeneration.**
 - A **backpack** at the start of the round, and **one random item** at the start of every leg: a snowball, a brown berrynana or a fortified milk.
 - **Fortified milk** protects you from being captured while it's active.
 - First runner into each campfire's safe zone gets an **energy drink**.
@@ -70,7 +73,7 @@
 ## HUD
 - **Role reveal** and **head-start countdown** in the middle of the screen (translucent for runners).
 - **Chaser list** in the top right, under the ascent label. Frozen chasers show in ice blue with their remaining time; dead chasers are crossed out.
-- **Blowgun cooldown ring** above the blowgun's hotbar slot.
+- **Blowgun cooldown** in seconds above the blowgun's hotbar slot.
 - Short notices for captures, new chasers and rewards.
 
 ## Host controls
@@ -116,15 +119,16 @@ Settings live in `BepInEx/config/codesycamore.OnTheLookout.cfg` (or the mod mana
 | `NoTitleFallbackSeconds` | 12 | …or this long after lighting if no title shows. |
 | `SpawnInteractLockSeconds` | 7 | No interacting on the shore until this long after the round starts. |
 | `ChaserSpeedMultiplier` | 1.15 | Chaser movement speed. |
+| `ChaserClimbSpeedMultiplier` | 1.06 | Chaser climbing speed (walls, ropes, vines). |
 | `CaptureBoostPercent` | 1 | Speed boost (%) after a capture. |
 | `CaptureBoostStackPercent` | 0.5 | Extra boost (%) per further capture during the boost. |
 | `CaptureBoostSeconds` | 5 | Capture boost duration. |
 | `CaptureMoraleBoost` | true | Capturing gives a full morale boost. |
 | `ChaserStatusMultiplier` | 0.333 | Fraction of negative statuses chasers take (not hunger). |
-| `ChaserNoFallDamage` | true | Chasers take no fall damage. |
+| `ChaserFallDamageMultiplier` | 0.25 | Fraction of vanilla fall damage chasers take (ascent-scaled). 0 = none. |
 | `ZombiesIgnoreChasers` | true | Mushroom zombies ignore chasers. |
 | `TeleportChasersOnLegComplete` | true | Bring chasers to the campfire when the runners are all safe. |
-| `RunnerStaminaRegenMultiplier` | 1.12 | Runner stamina regeneration. |
+| `RunnerStaminaRegenMultiplier` | 1.18 | Runner stamina regeneration. |
 | `RunnerBackpacks` | true | Runners get a backpack at round start. |
 | `RunnerLegItems` | `Snowball, Brown Berrynana, Fortified Milk` | One random item per runner each leg. Empty = off. |
 | `CampfireFoodItems` | `Marshmallow, Glizzy` | Food laid out (one per player) when a leg ends. `Glizzy` is the hot dog. |
@@ -188,7 +192,8 @@ Settings live in `BepInEx/config/codesycamore.OnTheLookout.cfg` (or the mod mana
 |---|---|---|
 | `ChaserAutoAllowHealing` | true | Chasers can use healing items. |
 | `ChaserAutoAllowFood` | true | Chasers can eat food. |
-| `ChaserAllowedItems` | *(empty)* | Extra items chasers may use (names, comma separated). |
+| `ChaserAllowedItems` | `Remedy Fungus` | Extra items chasers may always use (names, comma separated). |
+| `ChaserForbiddenItems` | `Energy Drink, Big Lollipop, Bounce Fungus, Cloud Fungus, Shelf Fungus, Warp Fungus, Blue Shroomberry, Green Shroomberry, Purple Shroomberry, Red Shroomberry, Yellow Shroomberry` | Items chasers can never use, even if they are food or healing. |
 | `ClownLuggageChasersOnly` | true | Only chasers open clown luggage (food/healing inside). |
 | `ChasersOnlyOpenClownLuggage` | true | Chasers can't open other luggage. |
 | `BanAmulets` / `BanGems` / `BanRescueClaws` | true | Remove these items. |

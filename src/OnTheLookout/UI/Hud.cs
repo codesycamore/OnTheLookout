@@ -136,7 +136,7 @@ internal sealed class Hud : MonoBehaviour
         BuildChaserList(_hudCanvas.transform, gui.interactNameText);
         BuildToast(_hudCanvas.transform, gui.interactNameText);
         _blowgunCooldown?.Destroy();
-        _blowgunCooldown = new BlowgunCooldownUI(_hudCanvas, gui.interactNameText);
+        if (_overlay != null) _blowgunCooldown = new BlowgunCooldownUI(_overlay, gui.heroText != null ? gui.heroText : gui.interactNameText);
         Plugin.Log.LogInfo($"[OTL][UI] HUD built on '{_hudCanvas.name}' (stamina bar found: {gui.bar != null}).");
         return true;
     }

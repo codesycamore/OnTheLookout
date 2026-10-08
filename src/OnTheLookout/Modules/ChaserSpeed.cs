@@ -60,3 +60,54 @@ internal static class ChaserSpeed
         __result *= Plugin.ModConfig.ChaserSpeedMultiplier.Synced() * (1f + BoostPercent(Net.Actor(c)) / 100f);
     }
 }
+
+/// <summary>
+/// Chasers climb a bit faster (walls, ropes and vines). PEAK's climbing speed is the additive
+/// climbSpeedMod on CharacterClimbing / CharacterRopeHandling / CharacterVineClimbing (base 1; the energy
+/// drink's Affliction_FasterBoi adds to it the same way). Climbing is simulated by the player's own
+/// client, so only the local character is adjusted; the exact amount added is tracked and removed again
+/// when the player stops being a chaser.
+/// </summary>
+internal sealed class ChaserClimbBoost : MonoBehaviour
+{
+    private Character? _applied;
+    private float _delta;
+
+    private void Update()
+    {
+        Character local = Character.localCharacter;
+        float want = local != null && RoleManager.IsChaser(local)
+            ? Plugin.ModConfig.ChaserClimbSpeedMultiplier.Synced() - 1f
+            : 0f;
+
+        if (_applied != local || !Mathf.Approximately(want, _delta))
+        {
+            Remove();
+            if (local != null && want != 0f) Apply(local, want);
+        }
+    }
+
+    private void Apply(Character c, float delta)
+    {
+        c.refs.climbing.climbSpeedMod += delta;
+        c.refs.ropeHandling.climbSpeedMod += delta;
+        c.refs.vineClimbing.climbSpeedMod += delta;
+        _applied = c;
+        _delta = delta;
+    }
+
+    private void Remove()
+    {
+        if (_applied != null && _delta != 0f)
+        {
+            _applied.refs.climbing.climbSpeedMod -= _delta;
+            _applied.refs.ropeHandling.climbSpeedMod -= _delta;
+            _applied.refs.vineClimbing.climbSpeedMod -= _delta;
+        }
+
+        _applied = null;
+        _delta = 0f;
+    }
+
+    private void OnDisable() => Remove();
+}

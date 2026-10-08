@@ -92,20 +92,51 @@ internal static class RoundManager
     // ---------- Host ----------
 
     /// <summary>Host: wait until every player has spawned and woken up on the beach, then start.</summary>
+    /// <summary>Room property: the PEAK run (RunManager.RunId) the current round belongs to.</summary>
+    public const string RunKey = "otl.run";
+
+    private static bool s_StartPending;
+
+    private static string CurrentRunId => RunManager.Instance != null ? RunManager.Instance.RunId.ToString() : "";
+
+    /// <summary>
+    /// Host, after RunManager.StartRun: wait until everyone has woken up, then start a round - but only for
+    /// a NEW run. PEAK calls StartRun more than once per run (RunManager.Start and RunStarter, and again
+    /// when a run scene loads or a quicksave resumes); if a round is already going for this run, roles
+    /// (including dead and converted chasers) are kept. A fresh run from the airport has a new RunId.
+    /// </summary>
     public static IEnumerator HostStartWhenReady()
     {
-        float deadline = Time.time + 60f;
-        while (Time.time < deadline)
+        if (s_StartPending) yield break; // another StartRun call is already waiting
+        s_StartPending = true;
+        try
         {
-            if (!Net.InRoom || !Net.IsHost) yield break;
-            bool ready = PhotonNetwork.PlayerList.All(p => Net.CharacterOf(p.ActorNumber) is { } c
-                && !c.data.passedOut && !c.data.fullyPassedOut && c.data.fallSeconds <= 0f && c.data.passedOutOnTheBeach <= 0f);
-            if (ready) break;
-            yield return new WaitForSeconds(0.5f);
-        }
+            float deadline = Time.time + 60f;
+            while (Time.time < deadline)
+            {
+                if (!Net.InRoom || !Net.IsHost) yield break;
+                bool ready = PhotonNetwork.PlayerList.All(p => Net.CharacterOf(p.ActorNumber) is { } c
+                    && !c.data.passedOut && !c.data.fullyPassedOut && c.data.fallSeconds <= 0f && c.data.passedOutOnTheBeach <= 0f);
+                if (ready) break;
+                yield return new WaitForSeconds(0.5f);
+            }
 
-        yield return new WaitForSeconds(1f);
-        HostStartRound();
+            yield return new WaitForSeconds(1f); // PEAK assigns a fresh run its RunId ~2 s after StartRun
+            if (!Net.InRoom || !Net.IsHost) yield break;
+
+            string run = CurrentRunId;
+            if (IsActive && run.Length > 0 && Net.GetRoom(RunKey) as string == run)
+            {
+                Plugin.Log.LogInfo($"[OTL][Round] HOST: StartRun again during the same run ({run}); keeping the round and everyone's roles.");
+                yield break;
+            }
+
+            HostStartRound();
+        }
+        finally
+        {
+            s_StartPending = false;
+        }
     }
 
     /// <summary>Host: assign roles and start (or restart) a round.</summary>
@@ -113,6 +144,7 @@ internal static class RoundManager
     {
         if (!Net.IsHost) return;
         ConfigSync.Publish();
+        Net.SetRoom(RunKey, CurrentRunId);
         RoleManager.AssignRandom();
         FreezeState.HostReset();
         RewardSystem.HostReset();

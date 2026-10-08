@@ -93,6 +93,7 @@ internal static class ItemCatalog
         Info info = Classify(e);
         var cfg = Plugin.ModConfig;
         return info.BanReason == null
+            && !MatchesList(e, cfg.ChaserForbiddenItems.Synced()) // explicit block-list beats the food/healing rules
             && (info.Blowgun
                 || MatchesList(e, cfg.ChaserAllowedItems.Synced())
                 || (cfg.ChaserAutoAllowHealing.Synced() && info.Healing)
@@ -104,7 +105,7 @@ internal static class ItemCatalog
         var cfg = Plugin.ModConfig;
         string stamp = string.Join("|", cfg.BanAmulets.Synced(), cfg.BanGems.Synced(), cfg.BanRescueClaws.Synced(),
             cfg.BanHiddenItems.Synced(), cfg.AllowedHiddenItems.Synced(), cfg.BannedItems.Synced(), cfg.AllowJetpacks.Synced(), cfg.AllowGliders.Synced(),
-            cfg.RunnerLegItems.Synced(), cfg.ChaserAllowedItems.Synced(), cfg.CampfireFoodItems.Synced());
+            cfg.RunnerLegItems.Synced(), cfg.ChaserAllowedItems.Synced(), cfg.CampfireFoodItems.Synced(), cfg.ChaserForbiddenItems.Synced());
         if (stamp != s_Stamp)
         {
             s_Cache.Clear();
@@ -245,7 +246,7 @@ internal static class ItemCatalog
             return s_ClownLoot ??= AllItems()
                 .Where(i => s_Legit != null && s_Legit.Contains(i.itemID) && i.isSecretlyOtherItemPrefab == null)
                 .Where(i => i.GetComponent<LootData>() is { } loot && loot.spawnLocations != SpawnPool.None)
-                .Where(i => !RemoveFromWorld(i) && (Classify(i).Food || Classify(i).Healing))
+                .Where(i => !RemoveFromWorld(i) && (Classify(i).Food || Classify(i).Healing) && !MatchesList(i, Plugin.ModConfig.ChaserForbiddenItems.Synced()))
                 .ToList();
         }
     }

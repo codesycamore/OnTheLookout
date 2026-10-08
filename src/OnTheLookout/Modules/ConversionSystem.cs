@@ -55,7 +55,11 @@ internal static class ConversionSystem
             if (c.isBot || !(c.data.dead || c.data.fullyPassedOut)) continue;
             if (RoleManager.RoleOf(Net.Actor(c)) == Role.Chaser && c.data.dead && !converted.Contains(Net.Actor(c))
                 && !Plugin.ModConfig.ReviveDeadChasers.Synced()) continue;
+            bool deadChaser = c.data.dead && RoleManager.RoleOf(Net.Actor(c)) == Role.Chaser && !converted.Contains(Net.Actor(c));
             Revive(Net.Actor(c), __instance);
+
+            // A chaser who died stays a chaser for the rest of the run; dying dropped their blowgun, so give it back.
+            if (deadChaser) LegLoadout.GiveBlowgunLater(Net.Actor(c)); // checked before the revive: it runs on the host immediately
             revived++;
         }
 

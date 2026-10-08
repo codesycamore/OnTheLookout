@@ -28,7 +28,7 @@ internal sealed class ModConfig
     public ConfigEntry<float> BiomeTitleSeconds { get; }
     public ConfigEntry<float> SpawnInteractLockSeconds { get; }
     public ConfigEntry<float> ChaserStatusMultiplier { get; }
-    public ConfigEntry<bool> ChaserNoFallDamage { get; }
+    public ConfigEntry<float> ChaserFallDamageMultiplier { get; }
     public ConfigEntry<bool> ZombiesIgnoreChasers { get; }
     public ConfigEntry<bool> TeleportChasersOnLegComplete { get; }
     public ConfigEntry<bool> CaptureMoraleBoost { get; }
@@ -37,6 +37,7 @@ internal sealed class ModConfig
     public ConfigEntry<string> RewardItems { get; }
     public ConfigEntry<float> NoTitleFallbackSeconds { get; }
     public ConfigEntry<float> ChaserSpeedMultiplier { get; }
+    public ConfigEntry<float> ChaserClimbSpeedMultiplier { get; }
     public ConfigEntry<float> CaptureBoostPercent { get; }
     public ConfigEntry<float> CaptureBoostStackPercent { get; }
     public ConfigEntry<float> CaptureBoostSeconds { get; }
@@ -87,6 +88,7 @@ internal sealed class ModConfig
 
     // Items
     public ConfigEntry<string> ChaserAllowedItems { get; }
+    public ConfigEntry<string> ChaserForbiddenItems { get; }
     public ConfigEntry<bool> ChaserAutoAllowHealing { get; }
     public ConfigEntry<bool> ChaserAutoAllowFood { get; }
     public ConfigEntry<bool> ClownLuggageChasersOnly { get; }
@@ -152,16 +154,17 @@ internal sealed class ModConfig
         NoTitleFallbackSeconds = Synced(round, "NoTitleFallbackSeconds", 12f, "If nobody sees a biome title after a campfire is lit, the next leg starts this long after lighting anyway.");
         SpawnInteractLockSeconds = Synced(round, "SpawnInteractLockSeconds", 7f, "At the start of a run on the shore nothing can be interacted with while everyone wakes up and for this many seconds after the round starts.");
         ChaserStatusMultiplier = Synced(round, "ChaserStatusMultiplier", 0.333f, "Chasers take this fraction of every negative status (injury, cold, poison, drowsy, ...) they would get in vanilla at the current ascent. Hunger is not reduced.");
-        ChaserNoFallDamage = Synced(round, "ChaserNoFallDamage", true, "Chasers never take fall damage.");
+        ChaserFallDamageMultiplier = Synced(round, "ChaserFallDamageMultiplier", 0.25f, "Fraction of vanilla fall damage chasers take (0.25 = 1/4). Still scales with the ascent like vanilla. 0 = no fall damage.");
         ZombiesIgnoreChasers = Synced(round, "ZombiesIgnoreChasers", true, "Mushroom zombies don't target or bite chasers.");
         TeleportChasersOnLegComplete = Synced(round, "TeleportChasersOnLegComplete", true, "When every living runner reaches the next campfire's safe zone, living chasers are teleported to that campfire too.");
         CaptureMoraleBoost = Synced(round, "CaptureMoraleBoost", true, "A chaser who captures a runner also gets a full morale boost (full extra-stamina bar).");
         EnergyDrinkDrowsyMultiplier = Synced(round, "EnergyDrinkDrowsyMultiplier", 1.5f, "Multiplier for the drowsiness an energy drink causes when it wears off.");
         ChaserSpeedMultiplier = Synced(round, "ChaserSpeedMultiplier", 1.15f, "Chaser movement speed multiplier (they can't use most items).");
+        ChaserClimbSpeedMultiplier = Synced(round, "ChaserClimbSpeedMultiplier", 1.06f, "Chaser climbing speed on walls, ropes and vines (1.06 = 6% faster).");
         CaptureBoostPercent = Synced(round, "CaptureBoostPercent", 1f, "Temporary chaser speed boost (%) after a capture.");
         CaptureBoostStackPercent = Synced(round, "CaptureBoostStackPercent", 0.5f, "Extra boost (%) for each further capture while the boost is still active.");
         CaptureBoostSeconds = Synced(round, "CaptureBoostSeconds", 5f, "How long the capture boost lasts (refreshed by each capture).");
-        RunnerStaminaRegenMultiplier = Synced(round, "RunnerStaminaRegenMultiplier", 1.12f, "Runner stamina regeneration multiplier (1.12 = 12% faster).");
+        RunnerStaminaRegenMultiplier = Synced(round, "RunnerStaminaRegenMultiplier", 1.18f, "Runner stamina regeneration multiplier (1.18 = 18% faster).");
         RunnerLegItems = Synced(round, "RunnerLegItems", "Snowball, Brown Berrynana, Fortified Milk", "At the start of each leg every runner gets ONE random item from this list (prefab or display names, comma separated). Empty = off.");
         RunnerBackpacks = Synced(round, "RunnerBackpacks", true, "After roles are assigned at the start of a round, every runner without a backpack gets one.");
         CampfireFoodItems = Synced(round, "CampfireFoodItems", "Marshmallow, Glizzy", "When the chase of a leg ends at a campfire, the host makes sure there is one of these per living player near the fire (random pick each; spawns only what is missing). Glizzy = the hot dog. Empty = off.");
@@ -210,7 +213,8 @@ internal sealed class ModConfig
         FogIgnoresChasers = Synced(fog, "FogIgnoresChasers", true, "Chasers don't count when deciding whether the fog starts moving. (Campfire lighting/resting always ignores chasers during a round.)");
 
         const string items = "7. Items";
-        ChaserAllowedItems = Synced(items, "ChaserAllowedItems", "", "Extra item names chasers may pick up/use (comma separated, prefab or display name).");
+        ChaserAllowedItems = Synced(items, "ChaserAllowedItems", "Remedy Fungus", "Extra item names chasers may pick up/use (comma separated, prefab or display name).");
+        ChaserForbiddenItems = Synced(items, "ChaserForbiddenItems", "Energy Drink, Big Lollipop, Bounce Fungus, Cloud Fungus, Shelf Fungus, Warp Fungus, Blue Shroomberry, Green Shroomberry, Purple Shroomberry, Red Shroomberry, Yellow Shroomberry", "Items chasers may never pick up or use, even though they are food or healing (comma separated, display or prefab names). Also kept out of clown luggage.");
         ChaserAutoAllowHealing = Synced(items, "ChaserAutoAllowHealing", true, "Chasers may pick up and use items that heal injury.");
         ChaserAutoAllowFood = Synced(items, "ChaserAutoAllowFood", true, "Chasers may pick up and eat food.");
         ClownLuggageChasersOnly = Synced(items, "ClownLuggageChasersOnly", true, "During a round only chasers can open clown luggage, and it contains food and healing items.");

@@ -71,6 +71,7 @@ public partial class Plugin : BaseUnityPlugin
         ui.AddComponent<GhostVisibility>();
         ui.AddComponent<ChaseEffects>();
         root.AddComponent<AdminRestart>();
+        root.AddComponent<ChaserClimbBoost>();
         UnityEngine.SceneManagement.SceneManager.sceneLoaded += (_, _) => ItemCatalog.OnSceneLoaded();
 
         Log.LogInfo($"[OTL] {Name} {Version} loaded. round={round} freeze={input && cfg.EnableFreeze.Value} " +

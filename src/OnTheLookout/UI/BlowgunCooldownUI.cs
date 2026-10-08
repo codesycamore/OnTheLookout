@@ -1,74 +1,52 @@
+using DG.Tweening;
 using OnTheLookout.Core;
 using OnTheLookout.Modules;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace OnTheLookout.UI;
 
 /// <summary>
-/// Blowgun cooldown indicator for chasers: a clone of PEAK's own action progress ring
-/// (UI_UseItemProgress) draining over the cooldown, with the seconds left in the middle.
-/// It lives directly on the HUD canvas (drawn on top, not inside the hotbar's own layout, which can
-/// clip or hide extra children) and is moved every frame to sit just above the hotbar slot holding
-/// the blowgun, or above the middle of the hotbar if that slot can't be found.
+/// Blowgun cooldown for chasers: the seconds left as a number, in the same PEAK title font as the
+/// head-start countdown but smaller, just above the hotbar slot that holds the blowgun.
+/// It lives on the mod's own overlay canvas (always drawn on top, nothing in PEAK's HUD can hide or
+/// clip it) and is placed by converting the slot's position to screen space and back, so it lines up
+/// whatever render mode PEAK's HUD canvas uses. Falls back to above the middle of the hotbar.
 /// </summary>
 internal sealed class BlowgunCooldownUI
 {
-    private const float RingScale = 0.8f;
-    private const float AboveSlotPixels = 70f;
+    private const float FontSize = 64f;
+    private const float AboveSlot = 45f; // overlay units above the slot's top edge
 
+    private readonly RectTransform _overlay;
     private readonly RectTransform _root;
-    private readonly Image? _fill;
     private readonly TextMeshProUGUI _text;
     private readonly Vector3[] _corners = new Vector3[4];
+    private int _lastShown = -1;
     private bool _logged;
 
-    public bool IsValid => _root != null;
+    public bool IsValid => _root != null && _overlay != null;
 
-    public BlowgunCooldownUI(Canvas hud, TextMeshProUGUI fontStyle)
+    public BlowgunCooldownUI(Canvas overlay, TextMeshProUGUI fontStyle)
     {
+        _overlay = (RectTransform)overlay.transform;
         var go = new GameObject("OTL_BlowgunCooldown", typeof(RectTransform));
         _root = (RectTransform)go.transform;
-        _root.SetParent(hud.transform, false);
+        _root.SetParent(_overlay, false);
         _root.anchorMin = _root.anchorMax = _root.pivot = new Vector2(0.5f, 0.5f);
-        _root.sizeDelta = new Vector2(120f, 120f);
-        go.SetActive(false);
+        _root.sizeDelta = new Vector2(200f, 90f);
 
-        UI_UseItemProgress? template = hud.GetComponentInChildren<UI_UseItemProgress>(true);
-        if (template != null)
-        {
-            GameObject ring = Object.Instantiate(template.gameObject, _root);
-            ring.name = "OTL_BlowgunRing";
-            UI_UseItemProgress clone = ring.GetComponent<UI_UseItemProgress>();
-            _fill = clone.fill;
-            Image empty = clone.empty;
-            Object.DestroyImmediate(clone); // stop the game's script from driving (and hiding) our copy
-            ring.SetActive(true);
-            var rt = (RectTransform)ring.transform;
-            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = Vector2.zero;
-            rt.localScale = Vector3.one * RingScale;
-            _fill.enabled = empty.enabled = true;
-            _fill.color = new Color(1f, 0.45f, 0.35f);
-        }
-
-        var textGo = new GameObject("OTL_BlowgunCooldownText", typeof(RectTransform));
-        var textRect = (RectTransform)textGo.transform;
-        textRect.SetParent(_root, false);
-        textRect.sizeDelta = new Vector2(140f, 70f);
-        _text = textGo.AddComponent<TextMeshProUGUI>();
+        _text = go.AddComponent<TextMeshProUGUI>();
         _text.font = fontStyle.font;
         _text.fontSharedMaterial = fontStyle.fontSharedMaterial;
-        _text.fontSize = fontStyle.fontSize;
+        _text.fontSize = FontSize;
         _text.alignment = TextAlignmentOptions.Center;
         _text.textWrappingMode = TextWrappingModes.NoWrap;
         _text.raycastTarget = false;
         _text.color = Color.white;
-        _text.outlineWidth = 0.25f;
+        _text.outlineWidth = 0.2f;
         _text.outlineColor = new Color32(20, 30, 45, 255);
-
-        Plugin.Log.LogInfo($"[OTL][UI] blowgun cooldown indicator built (PEAK ring found: {template != null}).");
+        go.SetActive(false);
     }
 
     public void Update(GUIManager gui)
@@ -76,34 +54,45 @@ internal sealed class BlowgunCooldownUI
         Character local = Character.localCharacter;
         bool show = BlowgunSystem.OnCooldown && local != null && RoleManager.IsChaser(local) && !local.data.dead;
         if (_root.gameObject.activeSelf != show) _root.gameObject.SetActive(show);
-        if (!show) return;
-
-        _root.SetAsLastSibling(); // draw above the rest of the HUD
+        if (!show)
+        {
+            _lastShown = -1;
+            return;
+        }
 
         int slot = BlowgunSlot();
         RectTransform? anchor = SlotRect(gui, slot) ?? SlotRect(gui, gui.items != null ? gui.items.Length / 2 : -1);
+        Vector2 position = new(0f, -_overlay.rect.height * 0.5f + 220f); // bottom-centre fallback
         if (anchor != null)
         {
             anchor.GetWorldCorners(_corners); // 1 top-left, 2 top-right
             Vector3 topCenter = (_corners[1] + _corners[2]) * 0.5f;
-            _root.position = topCenter + anchor.up * (AboveSlotPixels * _root.lossyScale.y);
+            Canvas? slotCanvas = anchor.GetComponentInParent<Canvas>();
+            Camera? cam = slotCanvas != null && slotCanvas.renderMode != RenderMode.ScreenSpaceOverlay ? slotCanvas.worldCamera : null;
+            Vector2 screen = RectTransformUtility.WorldToScreenPoint(cam, topCenter);
+            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(_overlay, screen, null, out Vector2 local2))
+            {
+                position = local2 + new Vector2(0f, AboveSlot);
+            }
         }
-        else
+
+        _root.anchoredPosition = position;
+
+        int seconds = Mathf.CeilToInt(BlowgunSystem.CooldownSecondsLeft);
+        if (seconds != _lastShown)
         {
-            _root.anchorMin = _root.anchorMax = new Vector2(0.5f, 0f);
-            _root.anchoredPosition = new Vector2(0f, 220f);
+            _lastShown = seconds;
+            _text.text = seconds.ToString();
+            _root.DOKill();
+            _root.localScale = Vector3.one * 1.2f;
+            _root.DOScale(1f, 0.2f).SetEase(Ease.OutBack); // same little pop as the head-start countdown
         }
 
         if (!_logged)
         {
             _logged = true;
-            Plugin.Log.LogInfo($"[OTL][UI] blowgun cooldown shown (blowgun slot {slot}, anchored to {(anchor != null ? anchor.name : "screen bottom")}).");
+            Plugin.Log.LogInfo($"[OTL][UI] blowgun cooldown shown (blowgun slot {slot}, above {(anchor != null ? anchor.name : "screen bottom")}, at {position}).");
         }
-
-        float total = Mathf.Max(0.1f, Plugin.ModConfig.BlowgunCooldownSeconds.Synced());
-        float left = BlowgunSystem.CooldownSecondsLeft;
-        if (_fill != null) _fill.fillAmount = left / total;
-        _text.text = Mathf.CeilToInt(left).ToString();
     }
 
     private static RectTransform? SlotRect(GUIManager gui, int slot) =>
