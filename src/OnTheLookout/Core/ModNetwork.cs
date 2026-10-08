@@ -48,6 +48,7 @@ internal sealed class ModNetwork : MonoBehaviourPunCallbacks, Photon.Realtime.IO
 
         Safe(RoundManager.HostTick);
         Safe(RewardSystem.HostTick);
+        Safe(ZombieHunt.HostTick);
     }
 
     // ---------- Room lifecycle ----------
@@ -81,6 +82,7 @@ internal sealed class ModNetwork : MonoBehaviourPunCallbacks, Photon.Realtime.IO
         FreezeState.Clear();
         FreezeSuspendPatch.End();
         RewardSystem.Clear();
+        ZombieHunt.Clear();
     }
 
     public override void OnRoomPropertiesUpdate(Hashtable changed)
@@ -147,6 +149,9 @@ internal sealed class ModNetwork : MonoBehaviourPunCallbacks, Photon.Realtime.IO
             {
                 case Msg.TagClaim when Net.IsHost && data.Length >= 3:
                     TagSystem.HostHandleClaim((int)data[1], (int)data[2], photonEvent.Sender);
+                    break;
+                case Msg.RefreshSlot when data.Length >= 2:
+                    LegLoadout.RefreshLocalSlot((int)data[1]);
                     break;
                 case Msg.ClearHands:
                     LegLoadout.ClearLocalHands();

@@ -75,8 +75,16 @@ internal static class ItemCatalog
     private static bool AlwaysLegit(Item item)
     {
         var cfg = Plugin.ModConfig;
-        return MatchesList(item, cfg.AllowedHiddenItems.Synced()) || MatchesList(item, cfg.RunnerLegItems.Synced()) || MatchesList(item, cfg.CampfireFoodItems.Synced())
+        return NameContainsAny(item, cfg.AllowedHiddenItems.Synced()) || MatchesList(item, cfg.RunnerLegItems.Synced()) || MatchesList(item, cfg.CampfireFoodItems.Synced())
             || MatchesList(item, cfg.ChaserAllowedItems.Synced());
+    }
+
+    /// <summary>True if the item's display or prefab name contains any entry (spaces and case ignored), e.g. "Kingberry" matches "Green Kingberry".</summary>
+    private static bool NameContainsAny(Item item, string csv)
+    {
+        if (string.IsNullOrWhiteSpace(csv)) return false;
+        string names = Normalize(CleanName(item)) + "|" + Normalize(item.UIData?.itemName ?? "");
+        return csv.Split(',').Select(Normalize).Any(w => w.Length > 0 && names.Contains(w));
     }
 
     /// <summary>A new level has different spawners: recompute everything.</summary>
@@ -269,19 +277,37 @@ internal static class ItemCatalog
             || i is Backpack || Has<Flare>(i) || Has<Action_Passport>(i) || Has<Action_Guidebook>(i)
             || Has<Action_GuidebookScroll>(i) || (i.itemTags & Item.ItemTags.BingBong) != 0));
 
-        // Items placed by the level itself: single-item spawners (Spawner.spawnedObjectPrefab, e.g. the
-        // Roots shelf shrooms, snow piles, berry bushes) and any other spawner-like component.
+        // Items the level itself places or references: scenery items (FakeItem.realItemPrefab - berries
+        // on bushes, shroomberries, ...), single-item spawners (Spawner.spawnedObjectPrefab), items lying in
+        // the level, and anything else in the scene with an Item/GameObject field pointing at an item.
+        // Scene copies are mapped back to their database prefab by itemID.
+        ItemDatabase db = SingletonAsset<ItemDatabase>.Instance;
         int sceneRefs = 0;
-        foreach (MonoBehaviour component in UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        void AddFromScene(Item found)
         {
-            if (component == null || (component is not Spawner && component.GetType().Name.IndexOf("Spawn", StringComparison.Ordinal) < 0)) continue;
-            foreach (Item referenced in FieldReferences(component))
-            {
-                if (legit.Add(referenced)) sceneRefs++;
-            }
+            Item prefab = db != null && db.itemLookup.TryGetValue(found.itemID, out Item p) && p != null ? p : found;
+            if (legit.Add(prefab)) sceneRefs++;
         }
 
-        Plugin.Log.LogInfo($"[OTL][Items] {sceneRefs} item type(s) are placed by this level's spawners.");
+        foreach (MonoBehaviour component in UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (component == null) continue;
+            if (component is Item placed) AddFromScene(placed);
+            FieldInfo[] fields = RefFieldsOf(component.GetType());
+            if (fields.Length == 0) continue;
+            var found = new List<Item>();
+            foreach (FieldInfo field in fields)
+            {
+                object? value;
+                try { value = field.GetValue(component); }
+                catch { continue; }
+                Collect(value, found);
+            }
+
+            foreach (Item item in found) AddFromScene(item);
+        }
+
+        Plugin.Log.LogInfo($"[OTL][Items] {sceneRefs} item type(s) are placed or referenced by this level.");
 
         // Anything a legitimate item can turn into or spawn is legitimate too (transitively).
         var queue = new Queue<Item>(legit);
@@ -310,6 +336,27 @@ internal static class ItemCatalog
 
         return found.Where(i => i != item);
     }
+
+    private static readonly Dictionary<Type, FieldInfo[]> s_RefFields = new();
+
+    /// <summary>A type's instance fields that can hold item references (Item, GameObject, or arrays/lists of them); cached.</summary>
+    private static FieldInfo[] RefFieldsOf(Type type)
+    {
+        if (s_RefFields.TryGetValue(type, out FieldInfo[] cached)) return cached;
+        var fields = new List<FieldInfo>();
+        for (Type? t = type; t != null && t != typeof(MonoBehaviour); t = t.BaseType)
+        {
+            fields.AddRange(t.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
+                .Where(f => CanHoldItem(f.FieldType)));
+        }
+
+        return s_RefFields[type] = fields.ToArray();
+    }
+
+    private static bool CanHoldItem(Type t) =>
+        typeof(Item).IsAssignableFrom(t) || t == typeof(GameObject)
+        || (t.IsArray && CanHoldItem(t.GetElementType()!))
+        || (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(List<>) && CanHoldItem(t.GetGenericArguments()[0]));
 
     /// <summary>Item prefabs referenced by any field of a component (Item, GameObject, or lists of them).</summary>
     private static List<Item> FieldReferences(MonoBehaviour component)

@@ -30,6 +30,13 @@ internal sealed class ModConfig
     public ConfigEntry<float> ChaserStatusMultiplier { get; }
     public ConfigEntry<float> ChaserFallDamageMultiplier { get; }
     public ConfigEntry<bool> ZombiesIgnoreChasers { get; }
+    public ConfigEntry<bool> ZombiesWhenChasersDead { get; }
+    public ConfigEntry<float> ZombieLifetimeSeconds { get; }
+    public ConfigEntry<float> ZombieSpawnDistance { get; }
+    public ConfigEntry<string> ZombiesByPlayerCount { get; }
+    public ConfigEntry<float> ZombieWaveDelaySeconds { get; }
+    public ConfigEntry<float> ZombieStartDelaySeconds { get; }
+    public ConfigEntry<int> WipeExtraConversions { get; }
     public ConfigEntry<bool> TeleportChasersOnLegComplete { get; }
     public ConfigEntry<bool> CaptureMoraleBoost { get; }
     public ConfigEntry<float> EnergyDrinkDrowsyMultiplier { get; }
@@ -89,6 +96,7 @@ internal sealed class ModConfig
     // Items
     public ConfigEntry<string> ChaserAllowedItems { get; }
     public ConfigEntry<string> ChaserForbiddenItems { get; }
+    public ConfigEntry<float> ShroomberryEffectSeconds { get; }
     public ConfigEntry<bool> ChaserAutoAllowHealing { get; }
     public ConfigEntry<bool> ChaserAutoAllowFood { get; }
     public ConfigEntry<bool> ClownLuggageChasersOnly { get; }
@@ -131,6 +139,7 @@ internal sealed class ModConfig
     // Admin (local)
     public ConfigEntry<bool> AdminKeys { get; }
     public ConfigEntry<Key> KeyRestartFromCampfire { get; }
+    public ConfigEntry<Key> KeyHostMenu { get; }
 
     public ModConfig(ConfigFile config)
     {
@@ -156,6 +165,13 @@ internal sealed class ModConfig
         ChaserStatusMultiplier = Synced(round, "ChaserStatusMultiplier", 0.333f, "Chasers take this fraction of every negative status (injury, cold, poison, drowsy, ...) they would get in vanilla at the current ascent. Hunger is not reduced.");
         ChaserFallDamageMultiplier = Synced(round, "ChaserFallDamageMultiplier", 0.25f, "Fraction of vanilla fall damage chasers take (0.25 = 1/4). Still scales with the ascent like vanilla. 0 = no fall damage.");
         ZombiesIgnoreChasers = Synced(round, "ZombiesIgnoreChasers", true, "Mushroom zombies don't target or bite chasers.");
+        ZombiesWhenChasersDead = Synced(round, "ZombiesWhenChasersDead", true, "When no chaser is alive during a chase (all dead, or none - e.g. a host playing solo), mushroom zombies hunt random runners outside the safe zones (ZombiesByPlayerCount per wave), wave after wave, until the runners reach the campfire or a chaser is back.");
+        ZombieLifetimeSeconds = Synced(round, "ZombieLifetimeSeconds", 120f, "How long each of those zombies lasts.");
+        ZombieSpawnDistance = Synced(round, "ZombieSpawnDistance", 15f, "How far from its runner a zombie appears (m).");
+        ZombiesByPlayerCount = Synced(round, "ZombiesByPlayerCount", "1:1, 6:2, 10:3", "Zombies per wave for a given lobby size, as \"minPlayers:zombies\" pairs. Each zombie hunts one random runner outside the safe zones.");
+        ZombieWaveDelaySeconds = Synced(round, "ZombieWaveDelaySeconds", 120f, "Cooldown (s) after a wave of zombies is gone (killed or expired) before the host checks again for living chasers and sends another.");
+        ZombieStartDelaySeconds = Synced(round, "ZombieStartDelaySeconds", 300f, "Zombies can only start coming this many seconds after the head start ends (each leg).");
+        WipeExtraConversions = Synced(round, "WipeExtraConversions", 1, "If every runner died, chasers are sent to the next campfire and the scout statue there turns this many extra revived runners into chasers (on top of GhostsConvertedPerStatue). At least one runner always remains.");
         TeleportChasersOnLegComplete = Synced(round, "TeleportChasersOnLegComplete", true, "When every living runner reaches the next campfire's safe zone, living chasers are teleported to that campfire too.");
         CaptureMoraleBoost = Synced(round, "CaptureMoraleBoost", true, "A chaser who captures a runner also gets a full morale boost (full extra-stamina bar).");
         EnergyDrinkDrowsyMultiplier = Synced(round, "EnergyDrinkDrowsyMultiplier", 1.5f, "Multiplier for the drowsiness an energy drink causes when it wears off.");
@@ -164,7 +180,7 @@ internal sealed class ModConfig
         CaptureBoostPercent = Synced(round, "CaptureBoostPercent", 1f, "Temporary chaser speed boost (%) after a capture.");
         CaptureBoostStackPercent = Synced(round, "CaptureBoostStackPercent", 0.5f, "Extra boost (%) for each further capture while the boost is still active.");
         CaptureBoostSeconds = Synced(round, "CaptureBoostSeconds", 5f, "How long the capture boost lasts (refreshed by each capture).");
-        RunnerStaminaRegenMultiplier = Synced(round, "RunnerStaminaRegenMultiplier", 1.18f, "Runner stamina regeneration multiplier (1.18 = 18% faster).");
+        RunnerStaminaRegenMultiplier = Synced(round, "RunnerStaminaRegenMultiplier", 1.12f, "Runner stamina regeneration multiplier (1.12 = 12% faster).");
         RunnerLegItems = Synced(round, "RunnerLegItems", "Snowball, Brown Berrynana, Fortified Milk", "At the start of each leg every runner gets ONE random item from this list (prefab or display names, comma separated). Empty = off.");
         RunnerBackpacks = Synced(round, "RunnerBackpacks", true, "After roles are assigned at the start of a round, every runner without a backpack gets one.");
         CampfireFoodItems = Synced(round, "CampfireFoodItems", "Marshmallow, Glizzy", "When the chase of a leg ends at a campfire, the host makes sure there is one of these per living player near the fire (random pick each; spawns only what is missing). Glizzy = the hot dog. Empty = off.");
@@ -205,7 +221,7 @@ internal sealed class ModConfig
         MilkProtectsFromCapture = Synced(tag, "MilkProtectsFromCapture", true, "Runners under the effect of fortified milk can't be captured.");
 
         const string safe = "5. SafeZones";
-        CampfireSafeRadius = Synced(safe, "CampfireSafeRadius", 50f, "Radius (m) around a campfire that is a safe zone. A leg ends when every living runner is inside the next campfire's safe zone.");
+        CampfireSafeRadius = Synced(safe, "CampfireSafeRadius", 30f, "Radius (m) around a campfire that is a safe zone: no captures, and runners inside can't freeze chasers. A leg ends when every living runner is inside the next campfire's safe zone.");
         SafeZoneRequiresLit = Synced(safe, "SafeZoneRequiresLit", false, "Only lit campfires are safe zones.");
 
         const string fog = "6. Fog";
@@ -215,6 +231,7 @@ internal sealed class ModConfig
         const string items = "7. Items";
         ChaserAllowedItems = Synced(items, "ChaserAllowedItems", "Remedy Fungus", "Extra item names chasers may pick up/use (comma separated, prefab or display name).");
         ChaserForbiddenItems = Synced(items, "ChaserForbiddenItems", "Energy Drink, Big Lollipop, Bounce Fungus, Cloud Fungus, Shelf Fungus, Warp Fungus, Blue Shroomberry, Green Shroomberry, Purple Shroomberry, Red Shroomberry, Yellow Shroomberry", "Items chasers may never pick up or use, even though they are food or healing (comma separated, display or prefab names). Also kept out of clown luggage.");
+        ShroomberryEffectSeconds = Synced(items, "ShroomberryEffectSeconds", 1f, "How long a shroomberry's effects last (s). The hunger it cures is unchanged.");
         ChaserAutoAllowHealing = Synced(items, "ChaserAutoAllowHealing", true, "Chasers may pick up and use items that heal injury.");
         ChaserAutoAllowFood = Synced(items, "ChaserAutoAllowFood", true, "Chasers may pick up and eat food.");
         ClownLuggageChasersOnly = Synced(items, "ClownLuggageChasersOnly", true, "During a round only chasers can open clown luggage, and it contains food and healing items.");
@@ -226,8 +243,8 @@ internal sealed class ModConfig
         AllowJetpacks = Synced(items, "AllowJetpacks", false, "Allow jetpacks and rocket packs. Off = removed from the game (not spawned, can't be picked up).");
         AllowGliders = Synced(items, "AllowGliders", false, "Allow gliders. Off = removed from the game (not spawned, can't be picked up).");
         BanHiddenItems = Synced(items, "BanHiddenItems", true, "Remove hidden items that never spawn in normal PEAK (not in any spawn pool and not produced by another item). Check the log for what was detected.");
-        AllowedHiddenItems = Synced(items, "AllowedHiddenItems", "", "Hidden items to allow anyway (comma separated, prefab or display name).");
-        BannedItems = Synced(items, "BannedItems", "", "Extra banned item names (comma separated, prefab or display name).");
+        AllowedHiddenItems = Synced(items, "AllowedHiddenItems", "Napberry, Kingberry, Clusterberry, Shroomberry", "Items never treated as hidden, so everyone can use them (comma separated; matches any item whose name contains an entry, so \"Kingberry\" covers every colour).");
+        BannedItems = Synced(items, "BannedItems", "Weird Shroom", "Extra banned item names (comma separated, prefab or display name).");
 
         const string conv = "8. Conversion";
         GhostsConvertedPerStatue = Synced(conv, "GhostsConvertedPerStatue", 1, "How many of the ghosts (dead runners) revived by a scout statue become chasers; the rest come back as runners.");
@@ -258,6 +275,7 @@ internal sealed class ModConfig
         const string admin = "13. Admin";
         AdminKeys = Local(admin, "AdminKeys", true, "Enable host admin keys (work even with DebugKeys off).");
         KeyRestartFromCampfire = Local(admin, "KeyRestartFromCampfire", Key.F10, "HOST: quick restart - everyone back to the last lit campfire (or the start), dead players revived, statuses cleared, fresh leg with role reveal + head start. Roles are kept.");
+        KeyHostMenu = Local(admin, "KeyHostMenu", Key.Equals, "HOST: open/close the host menu (restart at the airport or previous campfire, teleport everyone to the next campfire, debug hotkeys on/off).");
 
         config.SettingChanged += (_, _) => ConfigSync.Publish();
     }

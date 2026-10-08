@@ -23,8 +23,12 @@ internal static class FreezeInputPatch
             return;
         }
 
-        // A look-freeze, or the start-of-leg hold (role reveal + head start) for chasers: both are a full freeze.
-        bool frozen = Net.InRoom && (FreezeState.IsFrozen(Net.Actor(local)) || (RoundManager.InHold && RoleManager.IsChaser(local)));
+        // A full freeze for: a look-freeze; everyone between lighting a campfire and the next leg (until the
+        // biome title has played); runners during the role reveal; chasers during the reveal + head start.
+        bool frozen = Net.InRoom && (FreezeState.IsFrozen(Net.Actor(local))
+            || RoundManager.InIntermission
+            || (RoundManager.InReveal && RoleManager.IsRunner(local))
+            || (RoundManager.InHold && RoleManager.IsChaser(local)));
 
         if (frozen && !s_WasFrozen)
         {

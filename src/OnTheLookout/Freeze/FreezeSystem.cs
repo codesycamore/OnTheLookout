@@ -92,7 +92,9 @@ internal sealed class FreezeSystem : MonoBehaviour
 
             foreach (Character runner in Character.AllCharacters)
             {
-                if (!RoleManager.IsRunner(runner) || !CanAct(runner) || !IsLookingAt(runner, chaser)) continue;
+                if (!RoleManager.IsRunner(runner) || !CanAct(runner)) continue;
+                if (Modules.SafeZoneSystem.IsSafe(runner.Center)) continue; // must step out of the safe zone to freeze
+                if (!IsLookingAt(runner, chaser)) continue;
                 TryFreeze(chaser, $"runner {Name(runner)} looked at chaser");
                 break;
             }
@@ -202,7 +204,8 @@ internal sealed class FreezeSystem : MonoBehaviour
     {
         local = Character.localCharacter;
         return local != null && Net.InRoom
-            && (FreezeState.IsFrozen(Net.Actor(local)) || (RoundManager.InHold && RoleManager.IsChaser(local)));
+            && (FreezeState.IsFrozen(Net.Actor(local)) || RoundManager.InIntermission
+                || (RoundManager.InReveal && RoleManager.IsRunner(local)) || (RoundManager.InHold && RoleManager.IsChaser(local)));
     }
 
     private void LateUpdate()

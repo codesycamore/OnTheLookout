@@ -2,7 +2,7 @@
 
 **Chasers vs Runners for PEAK.** A few scouts are secretly chosen as **chasers** and hunt everyone else up the mountain. **Runners** have to make it from campfire to campfire, and finally to the peak, without getting caught. A runner's best defence is to turn around and **look at a chaser** to freeze them in place.
 
-> **New in 1.1.0:** roles now last for the whole run (dead and converted chasers stay chasers), chasers take 1/4 fall damage and climb 6% faster but can't use energy drinks, lollipops, shroomberries or most Roots fungi, runners regenerate stamina 18% faster, and the blowgun cooldown is a countdown above its slot. See the changelog.
+> **New in 1.2.0:** lighting a campfire freezes everyone while the next biome's title plays, then roles are shown and runners get their head start; if every runner is caught the chasers move to the next campfire and the statue there adds an extra chaser; if no chaser is alive (or you play solo) mushroom zombies hunt the runners, with an alarm; 30 m safe zones you can't freeze from; a host menu on the **=** key; shroomberries edible with 1-second effects; and fixes for items that couldn't be picked up. See the changelog.
 
 > **Everyone in the lobby needs this mod** (same version). The host runs the game: roles, freezes, captures and rewards are all decided by the host and synced to everyone.
 
@@ -11,16 +11,18 @@
 ## How a game works
 
 1. **Wake up on the shore.** Nothing can be interacted with while everyone wakes up, and for a few seconds after (no grabbing items before the roles are out).
-2. **Roles are revealed.** Each player sees **CHASER** (red) or **RUNNER** (yellow) in the middle of the screen. The number of chasers depends on lobby size (1 chaser, 2 from 6 players, configurable).
-3. **Head start.** Runners get a 20-second head start with a big countdown. Chasers are **frozen and blind** the whole time; their screen fades back in near the end.
+2. **Roles are revealed.** Each player sees **CHASER** (red) or **RUNNER** (yellow) in the middle of the screen. The number of chasers depends on lobby size (1 chaser, 2 from 6 players, configurable). Everyone is frozen during the reveal.
+3. **Head start.** Runners are released and get a 20-second head start with a big countdown. Chasers stay **frozen and blind** the whole time; their screen fades back in near the end.
 4. **The chase.** Chasers hunt the runners up the current biome.
    - A chaser **captures** a runner by **running into them**. The runner dies with a bang.
-   - A runner **freezes** a chaser by **looking at them** within 26 m. The chaser can't move, act or fall for 6.5 seconds, then is immune to freezing for 8 seconds.
-5. **Reach the campfire.** Within **50 m of a campfire** is a **safe zone**: no captures there. When **every living runner** is in the next campfire's safe zone, the chase for that leg is over: everyone sees *ALL RUNNERS ARE SAFE*, the chasers are brought to the campfire, and food is laid out so everyone gets something to eat.
-6. **Light the campfire.** Only a **runner** can light it. Lighting clears every negative status of everyone at the fire. After the next biome's title has played, the next leg starts with the same role reveal → frozen, blind chasers → runner head start.
+   - A runner **freezes** a chaser by **looking at them** within 26 m, from **outside** a safe zone. The chaser can't move, act or fall for 6.5 seconds, then is immune to freezing for 8 seconds.
+   - If **no chaser is alive** (all dead, or none at all, e.g. a host playing solo is a runner), the mountain takes over: from **5 minutes after the head start ends**, **mushroom zombies** are sent, each after one random runner who isn't in a safe zone yet (1 zombie per wave, more in bigger lobbies). Each lasts 2 minutes. When a wave is gone (killed or expired) there's a **2-minute cooldown** before the next one can come, until the runners reach the campfire or a chaser is back. Every spawn is announced to all players with an alarm and a screen shake, and all zombies vanish the moment every runner is safe (or every runner is caught).
+5. **Reach the campfire.** Within **30 m of a campfire** is a **safe zone**: no captures there, and runners inside can't freeze chasers. When **every living runner** is in the next campfire's safe zone, the chase for that leg is over: everyone sees *ALL RUNNERS ARE SAFE*, the chasers are brought to the campfire, and food is laid out so everyone gets something to eat.
+6. **Light the campfire.** Only a **runner** can light it. Lighting clears every negative status of everyone at the fire and **freezes everyone** while the next biome's title plays. Then the next leg starts: role reveal → runners released for their head start → chasers frozen and blind until it ends.
 7. **Win.**
    - **Runners win** when a runner reaches **the peak**.
-   - **Chasers win** when **every runner is dead**.
+   - **Chasers win** when **every runner is dead** and there's no campfire left to go to (the last stretch).
+   - **Caught them all?** If every runner dies earlier (passing out doesn't count), the chasers are sent to the **next campfire**. The **scout statue** there revives everyone, and **one extra** revived runner becomes a chaser on top of the usual conversion (at least one runner always remains).
 
 ### Captures, ghosts and new chasers
 - Captured runners (and runners who die any other way) become **ghosts**. Passing out is **not** death: teammates can still revive or carry a passed-out runner.
@@ -50,10 +52,10 @@
 ## Runners
 
 **Perks**
-- **Freeze chasers** by looking at them (26 m, 6.5 s; no stacking, 8 s immunity afterwards).
+- **Freeze chasers** by looking at them (26 m, 6.5 s; no stacking, 8 s immunity afterwards), but not from inside a safe zone.
 - **Head start** at every leg.
-- **Safe zones** around every campfire.
-- **18% faster stamina regeneration.**
+- **Safe zones** (30 m) around every campfire.
+- **12% faster stamina regeneration.**
 - A **backpack** at the start of the round, and **one random item** at the start of every leg: a snowball, a brown berrynana or a fortified milk.
 - **Fortified milk** protects you from being captured while it's active.
 - First runner into each campfire's safe zone gets an **energy drink**.
@@ -67,6 +69,7 @@
 
 ## Rules for everyone
 - **Removed from the game:** amulets (incl. Scout's Honor), gems, rescue claws, jetpacks/rocket packs, gliders, world blowguns and hidden test items that never appear in normal PEAK.
+- **Shroomberries** can be eaten (not by chasers), but their effects only last **1 second**; the hunger they cure is the same as vanilla.
 - **No Scoutmaster.** He would hunt the runner who's furthest from the group.
 - **No revival curse.** Revived players don't get the curse or extra hunger.
 
@@ -77,8 +80,15 @@
 - Short notices for captures, new chasers and rewards.
 
 ## Host controls
-- **F10:** quick restart. Everyone goes back to the last lit campfire (or the start), the dead are revived, statuses are cleared, and a fresh leg begins. Roles are kept. Works after a round has ended too.
-- Debug/testing keys (F6 swap own role, F7 start/restart round with new roles, F8 freeze yourself, F9 freeze the player you look at) are **off** by default (`DebugKeys`).
+- **= (equals): host menu.** A PEAK-style menu with:
+  - **Restart at the airport**: everyone goes back to the airport. The next run rolls new roles.
+  - **Restart at previous campfire**: everyone back to the last lit campfire (or the start), the dead revived, statuses cleared, and a fresh leg begins. Roles are kept.
+  - **Teleport everyone to next campfire**: moves every living player to the next unlit campfire.
+  - **Debug hotkeys: on/off** (see below).
+  
+  The two restarts ask you to click again to confirm. Press = or Esc to close.
+- **F10:** the same "restart at previous campfire" as a direct key.
+- Debug/testing keys (F6 swap own role, F7 start/restart round with new roles, F8 freeze yourself, F9 freeze the player you look at) are **off** by default. Turn them on in the host menu or with `DebugKeys`.
 
 ---
 
@@ -127,8 +137,14 @@ Settings live in `BepInEx/config/codesycamore.OnTheLookout.cfg` (or the mod mana
 | `ChaserStatusMultiplier` | 0.333 | Fraction of negative statuses chasers take (not hunger). |
 | `ChaserFallDamageMultiplier` | 0.25 | Fraction of vanilla fall damage chasers take (ascent-scaled). 0 = none. |
 | `ZombiesIgnoreChasers` | true | Mushroom zombies ignore chasers. |
+| `ZombiesWhenChasersDead` | true | Zombies hunt runners while no chaser is alive (incl. solo). |
+| `ZombieLifetimeSeconds` | 120 | How long each of those zombies lasts. |
+| `ZombieSpawnDistance` | 15 | How far from its runner a zombie appears (m). |
+| `ZombiesByPlayerCount` | `1:1, 6:2, 10:3` | Zombies per wave by lobby size (`minPlayers:zombies`); each hunts one random runner. |
+| `ZombieWaveDelaySeconds` | 120 | Cooldown after a wave is gone (killed or expired) before another can come. |
+| `ZombieStartDelaySeconds` | 300 | Zombies only start coming this long after the head start ends (each leg). |
 | `TeleportChasersOnLegComplete` | true | Bring chasers to the campfire when the runners are all safe. |
-| `RunnerStaminaRegenMultiplier` | 1.18 | Runner stamina regeneration. |
+| `RunnerStaminaRegenMultiplier` | 1.12 | Runner stamina regeneration. |
 | `RunnerBackpacks` | true | Runners get a backpack at round start. |
 | `RunnerLegItems` | `Snowball, Brown Berrynana, Fortified Milk` | One random item per runner each leg. Empty = off. |
 | `CampfireFoodItems` | `Marshmallow, Glizzy` | Food laid out (one per player) when a leg ends. `Glizzy` is the hot dog. |
@@ -178,7 +194,7 @@ Settings live in `BepInEx/config/codesycamore.OnTheLookout.cfg` (or the mod mana
 ### 5. Safe zones
 | Setting | Default | What it does |
 |---|---|---|
-| `CampfireSafeRadius` | 50 | Safe zone radius (m); also when a leg counts as complete. |
+| `CampfireSafeRadius` | 30 | Safe zone radius (m): no captures, no freezing from inside; also when a leg counts as complete. |
 | `SafeZoneRequiresLit` | false | Only lit campfires are safe. |
 
 ### 6. Fog
@@ -200,13 +216,15 @@ Settings live in `BepInEx/config/codesycamore.OnTheLookout.cfg` (or the mod mana
 | `BanBlowguns` | true | No blowguns in the world (chasers still get theirs). |
 | `AllowJetpacks` / `AllowGliders` | false | Turn on to allow them again. |
 | `BanHiddenItems` | true | Remove items that never spawn in normal PEAK. |
-| `AllowedHiddenItems` | *(empty)* | Hidden items to allow anyway. |
-| `BannedItems` | *(empty)* | Extra items to remove. |
+| `AllowedHiddenItems` | `Napberry, Kingberry, Clusterberry, Shroomberry` | Never treated as hidden (name contains, so all colours count). |
+| `BannedItems` | `Weird Shroom` | Extra items to remove. |
+| `ShroomberryEffectSeconds` | 1 | How long a shroomberry's effects last (hunger cure unchanged). |
 
 ### 8. Conversion
 | Setting | Default | What it does |
 |---|---|---|
 | `GhostsConvertedPerStatue` | 1 | Revived ghosts that become chasers at a statue. |
+| `WipeExtraConversions` | 1 | Extra conversions at the statue after every runner died. |
 | `ReviveDeadChasers` | true | Statues also revive dead chasers. |
 
 ### 9. Rewards
@@ -228,6 +246,7 @@ Settings live in `BepInEx/config/codesycamore.OnTheLookout.cfg` (or the mod mana
 | `LogLookChecks` *(local)* | false | Log every freeze look check. |
 | `AdminKeys` *(local)* | true | Host admin keys. |
 | `KeyRestartFromCampfire` *(local)* | F10 | Quick-restart key. |
+| `KeyHostMenu` *(local)* | = | Opens the host menu. |
 
 **Item names:** item settings accept PEAK's display or internal names (spaces and case don't matter). The log (`BepInEx/LogOutput.log`) lists every item name once per session, under `[OTL][Items] all items`.
 

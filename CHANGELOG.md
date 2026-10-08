@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.2.0
+
+### Round flow
+- **Lighting a campfire freezes everyone** and shows the next biome's title right away (it used to need someone to walk past the biome's progress point). Once the title has played, the next leg starts: role reveal (everyone frozen) → runners released for their head start → chasers frozen and blind until it ends.
+- **Every runner dead** (passing out doesn't count): instead of ending the round, the chasers are sent to the next campfire. The scout statue there revives everyone and turns **one extra** revived runner into a chaser (`WipeExtraConversions`). The chasers only win this way when there's no campfire left to go to.
+- **No chaser alive** (all dead, or none - e.g. a host playing solo is a runner): mushroom zombies hunt runners outside the safe zones. Each wave sends `ZombiesByPlayerCount` zombies (1, then 2 from 6 players, 3 from 10), each after one random runner; each lasts 2 minutes; after a wave is gone (killed or expired) there is a **2-minute cooldown** (`ZombieWaveDelaySeconds`) before the next, until the runners reach the campfire or a chaser is back. Each spawn is announced to everyone in the middle of the screen ("A ZOMBIE IS ON THE HUNT") with PEAK's lava-rises alarm and a screen shake (`ZombiesWhenChasersDead`, `ZombieLifetimeSeconds`, `ZombieSpawnDistance`). All zombies are removed the moment the leg ends: every runner safe at the campfire, or every runner caught and the chasers sent ahead. Zombies only start 5 minutes after the head start ends (`ZombieStartDelaySeconds`).
+
+### Balance
+- Safe zone radius **50 m → 30 m**, and runners inside a safe zone can no longer freeze chasers.
+- Runner stamina regeneration back to **+12%** (from +18%).
+
+### Items
+- **Shroomberries** can be eaten again (runners), but every effect they cause lasts only **1 second** (`ShroomberryEffectSeconds`): timed effects end, knock-downs are cut short and negative statuses are taken back. The hunger they cure is unchanged.
+
+### Host menu
+- New **host menu** on the **=** key (`KeyHostMenu`), built from PEAK's own menu buttons and fonts: restart at the airport, restart at the previous campfire, teleport everyone to the next campfire, and debug hotkeys on/off.
+
+### Fixes
+- **Zombies were spawned asleep and hidden** (how PEAK spawns its own), so the alert showed but no zombie came, and PEAK culled the sleeping ones. They are now woken up and pointed at their runner once they have faded in, and the alert is only sent when that has happened.
+- **Zombie cooldown was skipped when a zombie expired**, so a new zombie (and its announcement) came the moment the old one ran out. A wave now only ends once all its zombies are gone (expired, or killed and their body cleaned up 5 s later), and the 2-minute cooldown always starts then.
+- Items given at the start of a leg could land in the selected empty-hand slot without showing in the player's hands, making the slot look blocked. The player now holds the new item if their hands were empty.
+- **Shroomberries, Napberries, Kingberries, Clusterberries and other naturally placed items could not be picked up by anyone.** Napberry, Kingberry, Clusterberry and Shroomberry are now always allowed (`AllowedHiddenItems`, any colour); Weird Shroom stays removed (`BannedItems`). The hidden-item check only knew spawn pools and spawners; it now scans everything in the level that places or references an item (scenery items included), so only real test/unused items are removed.
+
+
 ## 1.1.0
 
 ### Roles

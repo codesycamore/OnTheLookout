@@ -78,9 +78,36 @@ internal static class SafeZoneSystem
             Plugin.Log.LogInfo("[OTL][Campfire] cleared local statuses for the new leg.");
         }
 
-        if (!Net.IsHost) return;
-        AdminRestart.HostRememberCampfire(__instance.transform.position);
-        RoundManager.HostOnCampfireLit();
+        if (Net.IsHost)
+        {
+            AdminRestart.HostRememberCampfire(__instance.transform.position);
+            RoundManager.HostOnCampfireLit(); // first, so the host is already waiting when the title below reports in
+        }
+
+        // Everyone is frozen until the next leg, so nobody would walk past the next biome's progress point
+        // to trigger its title: show it now, on every client, the same way PEAK does when you cross it.
+        ShowNextBiomeTitle(__instance);
+    }
+
+    /// <summary>
+    /// MountainProgressHandler.SetSegmentComplete(segment) marks the progress point reached and calls
+    /// TriggerReached, i.e. the biome title (+ area achievement); it won't play again when the point is
+    /// crossed later. Our TitlePostfix then tells the host, which starts the leg once the title has played.
+    /// </summary>
+    private static void ShowNextBiomeTitle(Campfire fire)
+    {
+        try
+        {
+            MountainProgressHandler? progress = Zorro.Core.Singleton<MountainProgressHandler>.Instance;
+            int segment = (int)fire.advanceToSegment;
+            if (progress == null || progress.progressPoints == null || segment < 0 || segment >= progress.progressPoints.Length) return;
+            if (progress.progressPoints[segment].Reached) return; // already shown (crossed already)
+            progress.SetSegmentComplete(segment);
+        }
+        catch (System.Exception e)
+        {
+            Plugin.Log.LogWarning($"[OTL][Campfire] couldn't show the biome title: {e.Message}");
+        }
     }
 
     /// <summary>All campfires currently loaded (refreshed every 2 s; inactive segments are excluded).</summary>

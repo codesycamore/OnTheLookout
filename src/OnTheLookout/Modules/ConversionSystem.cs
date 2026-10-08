@@ -39,8 +39,17 @@ internal static class ConversionSystem
 
         // Everyone dead (or fully passed out) is revived, as in vanilla; then one random revived ghost
         // (a dead runner) becomes a chaser and the rest come back as runners.
+        // If the chasers caught every runner (a wipe), one extra revived runner becomes a chaser on top of
+        // the normal conversion. Always leave at least one runner.
+        bool wiped = RoundManager.IsWiped;
+        int count = Mathf.Max(0, Plugin.ModConfig.GhostsConvertedPerStatue.Synced())
+            + (wiped ? Mathf.Max(0, Plugin.ModConfig.WipeExtraConversions.Synced()) : 0);
+        int runnersTotal = PhotonNetwork.PlayerList.Count(p => RoleManager.RoleOf(p.ActorNumber) == Role.Runner && Net.CharacterOf(p.ActorNumber) != null);
+        count = Mathf.Min(count, runnersTotal - 1);
+        if (wiped) RoundManager.HostClearWipe();
+
         int[] converted = ghosts.OrderBy(_ => Random.value)
-            .Take(Mathf.Max(0, Plugin.ModConfig.GhostsConvertedPerStatue.Synced()))
+            .Take(Mathf.Max(0, count))
             .ToArray();
         foreach (int actor in converted)
         {

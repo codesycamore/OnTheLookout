@@ -19,6 +19,9 @@ internal enum Msg : byte
 
     /// <summary>host -> one chaser: [] drop whatever is in hand (an item is about to be given)</summary>
     ClearHands = 4,
+
+    /// <summary>host -> one player: [slotId] an item was just added to this slot; refresh what is in hand</summary>
+    RefreshSlot = 5,
 }
 
 internal enum Notice : byte
@@ -28,6 +31,7 @@ internal enum Notice : byte
     Rewarded = 3, // A reached a campfire first
     MissingMod = 4, // A has no / a different OnTheLookout version (host only)
     Restarted = 5, // the host (A) restarted from the last campfire
+    ZombieHunt = 6, // a zombie was sent after runner A (all chasers are dead)
 }
 
 /// <summary>

@@ -24,6 +24,7 @@ internal sealed class Hud : MonoBehaviour
     private static readonly Color ChaserRed = new(0.93f, 0.22f, 0.2f);
     private static readonly Color RunnerYellow = new(1f, 0.84f, 0.2f);
     private static readonly Color Warm = new(1f, 0.78f, 0.36f);
+    private static readonly Color ZombieGreen = new(0.62f, 0.9f, 0.38f);
     private const string IceHex = "#9FDCFF";
 
     // Our own overlay canvas (blindness + centre text), above PEAK's HUD.
@@ -324,8 +325,11 @@ internal sealed class Hud : MonoBehaviour
         _chaserList = null;
     }
 
-    private void OnLegCompleted() =>
-        Announce("ALL RUNNERS ARE SAFE", "EVERY LIVING RUNNER MADE IT INTO THE SAFE ZONE", Warm, 5f);
+    private void OnLegCompleted()
+    {
+        if (RoundManager.IsWiped) Announce("ALL RUNNERS WERE CAUGHT", "CHASERS: USE THE SCOUT STATUE AT THE CAMPFIRE", ChaserRed, 6f);
+        else Announce("ALL RUNNERS ARE SAFE", "EVERY LIVING RUNNER MADE IT INTO THE SAFE ZONE", Warm, 5f);
+    }
 
     private void OnRoundEnded(RoundState result)
     {
@@ -352,6 +356,11 @@ internal sealed class Hud : MonoBehaviour
             case Notice.Restarted:
                 Toast("The host restarted from the last campfire");
                 AdminRestart.OnRestartNotice();
+                break;
+            case Notice.ZombieHunt:
+                bool mineShowing = _announceSub == "IT'S COMING FOR YOU" && Time.time < _announceUntil;
+                if (a == me || !mineShowing) Announce("A ZOMBIE IS ON THE HUNT", a == me ? "IT'S COMING FOR YOU" : $"IT'S AFTER {Net.NameOf(a).ToUpperInvariant()}", ZombieGreen, 5f);
+                LavaAlert.Play();
                 break;
             case Notice.MissingMod:
                 Toast($"{Net.NameOf(a)} doesn't have OnTheLookout {Plugin.Version}");

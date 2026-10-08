@@ -46,6 +46,54 @@ internal sealed class AdminRestart : MonoBehaviour
         }
     }
 
+    /// <summary>Host (menu): restart from the last lit campfire, same as the hotkey.</summary>
+    public static void HostRestartFromCampfire()
+    {
+        if (Net.IsHost) ModNetwork.Instance?.StartCoroutine(Restart());
+    }
+
+    /// <summary>Host (menu): everyone alive is moved to the next unlit campfire. The dead stay dead.</summary>
+    public static void HostTeleportToNextCampfire()
+    {
+        if (!Net.IsHost) return;
+        Campfire? next = RoundManager.NextCampfire();
+        if (next == null)
+        {
+            Plugin.Log.LogWarning("[OTL][Admin] teleport: no unlit campfire ahead.");
+            return;
+        }
+
+        int i = 0;
+        foreach (Character c in Character.AllCharacters.ToArray())
+        {
+            if (c == null || c.isBot || c.data.dead) continue;
+            float angle = i++ * 47f * Mathf.Deg2Rad;
+            Vector3 spot = next.transform.position + new Vector3(Mathf.Cos(angle) * 4f, 2f, Mathf.Sin(angle) * 4f);
+            c.view.RPC("WarpPlayerRPC", RpcTarget.All, spot, true);
+        }
+
+        Plugin.Log.LogInfo($"[OTL][Admin] HOST teleported {i} player(s) to the next campfire.");
+    }
+
+    /// <summary>
+    /// Host (menu): everyone back to the airport, through PEAK's own networked return
+    /// (GameOverHandler.LoadAirportMaster -> LoadSceneProcess("Airport", networked: true)). The next run
+    /// started from there gets a new run id, so roles are rolled again.
+    /// </summary>
+    public static void HostReturnToAirport()
+    {
+        if (!Net.IsHost) return;
+        GameOverHandler? handler = Object.FindFirstObjectByType<GameOverHandler>();
+        if (handler == null)
+        {
+            Plugin.Log.LogWarning("[OTL][Admin] airport: GameOverHandler not found in this scene.");
+            return;
+        }
+
+        Plugin.Log.LogInfo("[OTL][Admin] HOST sending everyone back to the airport.");
+        handler.LoadAirportMaster();
+    }
+
     private static IEnumerator Restart()
     {
         Vector3? point = RestartPoint();

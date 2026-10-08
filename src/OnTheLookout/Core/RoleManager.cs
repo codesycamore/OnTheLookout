@@ -56,10 +56,16 @@ internal static class RoleManager
     /// Chaser count for a lobby size from <c>ChasersByPlayerCount</c> ("minPlayers:chasers, ..."):
     /// the entry with the highest minPlayers that is still &lt;= players wins. Defaults to 1.
     /// </summary>
-    public static int ChasersFor(int players)
+    public static int ChasersFor(int players) => CountFor(Plugin.ModConfig.ChasersByPlayerCount.Value, players);
+
+    /// <summary>
+    /// Reads a "minPlayers:count, ..." table (e.g. "1:1, 6:2"): the entry with the highest minPlayers that
+    /// is still &lt;= players wins. Defaults to 1.
+    /// </summary>
+    public static int CountFor(string table, int players)
     {
         int best = 1, bestMin = int.MinValue;
-        foreach (string pair in Plugin.ModConfig.ChasersByPlayerCount.Value.Split(','))
+        foreach (string pair in table.Split(','))
         {
             string[] parts = pair.Split(':');
             if (parts.Length == 2 && int.TryParse(parts[0].Trim(), out int min) && int.TryParse(parts[1].Trim(), out int chasers)

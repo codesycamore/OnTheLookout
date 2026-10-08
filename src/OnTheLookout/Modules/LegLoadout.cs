@@ -160,12 +160,35 @@ internal static class LegLoadout
         }
     }
 
+    /// <summary>The local player's client: an item was just added to <paramref name="slotId"/> by the host.</summary>
+    public static void RefreshLocalSlot(int slotId) => ModNetwork.Instance?.StartCoroutine(RefreshLocalSlotLater(slotId));
+
+    private static IEnumerator RefreshLocalSlotLater(int slotId)
+    {
+        yield return new WaitForSeconds(0.3f); // let the inventory sync land first
+        Character local = Character.localCharacter;
+        if (local == null || local.data.dead || local.player == null || slotId < 0 || slotId >= local.player.itemSlots.Length) yield break;
+        CharacterItems items = local.refs.items;
+        ItemSlot slot = local.player.itemSlots[slotId];
+        if (slot == null || slot.IsEmpty() || local.data.currentItem != null) yield break; // something else in hand: leave it
+
+        // Hands are empty: (re-)equip the new item so it actually appears in their hands.
+        items.EquipSlot(Optionable<byte>.None);
+        yield return null;
+        items.EquipSlot(Optionable<byte>.Some((byte)slotId));
+        Plugin.Log.LogInfo($"[OTL][Loadout] equipped the new {ItemCatalog.NameOf(slot.prefab)} from slot {slotId}.");
+    }
+
     /// <summary>Into the inventory if there is room, otherwise dropped at their feet.</summary>
     public static void Give(Character c, Item prefab)
     {
-        if (c.player != null && c.player.AddItem(prefab.itemID, null, out _))
+        if (c.player != null && c.player.AddItem(prefab.itemID, null, out ItemSlot slot))
         {
-            Plugin.Log.LogInfo($"[OTL][Loadout] HOST gave {c.characterName} a {ItemCatalog.NameOf(prefab)}.");
+            Plugin.Log.LogInfo($"[OTL][Loadout] HOST gave {c.characterName} a {ItemCatalog.NameOf(prefab)} (slot {slot.itemSlotID}).");
+            // Player.AddItem syncs the inventory but not what is held: if the item landed in the slot the
+            // player has selected with an empty hand, it would sit in the slot without showing in their hands.
+            if (c.IsLocal) RefreshLocalSlot(slot.itemSlotID);
+            else Net.SendToActor(Net.Actor(c), Msg.RefreshSlot, (int)slot.itemSlotID);
             return;
         }
 
