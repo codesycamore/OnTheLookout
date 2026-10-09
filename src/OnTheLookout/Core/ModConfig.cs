@@ -38,6 +38,7 @@ internal sealed class ModConfig
     public ConfigEntry<float> ZombieStartDelaySeconds { get; }
     public ConfigEntry<float> MandrakeStartSeconds { get; }
     public ConfigEntry<float> MandrakeIntervalSeconds { get; }
+    public ConfigEntry<float> MandrakeFirstScreamSeconds { get; }
     public ConfigEntry<float> HeadStartBoostSeconds { get; }
     public ConfigEntry<bool> DisableScoutStatues { get; }
     public ConfigEntry<bool> PeakChasersDie { get; }
@@ -188,6 +189,7 @@ internal sealed class ModConfig
         ZombieStartDelaySeconds = Synced(round, "ZombieStartDelaySeconds", 300f, "Zombies can only start coming this many seconds after the head start ends (each leg).");
         MandrakeStartSeconds = Synced(round, "MandrakeStartSeconds", 180f, "Mandrakes start appearing at runners this many seconds after the head start ends (each leg). 0 or less = off.");
         MandrakeIntervalSeconds = Synced(round, "MandrakeIntervalSeconds", 60f, "After that, a mandrake is dropped at every living runner outside a safe zone this often (s).");
+        MandrakeFirstScreamSeconds = Synced(round, "MandrakeFirstScreamSeconds", 0.75f, "A dropped mandrake screams for the first time this many seconds after it appears (PEAK's own wait for a new mandrake is much longer). Later screams keep PEAK's timing.");
         HeadStartBoostSeconds = Synced(round, "HeadStartBoostSeconds", 3f, "Runners get an energy-drink speed boost (no drowsiness afterwards) for the last this-many seconds of their head start. 0 = off.");
         DisableScoutStatues = Synced(round, "DisableScoutStatues", true, "Scout statues do nothing during a round (no revives, no items). Everyone is brought back at the campfire after each leg instead.");
         PeakChasersDie = Synced(round, "PeakChasersDie", true, "When every living runner has reached the peak, the runners win and every living chaser is brought to the peak and dies.");

@@ -2,7 +2,7 @@
 
 **Chasers vs Runners for PEAK.** Every leg, a few scouts become **chasers** and hunt everyone else up the mountain. **Runners** have to make it from campfire to campfire, and finally to the peak, without getting caught. A runner's best defence is to turn around and **look at a chaser** to freeze them in place.
 
-> **New in 1.5.0:** a new role every leg (volunteer as chaser in the **-** menu at the campfire), captures by **holding interact** on a runner, the campfire lights itself after a 10-second role window, scout statues are off, chasers carry a reusable **napberry boost**, snowballs blind chasers, mandrakes start dropping at runners late in a leg, and plenty of balance changes. See the changelog.
+> **New in 1.5.1:** mandrakes dropped at runners scream 0.75 s after they appear. **1.5.0:** a new role every leg (volunteer as chaser in the **-** menu at the campfire), captures by **holding interact** on a runner, the campfire lights itself after a 10-second role window, scout statues are off, chasers carry a reusable **napberry boost**, snowballs blind chasers, mandrakes start dropping at runners late in a leg, and plenty of balance changes. See the changelog.
 
 > **Everyone in the lobby needs this mod** (same version). The host runs the game: roles, freezes, captures and rewards are all decided by the host and synced to everyone.
 
@@ -161,6 +161,7 @@ Settings live in `BepInEx/config/codesycamore.OnTheLookout.cfg` (or the mod mana
 | `ZombieStartDelaySeconds` | 300 | Zombies only start coming this long after the head start ends (each leg). |
 | `MandrakeStartSeconds` | 180 | Mandrakes start dropping at runners this long after the head start. 0 = off. |
 | `MandrakeIntervalSeconds` | 60 | Then one at every runner outside a safe zone this often (s). |
+| `MandrakeFirstScreamSeconds` | 0.75 | A dropped mandrake first screams this many seconds after it appears. |
 | `HeadStartBoostSeconds` | 3 | Runners' speed boost (no drowsiness) at the end of the head start. 0 = off. |
 | `DisableScoutStatues` | true | Scout statues do nothing during a round. |
 | `PeakChasersDie` | true | When every living runner reaches the peak, the chasers are brought up there and die. |

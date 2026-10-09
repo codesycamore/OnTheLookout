@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Linq;
 using OnTheLookout.Core;
 using Photon.Pun;
@@ -52,10 +53,26 @@ internal static class MandrakeDrops
         {
             if (!RoleManager.IsRunner(c) || c.data.dead || SafeZoneSystem.IsSafe(c.Center)) continue;
             Vector3 spot = c.Center + c.data.lookDirection_Flat * -0.8f + Vector3.up * 0.3f; // just behind them, on the ground
-            PhotonNetwork.Instantiate("0_Items/" + mandrake.gameObject.name, spot, Quaternion.Euler(0f, Random.Range(0f, 360f), 0f), 0);
+            GameObject go = PhotonNetwork.Instantiate("0_Items/" + mandrake.gameObject.name, spot, Quaternion.Euler(0f, Random.Range(0f, 360f), 0f), 0);
+            if (go.GetComponentInChildren<Mandrake>(true) is { } m) ModNetwork.Instance?.StartCoroutine(ShortenFirstScream(m));
             spawned++;
         }
 
         Plugin.Log.LogInfo($"[OTL][Mandrake] HOST wave {wave}: {spawned} mandrake(s) dropped.");
+    }
+
+    /// <summary>
+    /// A new mandrake waits its longest scream delay (Mandrake.screamWaitMax, set in Mandrake.Start) before its
+    /// first scream; the host counts that wait (Mandrake.CheckScream). Our drops scream after
+    /// MandrakeFirstScreamSeconds instead; later screams keep PEAK's random min-max gaps.
+    /// </summary>
+    private static IEnumerator ShortenFirstScream(Mandrake mandrake)
+    {
+        yield return null; // Mandrake.Start sets the first wait on its first frame
+        yield return null;
+        if (mandrake == null) yield break;
+        float before = mandrake.waitBeforeScreamTime;
+        mandrake.waitBeforeScreamTime = Mathf.Max(0f, Plugin.ModConfig.MandrakeFirstScreamSeconds.Synced());
+        Plugin.Log.LogInfo($"[OTL][Mandrake] first scream in {mandrake.waitBeforeScreamTime:0.##}s (vanilla {before:0.#}s).");
     }
 }

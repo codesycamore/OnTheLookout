@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.1
+
+- **Dropped mandrakes scream right away:** their first scream comes **0.75 s** after they appear (`MandrakeFirstScreamSeconds`). Later screams keep PEAK's timing.
+
 ## 1.5.0
 
 ### Roles and legs
