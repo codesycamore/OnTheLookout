@@ -29,7 +29,6 @@ internal sealed class ModConfig
     public ConfigEntry<float> ChaserOddsWantChaser { get; }
     public ConfigEntry<float> ChaserOddsNoPreference { get; }
     public ConfigEntry<float> ChaserOddsRatherRun { get; }
-    public ConfigEntry<float> BiomeTitleSeconds { get; }
     public ConfigEntry<float> SpawnInteractLockSeconds { get; }
     public ConfigEntry<float> ChaserStatusMultiplier { get; }
     public ConfigEntry<float> ChaserFallDamageMultiplier { get; }
@@ -42,11 +41,11 @@ internal sealed class ModConfig
     public ConfigEntry<float> ZombieStartDelaySeconds { get; }
     public ConfigEntry<int> WipeExtraConversions { get; }
     public ConfigEntry<bool> TeleportChasersOnLegComplete { get; }
+    public ConfigEntry<bool> PeakChasersDie { get; }
     public ConfigEntry<bool> CaptureMoraleBoost { get; }
     public ConfigEntry<float> EnergyDrinkDrowsyMultiplier { get; }
     public ConfigEntry<float> BlowdartDrowsy { get; }
     public ConfigEntry<string> RewardItems { get; }
-    public ConfigEntry<float> NoTitleFallbackSeconds { get; }
     public ConfigEntry<float> ChaserSpeedMultiplier { get; }
     public ConfigEntry<float> ChaserClimbSpeedMultiplier { get; }
     public ConfigEntry<float> CaptureBoostPercent { get; }
@@ -70,6 +69,7 @@ internal sealed class ModConfig
     public ConfigEntry<float> TrackingSmokeSeconds { get; }
     public ConfigEntry<float> FireworkIntervalSeconds { get; }
     public ConfigEntry<float> FireworkHeight { get; }
+    public ConfigEntry<bool> ScoutmasterChaseMusic { get; }
     public ConfigEntry<bool> ScoutmasterSounds { get; }
     public ConfigEntry<float> ScoutmasterSoundMinInterval { get; }
     public ConfigEntry<float> ScoutmasterSoundMaxInterval { get; }
@@ -81,6 +81,7 @@ internal sealed class ModConfig
     public ConfigEntry<float> FreezeCooldownSeconds { get; }
     public ConfigEntry<bool> FreezeHoldGrip { get; }
     public ConfigEntry<bool> FreezeLockStamina { get; }
+    public ConfigEntry<bool> FreezeBlindsChasers { get; }
     public ConfigEntry<bool> FreezeZeroVelocity { get; }
     public ConfigEntry<bool> FreezeBlockLook { get; }
     public ConfigEntry<bool> FreezeSuspendInAir { get; }
@@ -131,6 +132,7 @@ internal sealed class ModConfig
 
     // UI (local)
     public ConfigEntry<bool> ChasersSeeGhosts { get; }
+    public ConfigEntry<bool> ChasersSeeRunnerNames { get; }
     public ConfigEntry<bool> ShowChaserList { get; }
     public ConfigEntry<bool> FreezeScreenFrost { get; }
     public ConfigEntry<float> CountdownOpacity { get; }
@@ -172,11 +174,9 @@ internal sealed class ModConfig
         ChaserOddsWantChaser = Synced(round, "ChaserOddsWantChaser", 3f, "Draw weight for players who want to be a chaser.");
         ChaserOddsNoPreference = Synced(round, "ChaserOddsNoPreference", 1f, "Draw weight for players with no preference.");
         ChaserOddsRatherRun = Synced(round, "ChaserOddsRatherRun", 0.25f, "Draw weight for players who would rather run (0 = only picked if needed).");
-        BiomeTitleSeconds = Synced(round, "BiomeTitleSeconds", 3f, "After a campfire is lit, play goes on (no chase) until a runner walks far enough to see the new biome's title. Then everyone freezes and the next leg (role reveal, blind chasers, head start) starts this long later, after the title.");
-        NoTitleFallbackSeconds = Synced(round, "NoTitleFallbackSeconds", 5f, "If the new biome's title was already seen before the campfire was lit (or there is none), everyone freezes when it is lit and the next leg starts this long later.");
         SpawnInteractLockSeconds = Synced(round, "SpawnInteractLockSeconds", 7f, "At the start of a run on the shore nothing can be interacted with while everyone wakes up and for this many seconds after the round starts.");
         ChaserStatusMultiplier = Synced(round, "ChaserStatusMultiplier", 0.333f, "Chasers take this fraction of every negative status (injury, cold, poison, drowsy, ...) they would get in vanilla at the current ascent. Hunger is not reduced.");
-        ChaserFallDamageMultiplier = Synced(round, "ChaserFallDamageMultiplier", 0.25f, "Fraction of vanilla fall damage chasers take (0.25 = 1/4). Still scales with the ascent like vanilla. 0 = no fall damage.");
+        ChaserFallDamageMultiplier = Synced(round, "ChaserFallDamageMultiplier", 0.333f, "Fraction of vanilla fall damage chasers take (0.333 = 1/3). Still scales with the ascent like vanilla, and a big fall still knocks them down. 0 = no fall damage.");
         ZombiesIgnoreChasers = Synced(round, "ZombiesIgnoreChasers", true, "Mushroom zombies don't target or bite chasers.");
         ZombiesWhenChasersDead = Synced(round, "ZombiesWhenChasersDead", true, "When no chaser is alive during a chase (all dead, or none - e.g. a host playing solo), mushroom zombies hunt random runners outside the safe zones (ZombiesByPlayerCount per wave), wave after wave, until the runners reach the campfire or a chaser is back.");
         ZombieLifetimeSeconds = Synced(round, "ZombieLifetimeSeconds", 120f, "How long each of those zombies lasts.");
@@ -186,6 +186,7 @@ internal sealed class ModConfig
         ZombieStartDelaySeconds = Synced(round, "ZombieStartDelaySeconds", 300f, "Zombies can only start coming this many seconds after the head start ends (each leg).");
         WipeExtraConversions = Synced(round, "WipeExtraConversions", 1, "If every runner died, chasers are sent to the next campfire and the scout statue there turns this many extra revived runners into chasers (on top of GhostsConvertedPerStatue). At least one runner always remains.");
         TeleportChasersOnLegComplete = Synced(round, "TeleportChasersOnLegComplete", true, "When every living runner reaches the next campfire's safe zone, living chasers are teleported to that campfire too.");
+        PeakChasersDie = Synced(round, "PeakChasersDie", true, "When every living runner has reached the peak, the runners win and every living chaser is brought to the peak and dies.");
         CaptureMoraleBoost = Synced(round, "CaptureMoraleBoost", true, "A chaser who captures a runner also gets a full morale boost (full extra-stamina bar).");
         EnergyDrinkDrowsyMultiplier = Synced(round, "EnergyDrinkDrowsyMultiplier", 1.5f, "Multiplier for the drowsiness an energy drink causes when it wears off.");
         ChaserSpeedMultiplier = Synced(round, "ChaserSpeedMultiplier", 1.15f, "Chaser movement speed multiplier (they can't use most items).");
@@ -209,12 +210,13 @@ internal sealed class ModConfig
         ChaserBlowgun = Synced(blowgun, "ChaserBlowgun", true, "Chasers get a blowgun with unlimited uses. A dart doesn't put runners to sleep; it marks them with flare smoke instead.");
         BlowgunCooldownSeconds = Synced(blowgun, "BlowgunCooldownSeconds", 30f, "Seconds between blowgun shots.");
         TrackingSmokeSeconds = Synced(blowgun, "TrackingSmokeSeconds", 5f, "How long the tracking smoke follows a darted runner.");
-        BlowdartDrowsy = Synced(blowgun, "BlowdartDrowsy", 0.1f, "Drowsiness (sleep) a dart adds to the runner it hits (0.1 = 10%).");
+        BlowdartDrowsy = Synced(blowgun, "BlowdartDrowsy", 0.18f, "Drowsiness (sleep) a dart adds to the runner it hits (0.18 = 18%).");
 
         const string effects = "2c. ChaseEffects";
         FireworkIntervalSeconds = Synced(effects, "FireworkIntervalSeconds", 30f, "Every this many seconds of an active chase a firework goes off above each chaser. 0 = off.");
         FireworkHeight = Synced(effects, "FireworkHeight", 8f, "How high above the chaser the firework bursts (m).");
-        ScoutmasterSounds = Synced(effects, "ScoutmasterSounds", true, "While a chaser is within freeze range of a runner, Scoutmaster sounds play at the chaser.");
+        ScoutmasterChaseMusic = Synced(effects, "ScoutmasterChaseMusic", true, "A runner hears PEAK's own Scoutmaster chase music while a chaser is close (fades in under 50 m, louder under 25 m), like being hunted by the Scoutmaster.");
+        ScoutmasterSounds = Synced(effects, "ScoutmasterSounds", false, "Old effect: random Scoutmaster sounds at a chaser within freeze range of a runner (can cut out; replaced by ScoutmasterChaseMusic).");
         ScoutmasterSoundMinInterval = Synced(effects, "ScoutmasterSoundMinInterval", 3f, "Shortest gap between Scoutmaster sounds from one chaser (s).");
         ScoutmasterSoundMaxInterval = Synced(effects, "ScoutmasterSoundMaxInterval", 6f, "Longest gap between Scoutmaster sounds from one chaser (s).");
 
@@ -225,6 +227,7 @@ internal sealed class ModConfig
         FreezeCooldownSeconds = Synced(freeze, "FreezeCooldownSeconds", 8f, "Seconds after a freeze ends before that chaser can be frozen again (immunity).");
         FreezeHoldGrip = Synced(freeze, "FreezeHoldGrip", true, "Frozen while climbing: keep holding the wall.");
         FreezeLockStamina = Synced(freeze, "FreezeLockStamina", true, "Keep stamina constant while frozen.");
+        FreezeBlindsChasers = Synced(freeze, "FreezeBlindsChasers", true, "A chaser frozen by a runner is also blinded (PEAK's blue blindness from the Alpine flowers) while the freeze lasts.");
         FreezeZeroVelocity = Synced(freeze, "FreezeZeroVelocity", false, "Zero ragdoll velocities while frozen (anti-slide).");
         FreezeBlockLook = Synced(freeze, "FreezeBlockLook", false, "Also block camera look while frozen.");
         FreezeSuspendInAir = Synced(freeze, "FreezeSuspendInAir", true, "Frozen while airborne: hang in the air until the freeze ends.");
@@ -246,7 +249,7 @@ internal sealed class ModConfig
         FogIgnoresChasers = Synced(fog, "FogIgnoresChasers", true, "Chasers don't count when deciding whether the fog starts moving. (Campfire lighting/resting always ignores chasers during a round.)");
 
         const string items = "7. Items";
-        ChaserAllowedItems = Synced(items, "ChaserAllowedItems", "Remedy Fungus", "Extra item names chasers may pick up/use (comma separated, prefab or display name).");
+        ChaserAllowedItems = Synced(items, "ChaserAllowedItems", "Remedy Fungus, Cactus", "Extra item names chasers may pick up/use (comma separated, prefab or display name).");
         ChaserForbiddenItems = Synced(items, "ChaserForbiddenItems", "Energy Drink, Big Lollipop, Bounce Fungus, Cloud Fungus, Shelf Fungus, Warp Fungus, Blue Shroomberry, Green Shroomberry, Purple Shroomberry, Red Shroomberry, Yellow Shroomberry", "Items chasers may never pick up or use, even though they are food or healing (comma separated, display or prefab names). Also kept out of clown luggage.");
         ShroomberryEffectSeconds = Synced(items, "ShroomberryEffectSeconds", 1f, "How long a shroomberry's effects last (s). The hunger it cures is unchanged.");
         ChaserAutoAllowHealing = Synced(items, "ChaserAutoAllowHealing", true, "Chasers may pick up and use items that heal injury.");
@@ -260,7 +263,7 @@ internal sealed class ModConfig
         AllowJetpacks = Synced(items, "AllowJetpacks", false, "Allow jetpacks and rocket packs. Off = removed from the game (not spawned, can't be picked up).");
         AllowGliders = Synced(items, "AllowGliders", false, "Allow gliders. Off = removed from the game (not spawned, can't be picked up).");
         BanHiddenItems = Synced(items, "BanHiddenItems", true, "Remove hidden items that never spawn in normal PEAK (not in any spawn pool and not produced by another item). Check the log for what was detected.");
-        AllowedHiddenItems = Synced(items, "AllowedHiddenItems", "Napberry, Kingberry, Clusterberry, Shroomberry", "Items never treated as hidden, so everyone can use them (comma separated; matches any item whose name contains an entry, so \"Kingberry\" covers every colour).");
+        AllowedHiddenItems = Synced(items, "AllowedHiddenItems", "Napberry, Kingberry, Clusterberry, Shroomberry, Cactus", "Items never treated as hidden, so everyone can use them (comma separated; matches any item whose name contains an entry, so \"Kingberry\" covers every colour).");
         BannedItems = Synced(items, "BannedItems", "Weird Shroom", "Extra banned item names (comma separated, prefab or display name).");
 
         const string conv = "8. Conversion";
@@ -268,7 +271,7 @@ internal sealed class ModConfig
         ReviveDeadChasers = Synced(conv, "ReviveDeadChasers", true, "Chasers who died are also revived when a scout statue is used.");
 
         const string reward = "9. Rewards";
-        RewardItems = Synced(reward, "RewardItems", "Energy Drink", "Item(s) the first runner into each campfire safe zone can get (prefab or display names, comma separated; one random pick per RewardItemCount).");
+        RewardItems = Synced(reward, "RewardItems", "Fortified Milk", "Item(s) the first runner into each campfire safe zone can get (prefab or display names, comma separated; one random pick per RewardItemCount).");
         RewardItemCount = Synced(reward, "RewardItemCount", 1, "How many reward items the first runner into each campfire safe zone gets.");
 
         const string net = "10. Network";
@@ -276,6 +279,7 @@ internal sealed class ModConfig
 
         const string ui = "11. UI";
         ChasersSeeGhosts = Synced(ui, "ChasersSeeGhosts", false, "Whether chasers can see ghosts (spectators). Off = ghosts are invisible to living chasers, since a ghost floats around the runner it spectates.");
+        ChasersSeeRunnerNames = Synced(ui, "ChasersSeeRunnerNames", false, "Whether chasers see the name tags above runners. Off = chasers have to spot runners by sight.");
         ShowChaserList = Local(ui, "ShowChaserList", true, "Show the chaser list under the ascent label (top right).");
         FreezeScreenFrost = Local(ui, "FreezeScreenFrost", true, "Play PEAK's cold screen effect on your own screen while you are frozen.");
         CountdownOpacity = Local(ui, "CountdownOpacity", 0.35f, "Opacity of the big head-start countdown on runners' screens (0-1).");

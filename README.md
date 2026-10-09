@@ -2,7 +2,7 @@
 
 **Chasers vs Runners for PEAK.** A few scouts are secretly chosen as **chasers** and hunt everyone else up the mountain. **Runners** have to make it from campfire to campfire, and finally to the peak, without getting caught. A runner's best defence is to turn around and **look at a chaser** to freeze them in place.
 
-> **New in 1.3.2:** a shorter 3 s freeze after the biome title and new reveal/head-start texts. **1.3.1:** lighting a campfire only freezes everyone once a runner reaches the next biome title, safe zones are **20 m**, and the energy drink lasts 65% less. **1.3.0** added **chaser odds** in the airport (press **-**; secret, first draw only, resets every run), a runner **biome item** each leg and heavier **fortified milk** with shorter invincibility. See the changelog for earlier versions.
+> **New in 1.4.0:** lighting a campfire freezes everyone and starts the next leg right away, nobody moves on the shore until everyone is awake, runners win when **all** of them reach the peak (chasers die up there), items go straight into your hands, PEAK's **Scoutmaster chase music** plays when a chaser closes in, chasers are **blinded while frozen**, can't see runner names and can throw cactus balls, and the first-runner reward is a fortified milk. See the changelog for earlier versions.
 
 > **Everyone in the lobby needs this mod** (same version). The host runs the game: roles, freezes, captures and rewards are all decided by the host and synced to everyone.
 
@@ -11,7 +11,7 @@
 ## How a game works
 
 0. **In the airport**, press **-** to choose your **chaser odds** for the next run: *I want to be a chaser*, *no preference* or *I'd rather be a runner*. Your choice is secret (only the host's game receives it, and nothing shows it), it only affects the first role draw, and it resets every run.
-1. **Wake up on the shore.** Nothing can be interacted with while everyone wakes up, and for a few seconds after (no grabbing items before the roles are out).
+1. **Wake up on the shore.** Nobody can move or interact until **everyone** has woken up and loaded in, and interacting stays locked for a few seconds after (no grabbing items before the roles are out).
 2. **Roles are revealed.** Each player sees **CHASER** (red) or **RUNNER** (yellow) in the middle of the screen. The number of chasers depends on lobby size (1 chaser, 2 from 6 players, configurable). Everyone is frozen during the reveal.
 3. **Head start.** Runners are released and get a 20-second head start with a big countdown. Chasers stay **frozen and blind** the whole time; their screen fades back in near the end.
 4. **The chase.** Chasers hunt the runners up the current biome.
@@ -19,9 +19,9 @@
    - A runner **freezes** a chaser by **looking at them** within 26 m, from **outside** a safe zone. The chaser can't move, act or fall for 6.5 seconds, then is immune to freezing for 8 seconds.
    - If **no chaser is alive** (all dead, or none at all, e.g. a host playing solo is a runner), the mountain takes over: from **5 minutes after the head start ends**, **mushroom zombies** are sent, each after one random runner who isn't in a safe zone yet (1 zombie per wave, more in bigger lobbies). Each lasts 2 minutes. When a wave is gone (killed or expired) there's a **2-minute cooldown** before the next one can come, until the runners reach the campfire or a chaser is back. Every spawn is announced to all players with an alarm and a screen shake, and all zombies vanish the moment every runner is safe (or every runner is caught).
 5. **Reach the campfire.** Within **20 m of a campfire** is a **safe zone**: no captures there, and runners inside can't freeze chasers. When **every living runner** is in the next campfire's safe zone, the chase for that leg is over: everyone sees *ALL RUNNERS ARE SAFE*, the chasers are brought to the campfire, and food is laid out so everyone gets something to eat.
-6. **Light the campfire.** Only a **runner** can light it. Lighting ends the chase and clears every negative status of everyone at the fire. Everyone can still move until a runner walks far enough to see the next biome's title; then **everyone freezes** while it plays, and the next leg starts: role reveal → runners released for their head start → chasers frozen and blind until it ends.
+6. **Light the campfire.** Only a **runner** can light it. Lighting **freezes everyone**, clears every negative status of everyone at the fire, and starts the next leg right away: role reveal → runners released for their head start → chasers frozen and blind until it ends.
 7. **Win.**
-   - **Runners win** when a runner reaches **the peak**.
+   - **Runners win** when **every living runner** reaches **the peak**. The chasers are brought up there and **die**.
    - **Chasers win** when **every runner is dead** and there's no campfire left to go to (the last stretch).
    - **Caught them all?** If every runner dies earlier (passing out doesn't count), the chasers are sent to the **next campfire**. The **scout statue** there revives everyone, and **one extra** revived runner becomes a chaser on top of the usual conversion (at least one runner always remains).
 
@@ -36,19 +36,20 @@
 
 **Perks**
 - **15% faster** than runners, and **6% faster climbing** (walls, ropes, vines).
-- **Blowgun** with **unlimited** darts (30 s cooldown, counted down above its hotbar slot). A dart doesn't knock the runner out: it adds **10% drowsiness** and marks them with **flare smoke in their own skin colour** for 5 seconds, so everyone can see where they are.
+- **Blowgun** with **unlimited** darts (30 s cooldown, counted down above its hotbar slot). A dart doesn't knock the runner out: it adds **18% drowsiness** and marks them with **flare smoke in their own skin colour** for 5 seconds, so everyone can see where they are.
 - **Capture rush:** each capture gives a short **+1% speed** boost (5 s; each further capture during the boost adds +0.5%) and a **full morale boost** (extra-stamina bar).
-- **Tough:** only **1/3** of every negative status (injury, cold, poison, drowsiness, …), only **1/4 fall damage** (still scaled by the ascent), **immune to fog**, ignored by **mushroom zombies**. *Hunger works the same as for runners.*
+- **Tough:** only **1/3** of every negative status (injury, cold, poison, drowsiness, …), only **1/3 fall damage** (still scaled by the ascent; a big fall still knocks them down), **immune to fog**, ignored by **mushroom zombies**. *Hunger works the same as for runners.*
 - **Clown luggage** is theirs: only chasers can open it, and it's full of food and healing items.
 
 **Drawbacks**
-- Can only pick up and use **food and healing items** (plus their blowgun), and **never energy drinks, lollipops, shroomberries or the Roots fungi** (Bounce, Cloud, Shelf, Warp; the healing Remedy Fungus is allowed).
+- Can only pick up and use **food and healing items** (plus their blowgun), and **never energy drinks, lollipops, shroomberries or the Roots fungi** (Bounce, Cloud, Shelf, Warp; the healing Remedy Fungus is allowed). They can pick up and throw **cactus balls**.
 - Can only open **clown luggage** (scout statues still work).
 - **Can't light campfires.**
 - **Can't see ghosts**, since a ghost floats around the runner it spectates.
 - Frozen and **blind** during every head start.
-- Can be **frozen** by any runner who looks at them, and they **pulse icy blue** while frozen so everyone can tell.
-- **Fireworks** go off above every chaser every 30 seconds of the chase, and they sound like the **Scoutmaster** when they're close to a runner. Runners always have a clue where they are.
+- Can be **frozen** by any runner who looks at them: they **pulse icy blue** so everyone can tell, and they're **blinded** (PEAK's blue-flower blindness) for as long as the freeze lasts.
+- **Can't see runners' name tags.**
+- **Fireworks** go off above every chaser every 30 seconds of the chase, and a runner with a chaser closing in hears PEAK's own **Scoutmaster chase music**. Runners always have a clue where they are.
 
 ## Runners
 
@@ -59,7 +60,8 @@
 - **12% faster stamina regeneration.**
 - A **backpack** at the start of the round, **one random item** at the start of every leg (a snowball, a brown berrynana or a fortified milk), plus a **biome item**: a heat pack in the Alpine, a sports drink in the Caldera, an early worm in the Gloom, aloe vera in the Mesa.
 - **Fortified milk** protects you from being captured while it's active (milk is twice as heavy and its invincibility is 65% shorter than vanilla).
-- First runner into each campfire's safe zone gets an **energy drink**.
+- First runner into each campfire's safe zone gets a **fortified milk** (not when every runner was caught and the chasers were sent ahead).
+- Leg and biome items are dropped at your feet and picked up for you, straight into your hands; if your slots are full they stay on the ground.
 
 **Drawbacks**
 - **Fog rises 1.5× faster** (and starts sooner), and only hurts runners.
@@ -128,8 +130,6 @@ Settings live in `BepInEx/config/codesycamore.OnTheLookout.cfg` (or the mod mana
 | `AutoStartRound` | true | Start automatically once everyone has woken up. |
 | `ChaserPreferenceEnabled` | true | Lets players choose their chaser odds in the airport (host decides). |
 | `ChaserOddsWantChaser` / `NoPreference` / `RatherRun` | 3 / 1 / 0.25 | Draw weights for each choice (0 = only if needed). |
-| `BiomeTitleSeconds` | 3 | After lighting a campfire, everyone freezes when a runner reaches the next biome title; the next leg starts this long later. |
-| `NoTitleFallbackSeconds` | 5 | If that title was already seen (or there is none), everyone freezes at lighting and the leg starts this long later. |
 | `SpawnInteractLockSeconds` | 7 | No interacting on the shore until this long after the round starts. |
 | `ChaserSpeedMultiplier` | 1.15 | Chaser movement speed. |
 | `ChaserClimbSpeedMultiplier` | 1.06 | Chaser climbing speed (walls, ropes, vines). |
@@ -138,7 +138,7 @@ Settings live in `BepInEx/config/codesycamore.OnTheLookout.cfg` (or the mod mana
 | `CaptureBoostSeconds` | 5 | Capture boost duration. |
 | `CaptureMoraleBoost` | true | Capturing gives a full morale boost. |
 | `ChaserStatusMultiplier` | 0.333 | Fraction of negative statuses chasers take (not hunger). |
-| `ChaserFallDamageMultiplier` | 0.25 | Fraction of vanilla fall damage chasers take (ascent-scaled). 0 = none. |
+| `ChaserFallDamageMultiplier` | 0.333 | Fraction of vanilla fall damage chasers take (ascent-scaled; big falls still knock them down). 0 = none. |
 | `ZombiesIgnoreChasers` | true | Mushroom zombies ignore chasers. |
 | `ZombiesWhenChasersDead` | true | Zombies hunt runners while no chaser is alive (incl. solo). |
 | `ZombieLifetimeSeconds` | 120 | How long each of those zombies lasts. |
@@ -147,6 +147,7 @@ Settings live in `BepInEx/config/codesycamore.OnTheLookout.cfg` (or the mod mana
 | `ZombieWaveDelaySeconds` | 120 | Cooldown after a wave is gone (killed or expired) before another can come. |
 | `ZombieStartDelaySeconds` | 300 | Zombies only start coming this long after the head start ends (each leg). |
 | `TeleportChasersOnLegComplete` | true | Bring chasers to the campfire when the runners are all safe. |
+| `PeakChasersDie` | true | When every living runner reaches the peak, the chasers are brought up there and die. |
 | `RunnerStaminaRegenMultiplier` | 1.12 | Runner stamina regeneration. |
 | `RunnerBackpacks` | true | Runners get a backpack at round start. |
 | `RunnerLegItems` | `Snowball, Brown Berrynana, Fortified Milk` | One random item per runner each leg. Empty = off. |
@@ -166,14 +167,15 @@ Settings live in `BepInEx/config/codesycamore.OnTheLookout.cfg` (or the mod mana
 | `ChaserBlowgun` | true | Chasers get an unlimited blowgun. |
 | `BlowgunCooldownSeconds` | 30 | Time between shots. |
 | `TrackingSmokeSeconds` | 5 | How long the smoke follows a darted runner. |
-| `BlowdartDrowsy` | 0.1 | Drowsiness a dart adds (0.1 = 10%). |
+| `BlowdartDrowsy` | 0.18 | Drowsiness a dart adds (0.18 = 18%). |
 
 ### 2c. Chase effects
 | Setting | Default | What it does |
 |---|---|---|
 | `FireworkIntervalSeconds` | 30 | Firework above each chaser every N seconds of chase. 0 = off. |
 | `FireworkHeight` | 8 | Firework height above the chaser (m). |
-| `ScoutmasterSounds` | true | Chasers make Scoutmaster sounds near runners. |
+| `ScoutmasterChaseMusic` | true | Runners hear PEAK's Scoutmaster chase music when a chaser is close (under 50 m, louder under 25 m). |
+| `ScoutmasterSounds` | false | Old effect: random Scoutmaster sounds at chasers near runners. |
 | `ScoutmasterSoundMinInterval` / `MaxInterval` | 3 / 6 | Random gap between those sounds (s). |
 
 ### 3. Freeze
@@ -185,6 +187,7 @@ Settings live in `BepInEx/config/codesycamore.OnTheLookout.cfg` (or the mod mana
 | `FreezeCooldownSeconds` | 8 | Immunity after a freeze ends. |
 | `FreezeHoldGrip` | true | Frozen while climbing: keep holding on. |
 | `FreezeLockStamina` | true | Stamina doesn't drain while frozen. |
+| `FreezeBlindsChasers` | true | A frozen chaser is also blinded while the freeze lasts. |
 | `FreezeSuspendInAir` | true | Frozen mid-jump: hang in the air. |
 | `FreezeSuspendStiffness` | 10 | How firmly a mid-air chaser is held. |
 | `FreezeZeroVelocity` | false | Extra anti-slide while frozen. |
@@ -215,7 +218,7 @@ Settings live in `BepInEx/config/codesycamore.OnTheLookout.cfg` (or the mod mana
 |---|---|---|
 | `ChaserAutoAllowHealing` | true | Chasers can use healing items. |
 | `ChaserAutoAllowFood` | true | Chasers can eat food. |
-| `ChaserAllowedItems` | `Remedy Fungus` | Extra items chasers may always use (names, comma separated). |
+| `ChaserAllowedItems` | `Remedy Fungus, Cactus` | Extra items chasers may always use (names, comma separated). |
 | `ChaserForbiddenItems` | `Energy Drink, Big Lollipop, Bounce Fungus, Cloud Fungus, Shelf Fungus, Warp Fungus, Blue Shroomberry, Green Shroomberry, Purple Shroomberry, Red Shroomberry, Yellow Shroomberry` | Items chasers can never use, even if they are food or healing. |
 | `ClownLuggageChasersOnly` | true | Only chasers open clown luggage (food/healing inside). |
 | `ChasersOnlyOpenClownLuggage` | true | Chasers can't open other luggage. |
@@ -223,7 +226,7 @@ Settings live in `BepInEx/config/codesycamore.OnTheLookout.cfg` (or the mod mana
 | `BanBlowguns` | true | No blowguns in the world (chasers still get theirs). |
 | `AllowJetpacks` / `AllowGliders` | false | Turn on to allow them again. |
 | `BanHiddenItems` | true | Remove items that never spawn in normal PEAK. |
-| `AllowedHiddenItems` | `Napberry, Kingberry, Clusterberry, Shroomberry` | Never treated as hidden (name contains, so all colours count). |
+| `AllowedHiddenItems` | `Napberry, Kingberry, Clusterberry, Shroomberry, Cactus` | Never treated as hidden (name contains, so all colours count). |
 | `BannedItems` | `Weird Shroom` | Extra items to remove. |
 | `ShroomberryEffectSeconds` | 1 | How long a shroomberry's effects last (hunger cure unchanged). |
 
@@ -237,7 +240,7 @@ Settings live in `BepInEx/config/codesycamore.OnTheLookout.cfg` (or the mod mana
 ### 9. Rewards
 | Setting | Default | What it does |
 |---|---|---|
-| `RewardItems` | `Energy Drink` | Reward for the first runner into each safe zone. |
+| `RewardItems` | `Fortified Milk` | Reward for the first runner into each safe zone. |
 | `RewardItemCount` | 1 | How many. |
 
 ### 10–13. Network, UI, Debug, Admin
@@ -245,6 +248,7 @@ Settings live in `BepInEx/config/codesycamore.OnTheLookout.cfg` (or the mod mana
 |---|---|---|
 | `KickPlayersWithoutMod` *(local, host)* | false | Kick players with a missing/different mod version. |
 | `ChasersSeeGhosts` | false | Let chasers see ghosts. |
+| `ChasersSeeRunnerNames` | false | Let chasers see the name tags above runners. |
 | `ShowChaserList` *(local)* | true | Chaser list in the top right. |
 | `FreezeScreenFrost` *(local)* | true | Frost on your screen while you're frozen. |
 | `CountdownOpacity` *(local)* | 0.35 | Opacity of the runners' countdown. |

@@ -104,7 +104,6 @@ internal sealed class ModNetwork : MonoBehaviourPunCallbacks, Photon.Realtime.IO
             Hashtable props = PhotonNetwork.CurrentRoom.CustomProperties;
             FreezeState.OnRoomPropertiesUpdate(props);
             RewardSystem.OnRoomPropertiesUpdate(props);
-            RoundManager.HostResumeAfterMigration();
         }
     }
 
@@ -154,14 +153,11 @@ internal sealed class ModNetwork : MonoBehaviourPunCallbacks, Photon.Realtime.IO
                 case Msg.ChaserPreference when Net.IsHost && data.Length >= 2:
                     ChaserPreference.HostSet(photonEvent.Sender, (ChaserPref)(byte)data[1]);
                     break;
-                case Msg.RefreshSlot when data.Length >= 2:
-                    LegLoadout.RefreshLocalSlot((int)data[1]);
+                case Msg.PickUpItem when data.Length >= 2:
+                    LegLoadout.PickUpLocal((int)data[1]);
                     break;
                 case Msg.ClearHands:
                     LegLoadout.ClearLocalHands();
-                    break;
-                case Msg.BiomeTitle when Net.IsHost:
-                    RoundManager.HostOnBiomeTitle(photonEvent.Sender);
                     break;
                 case Msg.Notice when data.Length >= 4:
                     NoticeReceived?.Invoke((Notice)(byte)data[1], (int)data[2], (int)data[3]);

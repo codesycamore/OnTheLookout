@@ -191,6 +191,15 @@ internal sealed class FreezeSystem : MonoBehaviour
         s_LockedStamina = local.data.currentStamina;
         Plugin.Log.LogInfo($"[OTL][Freeze] LOCAL frozen. climbing={local.data.isClimbing} grounded={local.data.isGrounded} stamina={s_LockedStamina:0.00}");
         FreezeSuspendPatch.TryBegin(local);
+
+        // A runner's look-freeze also blinds the chaser with PEAK's blue blindness (the Alpine blue-flower
+        // effect, Affliction_Blind), for as long as the freeze lasts.
+        int actor = Net.Actor(local);
+        if (Plugin.ModConfig.FreezeBlindsChasers.Synced() && FreezeState.IsFrozen(actor) && RoleManager.IsChaser(local))
+        {
+            local.refs.afflictions.AddAffliction(new Peak.Afflictions.Affliction_Blind { totalTime = Mathf.Max(0.5f, FreezeState.FrozenSecondsLeft(actor)) });
+            s_BlindApplied = true;
+        }
     }
 
     public static void OnLocalFreezeEnded(Character local)
@@ -198,13 +207,20 @@ internal sealed class FreezeSystem : MonoBehaviour
         Plugin.Log.LogInfo($"[OTL][Freeze] LOCAL unfrozen. climbing={local.data.isClimbing} stamina={local.data.currentStamina:0.00}");
         s_LockedStamina = -1f;
         FreezeSuspendPatch.End();
+        if (s_BlindApplied)
+        {
+            s_BlindApplied = false;
+            local.refs.afflictions.RemoveAffliction(Peak.Afflictions.Affliction.AfflictionType.Blind);
+        }
     }
+
+    private static bool s_BlindApplied;
 
     private static bool LocalFrozen(out Character local)
     {
         local = Character.localCharacter;
         return local != null && Net.InRoom
-            && (FreezeState.IsFrozen(Net.Actor(local)) || RoundManager.InIntermission
+            && (FreezeState.IsFrozen(Net.Actor(local))
                 || (RoundManager.InReveal && RoleManager.IsRunner(local)) || (RoundManager.InHold && RoleManager.IsChaser(local)));
     }
 

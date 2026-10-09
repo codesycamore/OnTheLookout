@@ -75,13 +75,14 @@ public partial class Plugin : BaseUnityPlugin
         ui.AddComponent<HostMenu>();
         ui.AddComponent<ChaserOddsMenu>();
         HostMenu.Install(_harmony);
+        bool nameTags = NameTags.Install(_harmony);
         root.AddComponent<AdminRestart>();
         root.AddComponent<ChaserClimbBoost>();
         UnityEngine.SceneManagement.SceneManager.sceneLoaded += (_, _) => ItemCatalog.OnSceneLoaded();
 
         Log.LogInfo($"[OTL] {Name} {Version} loaded. round={round} freeze={input && cfg.EnableFreeze.Value} " +
             $"suspend={FreezeSuspendPatch.HooksAvailable} campfire={campfire} tag={tag} fog={fog} items={items} " +
-            $"conversion={conversion} speed={speed} blowgun={blowgun} tweaks={tweaks} resilience={resilience} shroomberry={shroomberry} milk={milk} rewards={RewardSystem.Enabled}");
+            $"conversion={conversion} speed={speed} blowgun={blowgun} tweaks={tweaks} resilience={resilience} shroomberry={shroomberry} milk={milk} nameTags={nameTags} rewards={RewardSystem.Enabled}");
     }
 
     private static void StartRunPostfix()

@@ -14,14 +14,11 @@ internal enum Msg : byte
     /// <summary>host -> all: [Notice, actorA, actorB]</summary>
     Notice = 2,
 
-    /// <summary>client -> host: [] this client just showed a biome title</summary>
-    BiomeTitle = 3,
-
     /// <summary>host -> one chaser: [] drop whatever is in hand (an item is about to be given)</summary>
     ClearHands = 4,
 
-    /// <summary>host -> one player: [slotId] an item was just added to this slot; refresh what is in hand</summary>
-    RefreshSlot = 5,
+    /// <summary>host -> one player: [viewId] an item was spawned at your feet for you; pick it up</summary>
+    PickUpItem = 5,
 
     /// <summary>client -> host only: [ChaserPref] this player's chaser odds from the airport (never broadcast)</summary>
     ChaserPreference = 6,

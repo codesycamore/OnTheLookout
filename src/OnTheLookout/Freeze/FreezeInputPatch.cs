@@ -23,10 +23,9 @@ internal static class FreezeInputPatch
             return;
         }
 
-        // A full freeze for: a look-freeze; everyone between lighting a campfire and the next leg (until the
-        // biome title has played); runners during the role reveal; chasers during the reveal + head start.
+        // A full freeze for: a look-freeze; runners during the role reveal (so everyone is frozen while it shows);
+        // chasers during the reveal + head start.
         bool frozen = Net.InRoom && (FreezeState.IsFrozen(Net.Actor(local))
-            || RoundManager.InIntermission
             || (RoundManager.InReveal && RoleManager.IsRunner(local))
             || (RoundManager.InHold && RoleManager.IsChaser(local)));
 
@@ -49,7 +48,9 @@ internal static class FreezeInputPatch
 
         s_WasFrozen = frozen;
 
-        if (frozen)
+        // On the shore before the round starts nobody can move (input only: no mid-air suspension, so the
+        // intro fall and waking up play out normally).
+        if (frozen || RoundManager.InPreRound)
         {
             Block(__instance);
         }

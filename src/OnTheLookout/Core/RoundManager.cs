@@ -76,8 +76,7 @@ internal static class RoundManager
                 return Net.IsBefore(unchecked(s_LegStart + (int)(Plugin.ModConfig.SpawnInteractLockSeconds.Synced() * 1000f)));
             }
 
-            return s_State == RoundState.Idle && Plugin.ModConfig.AutoStartRound.Synced()
-                && RunManager.Instance != null && RunManager.Instance.runStarted;
+            return InPreRound;
         }
     }
 
@@ -150,7 +149,6 @@ internal static class RoundManager
         FreezeState.HostReset();
         RewardSystem.HostReset();
         AdminRestart.HostForget();
-        s_AwaitingLeg = false;
         HostSetFlags(0);
         PublishLeg(RoundState.Active, s_RoundId + 1, 1);
         Plugin.Log.LogInfo($"[OTL][Round] HOST started round {s_RoundId}.");
@@ -160,7 +158,6 @@ internal static class RoundManager
     public static void HostStartLeg()
     {
         if (!Net.IsHost || !IsActive) return;
-        s_AwaitingLeg = false;
         HostSetFlags(0); // runners unfreeze (after the reveal) for their head start
         FreezeState.HostReset();
         PublishLeg(RoundState.Active, s_RoundId, s_LegId + 1);
@@ -177,7 +174,6 @@ internal static class RoundManager
             return;
         }
 
-        s_AwaitingLeg = false;
         HostSetFlags(0);
         FreezeState.HostReset();
         PublishLeg(RoundState.Active, s_RoundId, s_LegId + 1);
@@ -197,29 +193,15 @@ internal static class RoundManager
         Publish(state, s_LegStart, s_RevealMs, s_HeadStartMs, s_RoundId, s_LegId);
     }
 
-    // ---------- Campfire -> everyone frozen -> biome title -> next leg (host) ----------
+    // ---------- Campfire lit -> next leg (host) ----------
 
-    /// <summary>Room property: bit flags shared with every client (see <see cref="FlagIntermission"/>, <see cref="FlagWiped"/>).</summary>
+    /// <summary>Room property: bit flags shared with every client (see <see cref="FlagWiped"/>).</summary>
     public const string FlagsKey = "otl.flags";
-
-    /// <summary>A campfire was lit: everyone is frozen until the next leg starts (after the biome title).</summary>
-    private const int FlagIntermission = 1;
 
     /// <summary>Every runner died: chasers were sent to the next campfire; the next statue converts an extra runner.</summary>
     private const int FlagWiped = 2;
 
-    /// <summary>A campfire was lit; no chase, nobody frozen, until a runner walks far enough to see the next biome's title.</summary>
-    private const int FlagAwaitingTitle = 4;
-
     private static int s_Flags;
-    private static bool s_AwaitingLeg;
-    private static float s_LegDue;
-
-    /// <summary>From a runner seeing the new biome title until the next leg starts: every player is frozen.</summary>
-    public static bool InIntermission => IsActive && (s_Flags & FlagIntermission) != 0;
-
-    /// <summary>A campfire was lit and the host is waiting for a runner to see the new biome's title.</summary>
-    public static bool AwaitingTitle => IsActive && (s_Flags & FlagAwaitingTitle) != 0;
 
     /// <summary>All runners died this leg; cleared by the next scout statue or leg.</summary>
     public static bool IsWiped => IsActive && (s_Flags & FlagWiped) != 0;
@@ -235,58 +217,33 @@ internal static class RoundManager
     public static void HostClearWipe() => HostSetFlags(s_Flags & ~FlagWiped);
 
     /// <summary>
-    /// Host: a runner lit a campfire. The chase pauses (no captures or freezes) but nobody is frozen yet:
-    /// play goes on until a runner walks far enough to see the next biome's title (<see cref="HostOnBiomeTitle"/>).
-    /// If that title was already seen (or there is none), everyone freezes right away instead.
+    /// Host: a runner lit a campfire. The next leg starts right away: role reveal (everyone frozen), then
+    /// runners released for their head start while chasers stay frozen and blind.
     /// </summary>
-    public static void HostOnCampfireLit(bool titleAlreadySeen)
+    public static void HostOnCampfireLit()
     {
         if (!Net.IsHost || !IsActive) return;
-        HostSetState(RoundState.LegComplete); // no captures or freezes while waiting
-        if (titleAlreadySeen)
-        {
-            HostBeginIntermission(Plugin.ModConfig.NoTitleFallbackSeconds.Value, "campfire lit, biome title already seen");
-            return;
-        }
-
-        s_AwaitingLeg = false;
-        HostSetFlags((s_Flags & ~FlagIntermission) | FlagAwaitingTitle);
-        Plugin.Log.LogInfo("[OTL][Round] HOST: campfire lit; waiting for a runner to reach the next biome's title.");
+        Plugin.Log.LogInfo("[OTL][Round] HOST: campfire lit; next leg starts now.");
+        HostStartLeg();
     }
 
     /// <summary>
-    /// Host: some player's client just showed a biome title (PEAK shows it per player when they cross
-    /// the next biome's progress point). If it's a living runner and we're waiting for it, everyone
-    /// freezes and the next leg starts once the title has finished playing.
+    /// Start of a run on the shore, before the round has started: nobody can move (every client blocks
+    /// its own input) until everyone has woken up and the host starts the round with the role reveal.
+    /// True while PEAK's run is going but the round in the room belongs to no run or another run; only
+    /// when the host runs the mod and starts rounds automatically.
     /// </summary>
-    public static void HostOnBiomeTitle(int reporter)
+    public static bool InPreRound
     {
-        if (!Net.IsHost || !AwaitingTitle) return;
-        Character? c = Net.CharacterOf(reporter);
-        if (RoleManager.RoleOf(reporter) != Role.Runner || c == null || c.data.dead)
+        get
         {
-            Plugin.Log.LogInfo($"[OTL][Round] HOST: {Net.NameOf(reporter)} saw the biome title but isn't a living runner; still waiting.");
-            return;
+            if (!Net.InRoom || Net.GetRoom(ConfigSync.RoomKey) == null || !Plugin.ModConfig.AutoStartRound.Synced()) return false;
+            RunManager? run = RunManager.Instance;
+            if (run == null || !run.runStarted || Character.localCharacter == null || Character.localCharacter.inAirport) return false;
+            if (s_State == RoundState.Idle) return true;
+            string id = CurrentRunId;
+            return id.Length > 0 && id != Guid.Empty.ToString() && Net.GetRoom(RunKey) as string != id;
         }
-
-        HostBeginIntermission(Plugin.ModConfig.BiomeTitleSeconds.Value, $"{Net.NameOf(reporter)} sees the biome title");
-    }
-
-    /// <summary>Host: everyone freezes now; the next leg (reveal, timers, head start) starts after <paramref name="seconds"/>.</summary>
-    private static void HostBeginIntermission(float seconds, string why)
-    {
-        HostSetFlags((s_Flags & ~FlagAwaitingTitle) | FlagIntermission);
-        s_AwaitingLeg = true;
-        s_LegDue = Time.time + seconds;
-        Plugin.Log.LogInfo($"[OTL][Round] HOST: {why}; everyone frozen, next leg in {seconds:0.#}s.");
-    }
-
-    /// <summary>New host after migration: keep waiting for the next leg if the old host was.</summary>
-    public static void HostResumeAfterMigration()
-    {
-        if (!Net.IsHost || s_AwaitingLeg || !InIntermission) return;
-        s_AwaitingLeg = true;
-        s_LegDue = Time.time + Plugin.ModConfig.NoTitleFallbackSeconds.Value;
     }
 
     /// <summary>Host, ~2x per second: leg completion and win conditions.</summary>
@@ -294,12 +251,6 @@ internal static class RoundManager
     {
         if (!Net.IsHost || !IsActive) return;
 
-        if (s_AwaitingLeg && Time.time >= s_LegDue)
-        {
-            s_AwaitingLeg = false;
-            HostStartLeg();
-            return;
-        }
 
         var runners = PhotonNetwork.PlayerList
             .Where(p => RoleManager.RoleOf(p.ActorNumber) == Role.Runner)
@@ -318,7 +269,6 @@ internal static class RoundManager
             Campfire? next = NextCampfire();
             if (next == null)
             {
-                s_AwaitingLeg = false;
                 HostSetState(RoundState.ChasersWon);
                 return;
             }
@@ -326,6 +276,7 @@ internal static class RoundManager
             HostSetFlags(s_Flags | FlagWiped); // before the state change, so clients see it with LegCompleted
             HostSetState(RoundState.LegComplete);
             HostBringChasers(next.transform.position);
+            RewardSystem.HostMarkRewarded(next); // no first-runner reward when the runners are revived there
             ZombieHunt.HostDespawnAll(); // the chase is over: clear the zombies immediately
             Plugin.Log.LogInfo("[OTL][Round] HOST: every runner is down; chasers sent to the next campfire.");
             return;
@@ -333,10 +284,13 @@ internal static class RoundManager
 
         var alive = runners.Where(c => !c.data.dead).ToList();
         MountainProgressHandler? progress = Singleton<MountainProgressHandler>.Instance;
-        if (progress != null && alive.Any(c => progress.IsAtPeak(c.Center)))
+        // Every living runner made it to the peak: the runners win, and the chasers are brought up there
+        // and die (when PeakChasersDie).
+        if (progress != null && alive.Count > 0 && alive.All(c => progress.IsAtPeak(c.Center)))
         {
-            s_AwaitingLeg = false;
             HostSetState(RoundState.RunnersWon);
+            ZombieHunt.HostDespawnAll();
+            if (Plugin.ModConfig.PeakChasersDie.Synced()) ModNetwork.Instance?.StartCoroutine(HostChasersToPeak(alive[0].Center));
             return;
         }
 
@@ -383,6 +337,20 @@ internal static class RoundManager
         Plugin.Log.LogInfo($"[OTL][Round] HOST: leg complete, {i} chaser(s) brought to the campfire.");
     }
 
+    /// <summary>Host: every living runner reached the peak. Living chasers are warped next to them, then die.</summary>
+    private static IEnumerator HostChasersToPeak(Vector3 peak)
+    {
+        var chasers = Character.AllCharacters.Where(c => c != null && RoleManager.IsChaser(c) && !c.data.dead).ToList();
+        HostBringChasers(peak);
+        yield return new WaitForSeconds(2f); // let the warp land so they die up there
+        foreach (Character c in chasers)
+        {
+            if (c != null && !c.data.dead) c.view.RPC("RPCA_Die", RpcTarget.All);
+        }
+
+        Plugin.Log.LogInfo($"[OTL][Round] HOST: runners reached the peak; {chasers.Count} chaser(s) brought up and killed.");
+    }
+
     private static void Publish(RoundState state, int legStart, int revealMs, int headStartMs, int roundId, int legId) =>
         Net.SetRoom(RoomKey, new[] { (int)state, legStart, revealMs, headStartMs, roundId, legId });
 
@@ -419,7 +387,6 @@ internal static class RoundManager
     public static void Clear()
     {
         s_State = RoundState.Idle;
-        s_AwaitingLeg = false;
         s_Flags = 0;
         s_RoundId = 0;
         s_LegId = 0;

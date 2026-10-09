@@ -231,3 +231,21 @@ Debug keys (host, bottom-left hint): **F7** start or restart a round, **F6** swa
 
 - Freeze after the biome title: `BiomeTitleSeconds` 7.5 → **3** (saved dev config updated).
 - HUD texts: reveal subtitle "YOUR ROLE" → "YOU ARE A..."; runner countdown subtitle "HEAD START" → "YOU HAVE A HEADSTART... RUN!" (chasers keep "THE HUNT BEGINS IN").
+
+## Decided: change list 1.4.0 (2026-10-08)
+
+- **Campfire → next leg immediately.** Lighting starts the next leg on the spot (`RoundManager.HostOnCampfireLit` → `HostStartLeg`): the reveal freezes everyone, then the head start. The biome-title wait (flags, `TriggerReached` patch, `Msg.BiomeTitle`, `BiomeTitleSeconds`, `NoTitleFallbackSeconds`) is removed.
+- **Shore pre-round freeze** (`RoundManager.InPreRound`): input is blocked (no mid-air suspension, so the intro fall and waking up play out) while PEAK's run is going but the room's round belongs to no run or another run (`otl.run` ≠ `RunManager.RunId`), when the host runs the mod with `AutoStartRound`. Ends when the host starts the round (everyone awake, max 60 s). Also drives the shore interaction lock.
+  - **Risk:** if the host leaves before the round starts, the new host doesn't start it; use the host menu / F7.
+- **No reward after a wipe:** the campfire the chasers are sent to is marked as already rewarded (`RewardSystem.HostMarkRewarded`).
+- **Reward = Fortified Milk** (`RewardItems`; saved dev config updated).
+- **Item handout via vanilla pickup** (`LegLoadout.Give`): the host spawns the item at the player's feet and sends `Msg.PickUpItem` (replaces `RefreshSlot`); the player's client calls `Item.Interact` (→ `RequestPickup` → `Player.AddItem` + `OnPickupAccepted`, which equips it). Retries for 4 s (vanilla ignores pickups within 0.25 s of an equip). Slots full → left on the ground. Backpacks still go straight into the backpack slot.
+- **Chase music** (`ScoutmasterChaseMusic`): vanilla `MyresAmbience` fades a looping `fearMusic` by the animator float "Myers Distance", which `CharacterAnimations` copies from `CharacterData.myersDistance` (reset to 1000 each frame) and the Scoutmaster sets on his target (`Scoutmaster.DoVisuals`). We set it on the local runner to the nearest living chaser during the chase. Old random sounds off (`ScoutmasterSounds = false`).
+  - **Unverified:** that every player character has a `MyresAmbience` (log: "chase music: MyresAmbience on the local character = True").
+- **Cactus balls:** "Cactus" (prefab `CactusBall`) was classified *hidden* and so banned for everyone; added to `AllowedHiddenItems` and `ChaserAllowedItems`.
+- **Runner name tags hidden from chasers** (`UIPlayerNames.UpdateName` prefix forces `visible = false`).
+- **Chaser fall damage 1/3** (`ChaserFallDamageMultiplier = 0.333`). The knockdown is unaffected: `CharacterMovement.CheckFallDamage` calls `character.Fall(a * 5)` before the injury we scale.
+- **Freeze blindness** (`FreezeBlindsChasers`): on a look-freeze the chaser's own client adds `Affliction_Blind` (totalTime = freeze time left) and removes it when unfrozen.
+- **Peak:** runners win when every living runner `IsAtPeak`; chasers are warped next to a runner and killed 2 s later (`PeakChasersDie`).
+- **Blowdart drowsiness 18%.**
+- **To verify:** shore freeze ends when the reveal starts; items land in hands (watch "spawned a … for X to pick up"); chase music audible and continuous; cactus pickup; blindness during freeze; peak ending.

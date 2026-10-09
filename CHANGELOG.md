@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.4.0
+
+### Round flow
+- **Lighting a campfire freezes everyone and starts the next leg right away**: role reveal → runners' head start. The biome title no longer matters (`BiomeTitleSeconds` and `NoTitleFallbackSeconds` are gone).
+- **Shore start:** nobody can move until every player has woken up and loaded in; then the role reveal and timers start.
+- **Peak:** the runners win once **every living runner** is at the peak (was: the first one). The chasers are then brought up there and die (`PeakChasersDie`).
+- After **every runner was caught** and the chasers were sent ahead, the next campfire gives **no first-runner reward**.
+
+### Runners
+- The first-runner reward is now a **fortified milk** (`RewardItems`).
+- **Leg, biome and reward items no longer get "stuck" in a hotbar slot.** They are dropped at the runner's feet and their own game picks them up the vanilla way (into a free slot and into their hands). With every slot full, the item stays on the ground in front of them.
+- Blowgun darts add **18%** drowsiness (was 10%, `BlowdartDrowsy`).
+- **Chase music:** a runner with a chaser closing in hears PEAK's own Scoutmaster chase music, fading in under 50 m and louder under 25 m (`ScoutmasterChaseMusic`). The old random Scoutmaster sounds at chasers kept cutting out and are now off by default (`ScoutmasterSounds`).
+
+### Chasers
+- Take **1/3** of vanilla fall damage (was 1/4, `ChaserFallDamageMultiplier`); a big fall still knocks them down.
+- **Cactus balls** can be picked up by chasers (and by everyone: they were wrongly treated as a hidden item). Added to `ChaserAllowedItems` and `AllowedHiddenItems`.
+- **Can't see runners' name tags** (`ChasersSeeRunnerNames`).
+- **Blinded while frozen:** a runner's freeze also gives the chaser PEAK's blue-flower blindness until it ends (`FreezeBlindsChasers`).
+
 ## 1.3.2
 
 - Everyone stays frozen only **3 s** after a runner sees the next biome title, instead of 7.5 s (`BiomeTitleSeconds`).

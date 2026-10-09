@@ -10,7 +10,7 @@ namespace OnTheLookout.Modules;
 
 /// <summary>
 /// Rule 10: the first runner to reach the safe zone of each (unlit) campfire gets a reward item
-/// (RewardItems, default an energy drink), given by the host.
+/// (RewardItems, default a fortified milk), given by the host.
 /// Rewarded campfires are replicated in <see cref="RoomKey"/> so a new host won't pay out twice.
 /// </summary>
 internal static class RewardSystem
@@ -55,7 +55,7 @@ internal static class RewardSystem
         int spawned = 0;
         try
         {
-            // One random pick from RewardItems per count (default: one energy drink), into the inventory
+            // One random pick from RewardItems per count (default: one fortified milk), into the inventory
             // if there is room, otherwise at their feet.
             var pool = ItemCatalog.FindByNames(Plugin.ModConfig.RewardItems.Synced());
             for (int i = 0; pool.Count > 0 && i < Mathf.Max(1, Plugin.ModConfig.RewardItemCount.Synced()); i++)
@@ -71,6 +71,14 @@ internal static class RewardSystem
 
         Plugin.Log.LogInfo($"[OTL][Reward] HOST: {Net.NameOf(actor)} reached a campfire first; gave {spawned} item(s).");
         ModNetwork.Broadcast(Notice.Rewarded, actor, spawned);
+    }
+
+    /// <summary>Host: <paramref name="fire"/> pays out no reward (e.g. every runner died and the chasers were sent there).</summary>
+    public static void HostMarkRewarded(Campfire fire)
+    {
+        if (!s_Rewarded.Add(KeyOf(fire))) return;
+        Net.SetRoom(RoomKey, s_Rewarded.ToArray());
+        Plugin.Log.LogInfo("[OTL][Reward] HOST: no first-runner reward at the next campfire (every runner died).");
     }
 
     /// <summary>Host: new round, every campfire can pay out again.</summary>

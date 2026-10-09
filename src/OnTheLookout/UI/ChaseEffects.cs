@@ -18,7 +18,8 @@ namespace OnTheLookout.UI;
 /// - fireworks: every FireworkIntervalSeconds of an active chase, a burst goes off high above each
 ///   living chaser so runners get a sense of where they are. It's the rocket pack's mid-air explosion
 ///   (fireworks-like), cloned locally with its damage/knockback (AOE) and physics stripped, so it is harmless;
-/// - Scoutmaster sounds: while a chaser is within freeze range of a living runner, sounds from the
+/// - chase music: PEAK's own Scoutmaster fear music for a runner with a chaser closing in (ScoutmasterChaseMusic);
+/// - Scoutmaster sounds (off by default): while a chaser is within freeze range of a living runner, sounds from the
 ///   Scoutmaster's prefab play at the chaser now and then. "His" sounds are the ones on
 ///   Character_Scoutmaster that a normal player (Character) doesn't have.
 /// </summary>
@@ -134,6 +135,40 @@ internal sealed class ChaseEffects : MonoBehaviour
         return db?.itemLookup.Values.Select(i => i != null ? i.GetComponentInChildren<Dynamite>(true) : null).FirstOrDefault(d => d != null);
     }
 
+    // ---------- Chase music (vanilla Scoutmaster fear music) ----------
+
+    private bool _fearChecked;
+
+    /// <summary>
+    /// PEAK's own "being chased" music: every character has a MyresAmbience whose looping fearMusic fades in
+    /// as the animator float "Myers Distance" drops below 50 m (louder below 25 m). The Scoutmaster drives it
+    /// by writing his distance into his target's CharacterData.myersDistance each frame
+    /// (Scoutmaster.DoVisuals), and CharacterAnimations copies it to the animator and resets it to 1000.
+    /// We do the same for the local runner with the nearest living chaser, so it plays (continuously, with
+    /// vanilla fading) exactly like being hunted by the Scoutmaster.
+    /// </summary>
+    private void LateUpdate()
+    {
+        if (!RoundManager.IsChasing || !Plugin.ModConfig.ScoutmasterChaseMusic.Synced()) return;
+        Character local = Character.localCharacter;
+        if (local == null || local.data.dead || !RoleManager.IsRunner(local)) return;
+
+        float nearest = float.MaxValue;
+        foreach (Character c in Character.AllCharacters)
+        {
+            if (c == null || c.data.dead || !RoleManager.IsChaser(c)) continue;
+            nearest = Mathf.Min(nearest, Vector3.Distance(c.Center, local.Center));
+        }
+
+        if (nearest == float.MaxValue) return;
+        if (!_fearChecked)
+        {
+            _fearChecked = true;
+            Plugin.Log.LogInfo($"[OTL][Effects] chase music: MyresAmbience on the local character = {local.GetComponentInChildren<MyresAmbience>(true) != null}.");
+        }
+
+        local.data.myersDistance = Mathf.Max(0.1f, nearest); // 0 means "off" to MyresAmbience
+    }
     // ---------- Scoutmaster sounds ----------
 
     private void UpdateScoutmasterSounds()

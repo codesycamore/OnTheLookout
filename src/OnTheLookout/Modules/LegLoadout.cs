@@ -197,39 +197,55 @@ internal static class LegLoadout
         }
     }
 
-    /// <summary>The local player's client: an item was just added to <paramref name="slotId"/> by the host.</summary>
-    public static void RefreshLocalSlot(int slotId) => ModNetwork.Instance?.StartCoroutine(RefreshLocalSlotLater(slotId));
+    /// <summary>
+    /// The local player's client: the host just spawned an item at their feet for them. Pick it up the
+    /// vanilla way (Item.Interact -> RequestPickup on the host -> OnPickupAccepted), which puts it in a
+    /// free slot AND equips it properly, so it can't end up "stuck" in a slot without showing in their
+    /// hands. If every slot is full the item simply stays on the ground in front of them.
+    /// </summary>
+    public static void PickUpLocal(int viewId) => ModNetwork.Instance?.StartCoroutine(PickUpLocalRoutine(viewId));
 
-    private static IEnumerator RefreshLocalSlotLater(int slotId)
+    private static IEnumerator PickUpLocalRoutine(int viewId)
     {
-        yield return new WaitForSeconds(0.3f); // let the inventory sync land first
-        Character local = Character.localCharacter;
-        if (local == null || local.data.dead || local.player == null || slotId < 0 || slotId >= local.player.itemSlots.Length) yield break;
-        CharacterItems items = local.refs.items;
-        ItemSlot slot = local.player.itemSlots[slotId];
-        if (slot == null || slot.IsEmpty() || local.data.currentItem != null) yield break; // something else in hand: leave it
+        float deadline = Time.time + 4f;
+        while (Time.time < deadline)
+        {
+            yield return new WaitForSeconds(0.3f); // let the instantiation land; vanilla ignores pickups within 0.25 s of an equip
+            Character local = Character.localCharacter;
+            if (local == null || local.data.dead || local.player == null) yield break;
+            PhotonView view = PhotonNetwork.GetPhotonView(viewId);
+            if (view == null || !view.TryGetComponent(out Item item)) continue; // not here yet (or already picked up and destroyed)
+            if (!item.gameObject.activeSelf) continue; // pickup requested; a denied pickup reactivates it and we try again
+            if (!local.player.HasEmptySlot(item.itemID))
+            {
+                Plugin.Log.LogInfo($"[OTL][Loadout] inventory full; left the {ItemCatalog.NameOf(item)} at my feet.");
+                yield break;
+            }
 
-        // Hands are empty: (re-)equip the new item so it actually appears in their hands.
-        items.EquipSlot(Optionable<byte>.None);
-        yield return null;
-        items.EquipSlot(Optionable<byte>.Some((byte)slotId));
-        Plugin.Log.LogInfo($"[OTL][Loadout] equipped the new {ItemCatalog.NameOf(slot.prefab)} from slot {slotId}.");
+            if (local.refs.items.lastEquippedSlotTime + 0.25f > Time.time) continue;
+            item.Interact(local);
+        }
     }
 
-    /// <summary>Into the inventory if there is room, otherwise dropped at their feet.</summary>
+    /// <summary>
+    /// Host: give <paramref name="c"/> an item. Backpacks go straight into the backpack slot. Every other
+    /// item is spawned at the player's feet and their own client picks it up the vanilla way
+    /// (<see cref="PickUpLocal"/>): into a free slot and into their hands, or left on the ground if
+    /// their slots are full.
+    /// </summary>
     public static void Give(Character c, Item prefab)
     {
-        if (c.player != null && c.player.AddItem(prefab.itemID, null, out ItemSlot slot))
+        if (prefab is Backpack && c.player != null && c.player.AddItem(prefab.itemID, null, out ItemSlot slot))
         {
             Plugin.Log.LogInfo($"[OTL][Loadout] HOST gave {c.characterName} a {ItemCatalog.NameOf(prefab)} (slot {slot.itemSlotID}).");
-            // Player.AddItem syncs the inventory but not what is held: if the item landed in the slot the
-            // player has selected with an empty hand, it would sit in the slot without showing in their hands.
-            if (c.IsLocal) RefreshLocalSlot(slot.itemSlotID);
-            else Net.SendToActor(Net.Actor(c), Msg.RefreshSlot, (int)slot.itemSlotID);
             return;
         }
 
-        PhotonNetwork.Instantiate("0_Items/" + prefab.gameObject.name, c.Center + Vector3.up, Quaternion.identity, 0);
-        Plugin.Log.LogInfo($"[OTL][Loadout] HOST dropped a {ItemCatalog.NameOf(prefab)} at {c.characterName}'s feet (inventory full).");
+        Vector3 spot = c.Center + c.data.lookDirection_Flat * 0.6f + Vector3.up * 0.5f;
+        GameObject go = PhotonNetwork.Instantiate("0_Items/" + prefab.gameObject.name, spot, Quaternion.identity, 0);
+        int viewId = go.GetComponent<PhotonView>().ViewID;
+        if (c.IsLocal) PickUpLocal(viewId);
+        else Net.SendToActor(Net.Actor(c), Msg.PickUpItem, viewId);
+        Plugin.Log.LogInfo($"[OTL][Loadout] HOST spawned a {ItemCatalog.NameOf(prefab)} for {c.characterName} to pick up.");
     }
 }
