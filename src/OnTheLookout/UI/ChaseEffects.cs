@@ -16,29 +16,12 @@ namespace OnTheLookout.UI;
 /// <summary>
 /// Chase atmosphere, computed on every client from replicated state (no extra network traffic):
 /// - red glow: every living chaser's body glows red (ChaserRedOutline);
-/// - chase music: PEAK's own Scoutmaster fear music for a runner with a chaser closing in (ScoutmasterChaseMusic);
-/// - Scoutmaster sounds (off by default): while a chaser is within freeze range of a living runner, sounds from the
-///   Scoutmaster's prefab play at the chaser now and then. "His" sounds are the ones on
-///   Character_Scoutmaster that a normal player (Character) doesn't have.
+/// - chase music: PEAK's own Scoutmaster fear music for a runner with a chaser closing in (ScoutmasterChaseMusic).
+///   Only the runner's own client plays it; chasers never get any Scoutmaster audio.
 /// </summary>
 internal sealed class ChaseEffects : MonoBehaviour
 {
-
-    private List<SFX_Instance>? _smSfx;
-    private List<AudioClip>? _smClips;
-    private readonly Dictionary<int, float> _nextGrowl = new();
-
-    private void Update()
-    {
-        UpdateChaserGlow();
-        if (!RoundManager.IsChasing)
-        {
-            _nextGrowl.Clear();
-            return;
-        }
-
-        UpdateScoutmasterSounds();
-    }
+    private void Update() => UpdateChaserGlow();
 
     // ---------- Red glow on chasers ----------
 
@@ -96,133 +79,5 @@ internal sealed class ChaseEffects : MonoBehaviour
         }
 
         local.data.myersDistance = Mathf.Max(0.1f, nearest); // 0 means "off" to MyresAmbience
-    }
-    // ---------- Scoutmaster sounds ----------
-
-    private void UpdateScoutmasterSounds()
-    {
-        var cfg = Plugin.ModConfig;
-        if (!cfg.ScoutmasterSounds.Synced()) return;
-        LoadScoutmasterSounds();
-        if ((_smSfx?.Count ?? 0) + (_smClips?.Count ?? 0) == 0) return;
-
-        float range = cfg.FreezeRange.Synced();
-        foreach (Character chaser in Character.AllCharacters)
-        {
-            if (!RoleManager.IsChaser(chaser) || chaser.data.dead) continue;
-            int actor = Net.Actor(chaser);
-            bool near = Character.AllCharacters.Any(r => RoleManager.IsRunner(r) && !r.data.dead
-                && Vector3.Distance(r.Center, chaser.Center) <= range);
-            if (!near || FreezeState.IsFrozen(actor))
-            {
-                _nextGrowl.Remove(actor);
-                continue;
-            }
-
-            if (!_nextGrowl.TryGetValue(actor, out float next))
-            {
-                _nextGrowl[actor] = Time.time + Random.Range(0.2f, 1f); // first sound shortly after closing in
-                continue;
-            }
-
-            if (Time.time < next) continue;
-            _nextGrowl[actor] = Time.time + Random.Range(cfg.ScoutmasterSoundMinInterval.Synced(), cfg.ScoutmasterSoundMaxInterval.Synced());
-            PlayScoutmasterSound(chaser.Center);
-        }
-    }
-
-    private void PlayScoutmasterSound(Vector3 position)
-    {
-        int sfxCount = _smSfx?.Count ?? 0, clipCount = _smClips?.Count ?? 0;
-        int pick = Random.Range(0, sfxCount + clipCount);
-        if (pick < sfxCount)
-        {
-            if (SFX_Player.instance != null) _smSfx![pick].Play(position);
-        }
-        else
-        {
-            AudioSource.PlayClipAtPoint(_smClips![pick - sfxCount], position, 1f);
-        }
-    }
-
-    private void LoadScoutmasterSounds()
-    {
-        if (_smSfx != null) return;
-        _smSfx = new List<SFX_Instance>();
-        _smClips = new List<AudioClip>();
-        try
-        {
-            GameObject? scoutmaster = Resources.Load<GameObject>("Character_Scoutmaster");
-            GameObject? player = Resources.Load<GameObject>("Character");
-            if (scoutmaster == null)
-            {
-                Plugin.Log.LogWarning("[OTL][Effects] Scoutmaster prefab not found; no Scoutmaster sounds.");
-                return;
-            }
-
-            (HashSet<SFX_Instance> smSfx, HashSet<AudioClip> smClips) = CollectSounds(scoutmaster);
-            if (player != null)
-            {
-                (HashSet<SFX_Instance> pSfx, HashSet<AudioClip> pClips) = CollectSounds(player);
-                smSfx.ExceptWith(pSfx);
-                smClips.ExceptWith(pClips);
-            }
-
-            _smSfx.AddRange(smSfx);
-            _smClips.AddRange(smClips);
-            Plugin.Log.LogInfo($"[OTL][Effects] Scoutmaster sounds: {string.Join(", ", _smSfx.Select(s => s.name).Concat(_smClips.Select(c => c.name)))}");
-        }
-        catch (Exception e)
-        {
-            Plugin.Log.LogWarning($"[OTL][Effects] couldn't load Scoutmaster sounds: {e.Message}");
-        }
-    }
-
-    /// <summary>Every sound asset referenced by a prefab: SFX_Instance fields (incl. arrays/lists) and AudioSource clips.</summary>
-    private static (HashSet<SFX_Instance>, HashSet<AudioClip>) CollectSounds(GameObject prefab)
-    {
-        var sfx = new HashSet<SFX_Instance>();
-        var clips = new HashSet<AudioClip>();
-        foreach (AudioSource source in prefab.GetComponentsInChildren<AudioSource>(true))
-        {
-            if (source.clip != null) clips.Add(source.clip);
-        }
-
-        foreach (MonoBehaviour component in prefab.GetComponentsInChildren<MonoBehaviour>(true))
-        {
-            if (component == null) continue;
-            for (Type? t = component.GetType(); t != null && t != typeof(MonoBehaviour); t = t.BaseType)
-            {
-                foreach (FieldInfo field in t.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
-                {
-                    object? value;
-                    try { value = field.GetValue(component); }
-                    catch { continue; }
-                    Add(value, sfx, clips);
-                }
-            }
-        }
-
-        return (sfx, clips);
-    }
-
-    private static void Add(object? value, HashSet<SFX_Instance> sfx, HashSet<AudioClip> clips)
-    {
-        switch (value)
-        {
-            case SFX_Instance s when s != null:
-                sfx.Add(s);
-                break;
-            case AudioClip c when c != null:
-                clips.Add(c);
-                break;
-            case IEnumerable list and not string:
-                foreach (object? element in list)
-                {
-                    if (element is SFX_Instance or AudioClip) Add(element, sfx, clips);
-                }
-
-                break;
-        }
     }
 }

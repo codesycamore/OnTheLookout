@@ -100,9 +100,11 @@ internal static class RoleManager
     public static void SetRole(int actor, Role role)
     {
         if (!Net.IsHost) return;
+        Role previous = RoleOf(actor);
         s_Roles[actor] = role;
         Plugin.Log.LogInfo($"[OTL][Roles] HOST set {Net.NameOf(actor)}#{actor} -> {role}");
         Publish();
+        if (previous != role) Modules.RoleSwap.HostOnSwap(actor, role); // a swap during a leg (debug key)
     }
 
     private static void Publish()

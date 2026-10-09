@@ -10,7 +10,8 @@ namespace OnTheLookout.Modules;
 /// <summary>
 /// Capture: a chaser looks at a runner and holds interact for CaptureHoldSeconds, the same way a hungry
 /// scout eats another one (PEAK's CharacterInteractible "constant" interaction, with its hold ring).
-/// When the hold finishes the chaser's client sends a claim and only the host decides (roles, head start,
+/// The runner sees the same progress (<see cref="UI.CaptureIndicator"/>). No hold is offered on a runner protected by
+/// fortified milk. When the hold finishes the chaser's client sends a claim and only the host decides (roles, head start,
 /// freeze, safe zone, milk, distance), then kills the runner with the game's own RPCA_Die.
 /// </summary>
 internal static class TagSystem
@@ -36,6 +37,7 @@ internal static class TagSystem
         ok &= SafePatch.Prefix(harmony, ci, nameof(CharacterInteractible.GetInteractTime), t, nameof(TimePrefix), m);
         ok &= SafePatch.Prefix(harmony, ci, nameof(CharacterInteractible.Interact), t, nameof(InteractPrefix), m);
         ok &= SafePatch.Prefix(harmony, ci, nameof(CharacterInteractible.Interact_CastFinished), t, nameof(CastFinishedPrefix), m);
+        ok &= SafePatch.Prefix(harmony, ci, nameof(CharacterInteractible.CancelCast), t, nameof(CancelCastPrefix), m);
         return ok;
     }
 
@@ -47,6 +49,7 @@ internal static class TagSystem
         if (!RoleManager.IsChaser(interactor) || !RoleManager.IsRunner(runner)) return false;
         if (interactor.data.dead || interactor.data.passedOut || FreezeState.IsFrozen(Net.Actor(interactor))) return false;
         if (runner.data.dead || (runner.data.passedOut && !Plugin.ModConfig.TagPassedOutRunners.Synced())) return false;
+        if (Plugin.ModConfig.MilkProtectsFromCapture.Synced() && HasMilkProtection(runner)) return false; // no capture hold on a milk-protected runner
         return !SafeZoneSystem.IsSafe(runner.Center);
     }
 
@@ -72,7 +75,33 @@ internal static class TagSystem
     }
 
     /// <summary>Pressing interact on a runner as a chaser starts the hold; it must not also carry/drop them.</summary>
-    public static bool InteractPrefix(CharacterInteractible __instance, Character interactor) => !CanCapture(__instance, interactor);
+    public static bool InteractPrefix(CharacterInteractible __instance, Character interactor)
+    {
+        if (!CanCapture(__instance, interactor)) return true;
+        // Tell the runner a capture is under way, so they see the same progress (CaptureIndicator).
+        int ms = Mathf.RoundToInt(Mathf.Max(0.1f, Plugin.ModConfig.CaptureHoldSeconds.Synced()) * 1000f);
+        SendProgress(__instance.character, Net.Actor(interactor), ms);
+        s_HoldTarget = __instance.character;
+        return false;
+    }
+
+    /// <summary>The runner the local chaser is currently holding interact on (for the cancel message).</summary>
+    private static Character? s_HoldTarget;
+
+    /// <summary>Interaction stopped (released, looked away, or finished): the runner's indicator goes away.</summary>
+    public static void CancelCastPrefix(CharacterInteractible __instance, Character interactor)
+    {
+        if (s_HoldTarget == null || __instance.character != s_HoldTarget || interactor == null || !interactor.IsLocal) return;
+        s_HoldTarget = null;
+        SendProgress(__instance.character, Net.Actor(interactor), 0);
+    }
+
+    private static void SendProgress(Character runner, int chaserActor, int durationMs)
+    {
+        if (runner == null) return;
+        if (runner.IsLocal) UI.CaptureIndicator.OnProgress(chaserActor, Net.Now, durationMs);
+        else Net.SendToActor(Net.Actor(runner), Msg.CaptureProgress, chaserActor, Net.Now, durationMs);
+    }
 
     public static bool CastFinishedPrefix(CharacterInteractible __instance, Character interactor)
     {

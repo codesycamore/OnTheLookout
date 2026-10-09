@@ -162,6 +162,7 @@ internal static class RoundManager
         HostSetFlags(0); // runners unfreeze (after the reveal) for their head start
         FreezeState.HostReset();
         PublishLeg(RoundState.Active, s_RoundId, s_LegId + 1);
+        RoleSwap.HostApplySnapshot(); // drop/give role items for everyone whose role changed since the last leg
         Plugin.Log.LogInfo($"[OTL][Round] HOST started leg {s_LegId} of round {s_RoundId}.");
     }
 
@@ -352,6 +353,7 @@ internal static class RoundManager
     private static void HostEndLeg(Campfire fire, bool chasersWon)
     {
         float seconds = Mathf.Max(1f, Plugin.ModConfig.RoleWindowSeconds.Synced());
+        RoleSwap.HostSnapshot(); // who was what before the role choice; compared when the next leg starts
         Net.SetRoom(WindowKey, unchecked(Net.Now + (int)(seconds * 1000f)));
         // Flags before the state change, so clients see them together with LegCompleted.
         HostSetFlags(FlagRoleWindow | (chasersWon ? FlagChasersWonLeg : 0));

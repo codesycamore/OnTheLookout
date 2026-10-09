@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.6.0
+
+### Roles
+- **Role choice can't get lost:** while the role menu is available (airport or role window) every player's game re-sends its choice to the host every 2 seconds. The draw stays: chasers come **only** from players who chose CHASER; only if nobody did is a random player picked.
+- **Role swaps are checked leg to leg:** the host saves everyone's role when a leg ends (before the role window) and compares it with the new roles when the next leg starts. Changed players drop or get their role items. Every runner's own game also drops any chaser item it still carries shortly after each leg starts.
+
+### Capture
+- Capture hold **0.75 s** (was 1.5, `CaptureHoldSeconds`).
+- The **runner sees the capture progress** too: a red bar under their crosshair ("X IS CAPTURING YOU!").
+- A runner under **fortified milk** can't even be targeted for a capture.
+
+### Chasers
+- The chaser ability item is now **Scout's Initiative** (a scout gem, `ChaserGemItem`) instead of the napberry: same 1 s delay, 2.25 s speed boost + unlimited stamina, 60 s cooldown and 8% petrify. Its own power is never used. Settings renamed `Napberry*` → `Gem*` (`ChaserGem`, `GemBoostSeconds`, …). Napberries are normal food again, for everyone.
+- **Chasers can't use snowballs** (`ChaserForbiddenItems`).
+- **No more Scoutmaster sounds on chasers:** the old random Scoutmaster sound effect (`ScoutmasterSounds`) is removed; it could still be switched on by an older saved config and caused audio glitches. Runners still hear the Scoutmaster chase music.
+
+### Items
+- **Regular luggage** can also hold **fortified milk, snowballs, brown berrynanas and energy drinks** during a round, every leg: each item it spawns has a 38.3% chance to be one of them, about 9.6% for each (`LuggageExtraItems`, `LuggageExtraChance`).
+- **Snowballs push 10% harder** when they hit someone (`SnowballKnockbackBonus`).
+
+### HUD
+- The host sees **PRESS HOTKEY (+) FOR HOST CONTROLS** just above their stamina bar. The host menu also opens with numpad +.
+
 ## 1.5.1
 
 - **Dropped mandrakes scream right away:** their first scream comes **0.75 s** after they appear (`MandrakeFirstScreamSeconds`). Later screams keep PEAK's timing.

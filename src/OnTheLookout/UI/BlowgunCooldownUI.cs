@@ -7,7 +7,7 @@ using UnityEngine;
 namespace OnTheLookout.UI;
 
 /// <summary>
-/// A chaser item's cooldown (blowgun, chaser napberry): the seconds left as a number, in the same PEAK title
+/// A chaser item's cooldown (blowgun, chaser gem): the seconds left as a number, in the same PEAK title
 /// font as the head-start countdown but smaller, just above the hotbar slot that holds the item.
 /// It lives on the mod's own overlay canvas (always drawn on top, nothing in PEAK's HUD can hide or
 /// clip it) and is placed by converting the slot's position to screen space and back, so it lines up

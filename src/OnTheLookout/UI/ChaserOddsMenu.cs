@@ -30,6 +30,7 @@ internal sealed class ChaserOddsMenu : MonoBehaviour
 
     private void Update()
     {
+        ChaserPreference.LocalTick();
         bool available = ChaserPreference.Available && GUIManager.instance != null;
         if (IsOpen && !available) Close();
         UpdateHint(available);

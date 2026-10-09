@@ -169,6 +169,9 @@ internal sealed class ModNetwork : MonoBehaviourPunCallbacks, Photon.Realtime.IO
                 case Msg.DropChaserKit:
                     RoleSwap.DropChaserKitLocal();
                     break;
+                case Msg.CaptureProgress when data.Length >= 4:
+                    UI.CaptureIndicator.OnProgress((int)data[1], (int)data[2], (int)data[3]);
+                    break;
                 case Msg.Notice when data.Length >= 4:
                     NoticeReceived?.Invoke((Notice)(byte)data[1], (int)data[2], (int)data[3]);
                     break;

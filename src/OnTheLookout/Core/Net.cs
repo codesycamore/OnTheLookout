@@ -26,8 +26,11 @@ internal enum Msg : byte
     /// <summary>host -> one player: [] you became a chaser: drop every item and your backpack</summary>
     DropAllItems = 7,
 
-    /// <summary>host -> one player: [] you became a runner: drop the blowgun and napberry</summary>
+    /// <summary>host -> one player: [] you became a runner: drop the blowgun and chaser gem</summary>
     DropChaserKit = 8,
+
+    /// <summary>chaser -> the runner being captured: [chaserActor, startServerTime, durationMs] (durationMs 0 = stopped)</summary>
+    CaptureProgress = 9,
 }
 
 internal enum Notice : byte

@@ -161,6 +161,9 @@ internal static class ItemCatalog
         return w.Length > 0 && (Normalize(CleanName(item)) == w || Normalize(item.UIData?.itemName ?? "") == w);
     }
 
+    /// <summary>The item's prefab or display name is one of the comma-separated names (spaces and case ignored).</summary>
+    public static bool MatchesNames(Item item, string csv) => MatchesList(item, csv);
+
     private static bool MatchesList(Item item, string csv) =>
         !string.IsNullOrWhiteSpace(csv) && csv.Split(',').Any(s => NameMatches(item, s));
 

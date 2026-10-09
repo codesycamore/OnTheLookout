@@ -76,6 +76,7 @@ public partial class Plugin : BaseUnityPlugin
         ui.AddComponent<ChaseEffects>();
         ui.AddComponent<HostMenu>();
         ui.AddComponent<ChaserOddsMenu>();
+        ui.AddComponent<CaptureIndicator>();
         HostMenu.Install(_harmony);
         bool nameTags = NameTags.Install(_harmony);
         root.AddComponent<AdminRestart>();

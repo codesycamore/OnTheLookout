@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Photon.Pun;
+using UnityEngine;
 
 namespace OnTheLookout.Core;
 
@@ -39,13 +40,26 @@ internal static class ChaserPreference
         else Net.SendToHost(Msg.ChaserPreference, (byte)pref);
     }
 
+    private static float s_NextResend;
+
+    /// <summary>
+    /// Every client, each frame: while the choice is open (airport or role window) a non-host keeps re-sending
+    /// its current choice to the host every 2 s, so the host's pool always matches what the player sees (a
+    /// choice can't get lost to timing, e.g. the host clearing choices as it arrives in the airport).
+    /// </summary>
+    public static void LocalTick()
+    {
+        if (!Available || Net.IsHost || Time.time < s_NextResend) return;
+        s_NextResend = Time.time + 2f;
+        Net.SendToHost(Msg.ChaserPreference, (byte)Local);
+    }
+
     /// <summary>Host: store a player's choice. Logged without saying whose or what, to keep it secret.</summary>
     public static void HostSet(int actor, ChaserPref pref)
     {
         if (!Net.IsHost) return;
-        if (pref == ChaserPref.Chaser) s_HostVolunteers.Add(actor);
-        else s_HostVolunteers.Remove(actor);
-        Plugin.Log.LogInfo($"[OTL][Roles] HOST: a role choice was updated ({s_HostVolunteers.Count} volunteer(s)).");
+        bool changed = pref == ChaserPref.Chaser ? s_HostVolunteers.Add(actor) : s_HostVolunteers.Remove(actor);
+        if (changed) Plugin.Log.LogInfo($"[OTL][Roles] HOST: a role choice was updated ({s_HostVolunteers.Count} volunteer(s)).");
     }
 
     /// <summary>Host: whether this player is in the chaser pool. With the feature off, everyone is.</summary>

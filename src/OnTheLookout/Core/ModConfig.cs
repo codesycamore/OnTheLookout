@@ -67,18 +67,17 @@ internal sealed class ModConfig
     public ConfigEntry<bool> ChaserBlowgun { get; }
     public ConfigEntry<float> BlowgunCooldownSeconds { get; }
     public ConfigEntry<float> TrackingSmokeSeconds { get; }
-    public ConfigEntry<bool> ChaserNapberry { get; }
-    public ConfigEntry<float> NapberryBoostSeconds { get; }
-    public ConfigEntry<float> NapberryDelaySeconds { get; }
-    public ConfigEntry<bool> NapberryInfiniteStamina { get; }
-    public ConfigEntry<float> NapberryCooldownSeconds { get; }
-    public ConfigEntry<float> NapberryPetrify { get; }
+    public ConfigEntry<bool> ChaserGem { get; }
+    public ConfigEntry<string> ChaserGemItem { get; }
+    public ConfigEntry<float> GemBoostSeconds { get; }
+    public ConfigEntry<float> GemDelaySeconds { get; }
+    public ConfigEntry<bool> GemInfiniteStamina { get; }
+    public ConfigEntry<float> GemCooldownSeconds { get; }
+    public ConfigEntry<float> GemPetrify { get; }
+    public ConfigEntry<float> SnowballKnockbackBonus { get; }
     public ConfigEntry<float> CapturePetrifyRelief { get; }
     public ConfigEntry<float> SnowballBlindSeconds { get; }
     public ConfigEntry<bool> ScoutmasterChaseMusic { get; }
-    public ConfigEntry<bool> ScoutmasterSounds { get; }
-    public ConfigEntry<float> ScoutmasterSoundMinInterval { get; }
-    public ConfigEntry<float> ScoutmasterSoundMaxInterval { get; }
 
     // Freeze
     public ConfigEntry<float> FreezeRange { get; }
@@ -116,6 +115,8 @@ internal sealed class ModConfig
     public ConfigEntry<bool> ChaserAutoAllowHealing { get; }
     public ConfigEntry<bool> ChaserAutoAllowFood { get; }
     public ConfigEntry<bool> ClownLuggageChasersOnly { get; }
+    public ConfigEntry<string> LuggageExtraItems { get; }
+    public ConfigEntry<float> LuggageExtraChance { get; }
     public ConfigEntry<bool> ChasersOnlyOpenClownLuggage { get; }
     public ConfigEntry<bool> BanAmulets { get; }
     public ConfigEntry<bool> BanGems { get; }
@@ -216,12 +217,14 @@ internal sealed class ModConfig
         ChaserBlowgun = Synced(blowgun, "ChaserBlowgun", true, "Chasers get a blowgun with unlimited uses. A dart doesn't put runners to sleep; it marks them with flare smoke instead.");
         BlowgunCooldownSeconds = Synced(blowgun, "BlowgunCooldownSeconds", 30f, "Seconds between blowgun shots.");
         TrackingSmokeSeconds = Synced(blowgun, "TrackingSmokeSeconds", 7f, "How long the tracking smoke follows a darted runner.");
-        ChaserNapberry = Synced(blowgun, "ChaserNapberry", true, "Chasers also carry a napberry that never runs out: using it gives, after a short delay, an energy-drink speed boost and unlimited stamina (no drowsiness), with a cooldown and some petrification as the cost.");
-        NapberryBoostSeconds = Synced(blowgun, "NapberryBoostSeconds", 2.25f, "Length of the chaser napberry's effects (speed boost and unlimited stamina) (s).");
-        NapberryDelaySeconds = Synced(blowgun, "NapberryDelaySeconds", 1f, "The chaser napberry's effects start this long after it is used (s).");
-        NapberryInfiniteStamina = Synced(blowgun, "NapberryInfiniteStamina", true, "The chaser napberry also gives unlimited stamina (the rainbow stamina bar) for its duration, without drowsiness afterwards.");
-        NapberryCooldownSeconds = Synced(blowgun, "NapberryCooldownSeconds", 60f, "Cooldown of the chaser napberry (s). It starts when the napberry's effects wear off.");
-        NapberryPetrify = Synced(blowgun, "NapberryPetrify", 0.08f, "Petrification each napberry use adds to the chaser (0.08 = 8%).");
+        ChaserGem = Synced(blowgun, "ChaserGem", true, "Chasers also carry a scout gem (Scout's Initiative) that never runs out: using it gives, after a short delay, an energy-drink speed boost and unlimited stamina (no drowsiness), with a cooldown and some petrification as the cost. Its vanilla power is never activated.");
+        ChaserGemItem = Synced(blowgun, "ChaserGemItem", "Amulet_SuperJump", "The scout gem item chasers carry for that ability (prefab or display name). Amulet_SuperJump = Scout's Initiative.");
+        GemBoostSeconds = Synced(blowgun, "GemBoostSeconds", 2.25f, "Length of the chaser gem's effects (speed boost and unlimited stamina) (s).");
+        GemDelaySeconds = Synced(blowgun, "GemDelaySeconds", 1f, "The chaser gem's effects start this long after it is used (s).");
+        GemInfiniteStamina = Synced(blowgun, "GemInfiniteStamina", true, "The chaser gem also gives unlimited stamina (the rainbow stamina bar) for its duration, without drowsiness afterwards.");
+        GemCooldownSeconds = Synced(blowgun, "GemCooldownSeconds", 60f, "Cooldown of the chaser gem (s). It starts when the gem's effects wear off.");
+        GemPetrify = Synced(blowgun, "GemPetrify", 0.08f, "Petrification each gem use adds to the chaser (0.08 = 8%).");
+        SnowballKnockbackBonus = Synced(blowgun, "SnowballKnockbackBonus", 0.1f, "Extra push a thrown snowball gives the scout it hits, as a fraction of its own impact (0.1 = 10% stronger).");
         CapturePetrifyRelief = Synced(blowgun, "CapturePetrifyRelief", 0.05f, "Petrification a chaser loses for each capture (0.05 = 5%).");
         SnowballBlindSeconds = Synced(blowgun, "SnowballBlindSeconds", 2.5f, "A snowball thrown by a runner blinds the chaser it hits (blue-flower blindness) for this long. 0 = off.");
         BlowdartDrowsy = Synced(blowgun, "BlowdartDrowsy", 0.18f, "Drowsiness (sleep) a dart adds to the runner it hits (0.18 = 18%).");
@@ -229,9 +232,6 @@ internal sealed class ModConfig
         const string effects = "2c. ChaseEffects";
 
         ScoutmasterChaseMusic = Synced(effects, "ScoutmasterChaseMusic", true, "A runner hears PEAK's own Scoutmaster chase music while a chaser is close (fades in under 50 m, louder under 25 m), like being hunted by the Scoutmaster.");
-        ScoutmasterSounds = Synced(effects, "ScoutmasterSounds", false, "Old effect: random Scoutmaster sounds at a chaser within freeze range of a runner (can cut out; replaced by ScoutmasterChaseMusic).");
-        ScoutmasterSoundMinInterval = Synced(effects, "ScoutmasterSoundMinInterval", 3f, "Shortest gap between Scoutmaster sounds from one chaser (s).");
-        ScoutmasterSoundMaxInterval = Synced(effects, "ScoutmasterSoundMaxInterval", 6f, "Longest gap between Scoutmaster sounds from one chaser (s).");
 
         const string freeze = "3. Freeze";
         FreezeRange = Synced(freeze, "FreezeRange", 26f, "A runner can only freeze a chaser that is within this distance (m).");
@@ -249,7 +249,7 @@ internal sealed class ModConfig
         FreezePulseSlowInterval = Synced(freeze, "FreezePulseSlowInterval", 0.9f, "Seconds between cold pulses as the freeze runs out.");
 
         const string tag = "4. Tag";
-        CaptureHoldSeconds = Synced(tag, "CaptureHoldSeconds", 1.5f, "How long a chaser holds interact on a runner to capture them.");
+        CaptureHoldSeconds = Synced(tag, "CaptureHoldSeconds", 0.75f, "How long a chaser holds interact on a runner to capture them. The runner sees the progress too.");
         TagMaxDistance = Synced(tag, "TagMaxDistance", 5f, "Host rejects a capture if the two players are further apart than this (lag tolerance).");
         TagPassedOutRunners = Synced(tag, "TagPassedOutRunners", true, "Chasers can capture runners who are passed out.");
         MilkProtectsFromCapture = Synced(tag, "MilkProtectsFromCapture", true, "Runners under the effect of fortified milk can't be captured.");
@@ -264,11 +264,13 @@ internal sealed class ModConfig
 
         const string items = "7. Items";
         ChaserAllowedItems = Synced(items, "ChaserAllowedItems", "Remedy Fungus, Cactus, Dynamite, Mandrake", "Extra item names chasers may pick up/use (comma separated, prefab or display name).");
-        ChaserForbiddenItems = Synced(items, "ChaserForbiddenItems", "Energy Drink, Big Lollipop, Bounce Fungus, Cloud Fungus, Shelf Fungus, Warp Fungus, Blue Shroomberry, Green Shroomberry, Purple Shroomberry, Red Shroomberry, Yellow Shroomberry", "Items chasers may never pick up or use, even though they are food or healing (comma separated, display or prefab names). Also kept out of clown luggage.");
+        ChaserForbiddenItems = Synced(items, "ChaserForbiddenItems", "Snowball, Energy Drink, Big Lollipop, Bounce Fungus, Cloud Fungus, Shelf Fungus, Warp Fungus, Blue Shroomberry, Green Shroomberry, Purple Shroomberry, Red Shroomberry, Yellow Shroomberry", "Items chasers may never pick up or use, even though they are food or healing (comma separated, display or prefab names). Also kept out of clown luggage.");
         ShroomberryEffectSeconds = Synced(items, "ShroomberryEffectSeconds", 1f, "How long a shroomberry's effects last (s). The hunger it cures is unchanged.");
         ChaserAutoAllowHealing = Synced(items, "ChaserAutoAllowHealing", true, "Chasers may pick up and use items that heal injury.");
         ChaserAutoAllowFood = Synced(items, "ChaserAutoAllowFood", true, "Chasers may pick up and eat food.");
         ClownLuggageChasersOnly = Synced(items, "ClownLuggageChasersOnly", true, "During a round only chasers can open clown luggage, and it contains food and healing items.");
+        LuggageExtraItems = Synced(items, "LuggageExtraItems", "Fortified Milk, Snowball, Brown Berrynana, Energy Drink", "Items that can also come out of regular (non-clown) luggage during a round, every leg (comma separated). Empty = off.");
+        LuggageExtraChance = Synced(items, "LuggageExtraChance", 0.383f, "Chance (0-1) for each item a regular luggage spawns to be replaced by a random LuggageExtraItems item (split evenly between them: 0.383 with 4 items = about 9.6% each).");
         ChasersOnlyOpenClownLuggage = Synced(items, "ChasersOnlyOpenClownLuggage", true, "During a round chasers can open clown luggage only.");
         BanAmulets = Synced(items, "BanAmulets", true, "Remove amulets from the game.");
         BanGems = Synced(items, "BanGems", true, "Remove gems (scout gems, strange gem, healing gem) from the game.");

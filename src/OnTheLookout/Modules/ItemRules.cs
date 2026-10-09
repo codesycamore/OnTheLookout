@@ -62,15 +62,16 @@ internal static class ItemRules
     /// <summary>Why <paramref name="c"/> may not have <paramref name="item"/>, or null if allowed.</summary>
     private static string? Refusal(Character? c, Item item)
     {
+        // The chaser gem is a chaser kit item: allowed for chasers even though amulets are banned, never for anyone else.
+        if (ChaserKit.IsGem(item)) return RoleManager.IsChaser(c) && Plugin.ModConfig.ChaserGem.Synced() ? null : "Only chasers can use this gem";
         if (ItemCatalog.IsBanned(item)) return "This item is banned";
         if (ItemCatalog.IsBlowgun(item)) return RoleManager.IsChaser(c) ? null : "Only chasers can use the blowgun";
-        if (RoleManager.IsRunner(c) && ChaserKit.IsNapberry(item)) return "Napberries are for chasers only";
         if (RoleManager.IsChaser(c) && !ItemCatalog.IsChaserAllowed(item)) return "Chasers can only use food and healing items";
         return null;
     }
 
     /// <summary>
-    /// <see cref="Refusal"/> plus, for picking up: a chaser carries one blowgun and one napberry at most (a second
+    /// <see cref="Refusal"/> plus, for picking up: a chaser carries one blowgun and one chaser gem at most (a second
     /// would do nothing; both cooldowns belong to the player, not the item).
     /// </summary>
     private static string? PickupRefusal(Character? c, Item item)
@@ -79,7 +80,7 @@ internal static class ItemRules
         if (why != null || c == null || c.player == null || !RoleManager.IsChaser(c)) return why;
         Item e = ItemCatalog.Effective(item);
         if (ItemCatalog.IsBlowgun(e) && c.player.HasInAnySlot(e.itemID)) return "You already have a blowgun";
-        if (ChaserKit.IsNapberry(e) && c.player.HasInAnySlot(e.itemID)) return "You already have a napberry";
+        if (ChaserKit.IsGem(e) && c.player.HasInAnySlot(e.itemID)) return "You already have the gem";
         return null;
     }
 
@@ -100,7 +101,14 @@ internal static class ItemRules
 
     public static void GetObjectsToSpawnPostfix(Spawner __instance, ref List<GameObject> __result)
     {
-        if (__result == null || __instance is not Luggage luggage || !IsClownLuggage(luggage) || !Plugin.ModConfig.ClownLuggageChasersOnly.Synced()) return;
+        if (__result == null || __instance is not Luggage luggage || luggage is RespawnChest) return;
+        if (!IsClownLuggage(luggage))
+        {
+            AddLuggageExtras(__result);
+            return;
+        }
+
+        if (!Plugin.ModConfig.ClownLuggageChasersOnly.Synced()) return;
         List<Item> loot = ItemCatalog.ClownLoot;
         if (loot.Count == 0) return;
         for (int i = 0; i < __result.Count; i++)
@@ -109,6 +117,29 @@ internal static class ItemRules
         }
 
         Plugin.Log.LogInfo($"[OTL][Items] clown luggage filled with {__result.Count} food/healing item(s).");
+    }
+
+    /// <summary>
+    /// Regular (non-clown) luggage during a round: each item it is about to spawn has a LuggageExtraChance chance
+    /// to be one of LuggageExtraItems instead (fortified milk, snowball, brown berrynana by default), every leg.
+    /// </summary>
+    private static void AddLuggageExtras(List<GameObject> spawns)
+    {
+        var cfg = Plugin.ModConfig;
+        float chance = Mathf.Clamp01(cfg.LuggageExtraChance.Synced());
+        if (!RoundManager.IsActive || chance <= 0f || spawns.Count == 0) return;
+        List<Item> extras = ItemCatalog.FindByNames(cfg.LuggageExtraItems.Synced());
+        if (extras.Count == 0) return;
+
+        int swapped = 0;
+        for (int i = 0; i < spawns.Count; i++)
+        {
+            if (UnityEngine.Random.value >= chance) continue;
+            spawns[i] = extras[UnityEngine.Random.Range(0, extras.Count)].gameObject;
+            swapped++;
+        }
+
+        if (swapped > 0) Plugin.Log.LogInfo($"[OTL][Items] luggage: {swapped} of {spawns.Count} item(s) swapped for runner extras.");
     }
 
     // ---------- Real items ----------
@@ -143,7 +174,7 @@ internal static class ItemRules
     {
         Character holder = __instance.holderCharacter;
         if (holder == null || !holder.IsLocal) return true;
-        if (ChaserKit.HandleUse(__instance)) return false; // the chaser napberry: a boost instead of eating it
+        if (ChaserKit.HandleUse(__instance)) return false; // the chaser gem: a boost instead of its vanilla power
         string? why = Refusal(holder, __instance);
         if (why is null && ItemCatalog.IsBlowgun(__instance) && BlowgunSystem.OnCooldown) why = "Blowgun is recharging";
         if (why is null) return true;

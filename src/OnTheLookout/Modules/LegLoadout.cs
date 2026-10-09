@@ -12,7 +12,7 @@ namespace OnTheLookout.Modules;
 /// Host: hands out items at the start of every leg (round start and each lit campfire):
 /// chasers get their blowgun if they don't have one, and every living runner gets one random
 /// item from <c>RunnerLegItems</c> (snowball, banana or fortified milk by default).
-/// Chasers also get the chaser napberry (see <see cref="ChaserKit"/>).
+/// Chasers also get the chaser gem (Scout's Initiative; see <see cref="ChaserKit"/>).
 /// Before a chaser gets an item their hands are cleared: whatever they hold is dropped in front of
 /// them (by their own client, the vanilla way), then the item is given.
 /// </summary>
@@ -36,7 +36,7 @@ internal static class LegLoadout
 
     /// <summary>
     /// Host, ~2x per second and at every leg start: every living chaser must carry the chaser kit (blowgun and
-    /// napberry). Whoever is missing a piece gets it, however they became a chaser (role draw at a campfire,
+    /// gem). Whoever is missing a piece gets it, however they became a chaser (role draw at a campfire,
     /// a role swap mid-leg) or lost it (death drops everything). One hand-out at a time per chaser, retried
     /// at most every <see cref="KitRetrySeconds"/> so an item that couldn't be picked up isn't spammed.
     /// </summary>
@@ -44,20 +44,20 @@ internal static class LegLoadout
     {
         if (!Net.IsHost || !RoundManager.IsActive) return;
         Item? blowgun = Plugin.ModConfig.ChaserBlowgun.Synced() ? ItemCatalog.Blowgun : null;
-        Item? napberry = Plugin.ModConfig.ChaserNapberry.Synced() ? ItemCatalog.FindByNames("Napberry").FirstOrDefault() : null;
-        if (blowgun == null && napberry == null) return;
+        Item? gem = Plugin.ModConfig.ChaserGem.Synced() ? ChaserKit.GemPrefab : null;
+        if (blowgun == null && gem == null) return;
 
         foreach (int actor in RoleManager.Chasers.ToArray())
         {
             if (s_KitBusyUntil.TryGetValue(actor, out float busy) && Time.time < busy) continue;
             Character? c = Net.CharacterOf(actor);
             if (c == null || c.data.dead || c.player == null) continue;
-            bool missing = (blowgun != null && !c.player.HasInAnySlot(blowgun.itemID)) || (napberry != null && !c.player.HasInAnySlot(napberry.itemID));
+            bool missing = (blowgun != null && !c.player.HasInAnySlot(blowgun.itemID)) || (gem != null && !c.player.HasInAnySlot(gem.itemID));
             if (!missing) continue;
 
             s_KitBusyUntil[actor] = Time.time + KitRetrySeconds;
             Plugin.Log.LogInfo($"[OTL][Loadout] HOST: {Net.NameOf(actor)} is a chaser without the full kit; handing it out.");
-            Schedule(GiveChaserKitRoutine(actor, blowgun, napberry));
+            Schedule(GiveChaserKitRoutine(actor, blowgun, gem));
         }
     }
 
@@ -135,7 +135,7 @@ internal static class LegLoadout
         yield return new WaitForSeconds(1f);
         if (!Net.IsHost || !RoundManager.IsActive) yield break;
 
-        HostEnsureChaserKits(); // blowgun + napberry for every chaser, including runners who just became one
+        HostEnsureChaserKits(); // blowgun + gem for every chaser, including runners who just became one
 
         foreach (Character c in Character.AllCharacters.ToArray())
         {
@@ -204,7 +204,7 @@ internal static class LegLoadout
         return null;
     }
 
-    private static IEnumerator GiveChaserKitRoutine(int actor, Item? blowgun, Item? napberry)
+    private static IEnumerator GiveChaserKitRoutine(int actor, Item? blowgun, Item? gem)
     {
         Character? c = Net.CharacterOf(actor);
         if (blowgun != null && c != null && c.player != null && !c.player.HasInAnySlot(blowgun.itemID))
@@ -217,8 +217,8 @@ internal static class LegLoadout
             yield return new WaitForSeconds(1.5f); // let the pickup land before checking the slots again
         }
 
-        // The chaser napberry (ChaserKit): reusable speed boost instead of a snack.
-        if (napberry != null && Ready(actor, out c) && !c!.player.HasInAnySlot(napberry.itemID))
+        // The chaser gem (ChaserKit): reusable speed boost instead of its vanilla power.
+        if (gem != null && Ready(actor, out c) && !c!.player.HasInAnySlot(gem.itemID))
         {
             if (c.player.itemSlots.All(s => s != null && !s.IsEmpty()))
             {
@@ -228,7 +228,7 @@ internal static class LegLoadout
                 yield return new WaitForSeconds(ClearHandsDelay);
             }
 
-            if (Ready(actor, out c) && !c!.player.HasInAnySlot(napberry.itemID)) Give(c, napberry);
+            if (Ready(actor, out c) && !c!.player.HasInAnySlot(gem.itemID)) Give(c, gem);
         }
     }
 

@@ -39,7 +39,7 @@ internal sealed class Hud : MonoBehaviour
     // Attached to PEAK's HUD canvas.
     private Canvas? _hudCanvas;
     private BlowgunCooldownUI? _blowgunCooldown;
-    private BlowgunCooldownUI? _napberryCooldown;
+    private BlowgunCooldownUI? _gemCooldown;
     private TextMeshProUGUI? _chaserList;
     private TextMeshProUGUI? _toast;
     private CanvasGroup? _toastGroup;
@@ -138,13 +138,13 @@ internal sealed class Hud : MonoBehaviour
         BuildChaserList(_hudCanvas.transform, gui.interactNameText);
         BuildToast(_hudCanvas.transform, gui.interactNameText);
         _blowgunCooldown?.Destroy();
-        _napberryCooldown?.Destroy();
+        _gemCooldown?.Destroy();
         if (_overlay != null)
         {
             TextMeshProUGUI font = gui.heroText != null ? gui.heroText : gui.interactNameText;
             _blowgunCooldown = new BlowgunCooldownUI(_overlay, font);
-            _napberryCooldown = new BlowgunCooldownUI(_overlay, font, "Napberry", () => ChaserKit.NapberryOnCooldown,
-                () => ChaserKit.NapberryCooldownLeft, item => ChaserKit.IsNapberry(item));
+            _gemCooldown = new BlowgunCooldownUI(_overlay, font, "Gem", () => ChaserKit.GemOnCooldown,
+                () => ChaserKit.GemCooldownLeft, item => ChaserKit.IsGem(item));
         }
         Plugin.Log.LogInfo($"[OTL][UI] HUD built on '{_hudCanvas.name}' (stamina bar found: {gui.bar != null}).");
         return true;
@@ -241,7 +241,7 @@ internal sealed class Hud : MonoBehaviour
         ChaserKit.LocalTick();
         if (!EnsureHud()) return;
         if (_blowgunCooldown is { IsValid: true }) _blowgunCooldown.Update(GUIManager.instance);
-        if (_napberryCooldown is { IsValid: true }) _napberryCooldown.Update(GUIManager.instance);
+        if (_gemCooldown is { IsValid: true }) _gemCooldown.Update(GUIManager.instance);
         if (Time.time >= _nextListRefresh)
         {
             _nextListRefresh = Time.time + 0.25f;
