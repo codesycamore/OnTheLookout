@@ -2,7 +2,7 @@
 
 **Chasers vs Runners for PEAK.** A few scouts are secretly chosen as **chasers** and hunt everyone else up the mountain. **Runners** have to make it from campfire to campfire, and finally to the peak, without getting caught. A runner's best defence is to turn around and **look at a chaser** to freeze them in place.
 
-> **New in 1.3.1:** lighting a campfire only freezes everyone once a runner reaches the next biome title, safe zones are **20 m**, and the energy drink lasts 65% less. **1.3.0** added **chaser odds** in the airport (press **-**; secret, first draw only, resets every run), a runner **biome item** each leg and heavier **fortified milk** with shorter invincibility. See the changelog for earlier versions.
+> **New in 1.3.2:** a shorter 3 s freeze after the biome title and new reveal/head-start texts. **1.3.1:** lighting a campfire only freezes everyone once a runner reaches the next biome title, safe zones are **20 m**, and the energy drink lasts 65% less. **1.3.0** added **chaser odds** in the airport (press **-**; secret, first draw only, resets every run), a runner **biome item** each leg and heavier **fortified milk** with shorter invincibility. See the changelog for earlier versions.
 
 > **Everyone in the lobby needs this mod** (same version). The host runs the game: roles, freezes, captures and rewards are all decided by the host and synced to everyone.
 
@@ -128,7 +128,7 @@ Settings live in `BepInEx/config/codesycamore.OnTheLookout.cfg` (or the mod mana
 | `AutoStartRound` | true | Start automatically once everyone has woken up. |
 | `ChaserPreferenceEnabled` | true | Lets players choose their chaser odds in the airport (host decides). |
 | `ChaserOddsWantChaser` / `NoPreference` / `RatherRun` | 3 / 1 / 0.25 | Draw weights for each choice (0 = only if needed). |
-| `BiomeTitleSeconds` | 7.5 | After lighting a campfire, everyone freezes when a runner reaches the next biome title; the next leg starts this long later. |
+| `BiomeTitleSeconds` | 3 | After lighting a campfire, everyone freezes when a runner reaches the next biome title; the next leg starts this long later. |
 | `NoTitleFallbackSeconds` | 5 | If that title was already seen (or there is none), everyone freezes at lighting and the leg starts this long later. |
 | `SpawnInteractLockSeconds` | 7 | No interacting on the shore until this long after the round starts. |
 | `ChaserSpeedMultiplier` | 1.15 | Chaser movement speed. |

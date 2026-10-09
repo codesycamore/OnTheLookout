@@ -172,7 +172,7 @@ internal sealed class ModConfig
         ChaserOddsWantChaser = Synced(round, "ChaserOddsWantChaser", 3f, "Draw weight for players who want to be a chaser.");
         ChaserOddsNoPreference = Synced(round, "ChaserOddsNoPreference", 1f, "Draw weight for players with no preference.");
         ChaserOddsRatherRun = Synced(round, "ChaserOddsRatherRun", 0.25f, "Draw weight for players who would rather run (0 = only picked if needed).");
-        BiomeTitleSeconds = Synced(round, "BiomeTitleSeconds", 7.5f, "After a campfire is lit, play goes on (no chase) until a runner walks far enough to see the new biome's title. Then everyone freezes and the next leg (role reveal, blind chasers, head start) starts this long later, after the title.");
+        BiomeTitleSeconds = Synced(round, "BiomeTitleSeconds", 3f, "After a campfire is lit, play goes on (no chase) until a runner walks far enough to see the new biome's title. Then everyone freezes and the next leg (role reveal, blind chasers, head start) starts this long later, after the title.");
         NoTitleFallbackSeconds = Synced(round, "NoTitleFallbackSeconds", 5f, "If the new biome's title was already seen before the campfire was lit (or there is none), everyone freezes when it is lit and the next leg starts this long later.");
         SpawnInteractLockSeconds = Synced(round, "SpawnInteractLockSeconds", 7f, "At the start of a run on the shore nothing can be interacted with while everyone wakes up and for this many seconds after the round starts.");
         ChaserStatusMultiplier = Synced(round, "ChaserStatusMultiplier", 0.333f, "Chasers take this fraction of every negative status (injury, cold, poison, drowsy, ...) they would get in vanilla at the current ascent. Hunger is not reduced.");

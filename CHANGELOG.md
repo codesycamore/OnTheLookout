@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.2
+
+- Everyone stays frozen only **3 s** after a runner sees the next biome title, instead of 7.5 s (`BiomeTitleSeconds`).
+- The role reveal now reads *YOU ARE A... RUNNER / CHASER*, and the runners' countdown reads *YOU HAVE A HEADSTART... RUN!*
+
 ## 1.3.1
 
 ### Round flow

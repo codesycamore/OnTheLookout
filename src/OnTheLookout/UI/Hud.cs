@@ -258,13 +258,13 @@ internal sealed class Hud : MonoBehaviour
         else if (local != null && RoundManager.InReveal)
         {
             main = chaser ? "CHASER" : "RUNNER";
-            sub = "YOUR ROLE";
+            sub = "YOU ARE A...";
             color = chaser ? ChaserRed : RunnerYellow;
         }
         else if (local != null && RoundManager.InCountdown)
         {
             main = Mathf.CeilToInt(RoundManager.HoldSecondsLeft).ToString();
-            sub = chaser ? "THE HUNT BEGINS IN" : "HEAD START";
+            sub = chaser ? "THE HUNT BEGINS IN" : "YOU HAVE A HEADSTART... RUN!";
             alpha = chaser ? 1f : Mathf.Clamp01(Plugin.ModConfig.CountdownOpacity.Value);
         }
 

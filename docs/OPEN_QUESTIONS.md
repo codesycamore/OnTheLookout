@@ -226,3 +226,8 @@ Debug keys (host, bottom-left hint): **F7** start or restart a round, **F6** swa
   3. A runner who already crossed that point before the fire was lit reports it right away. If the campfire leads to a segment with no progress point, everyone freezes at lighting and the leg starts `NoTitleFallbackSeconds` (now 5 s) later.
   - **To verify:** `[OTL][Round]` lines "waiting for a runner to reach the next biome's title" then "X sees the biome title; everyone frozen, next leg in 7.5s". Chasers seeing the title first must not trigger it.
 - **Safe zone radius 30 m → 20 m** (`CampfireSafeRadius`; saved dev config updated).
+
+## Decided: change list 1.3.2 (2026-10-08)
+
+- Freeze after the biome title: `BiomeTitleSeconds` 7.5 → **3** (saved dev config updated).
+- HUD texts: reveal subtitle "YOUR ROLE" → "YOU ARE A..."; runner countdown subtitle "HEAD START" → "YOU HAVE A HEADSTART... RUN!" (chasers keep "THE HUNT BEGINS IN").
