@@ -1,35 +1,35 @@
 using System.Collections.Generic;
 using Photon.Pun;
-using UnityEngine;
 
 namespace OnTheLookout.Core;
 
 internal enum ChaserPref : byte
 {
-    NoPreference = 0,
-    WantChaser = 1,
-    RatherRun = 2,
+    Runner = 0,
+    Chaser = 1,
 }
 
 /// <summary>
-/// Chaser odds chosen in the airport. Each player's choice is sent privately to the host (an event to the
-/// master client only; it is never stored in room or player properties, so no other player's game ever
-/// receives it). The host turns it into a weight for the initial role draw only (RoleManager.AssignRandom),
-/// then forgets every choice. Each player's own choice is cleared when they leave the airport, so it
-/// resets for every run. Statue conversions are not affected.
+/// Each player's role choice: RUNNER (the default) or CHASER. Chasers are drawn at random from the pool of
+/// players who chose CHASER (<see cref="RoleManager.AssignFromPreferences"/>), no odds or weights. The choice
+/// is made in the role menu in the airport (for the first draw on the shore) and during the role window
+/// after each leg (<see cref="RoundManager.InRoleWindow"/>), and sent privately to the host (an event to the
+/// master client only, never stored in room or player properties). It stays until the player changes it,
+/// and resets to RUNNER when a run ends and everyone is back in the airport.
 /// </summary>
 internal static class ChaserPreference
 {
-    private static readonly Dictionary<int, ChaserPref> s_HostChoices = new();
+    private static readonly HashSet<int> s_HostVolunteers = new();
 
     /// <summary>The local player's current choice (shown in their own menu only).</summary>
-    public static ChaserPref Local { get; private set; }
+    public static ChaserPref Local { get; private set; } = ChaserPref.Runner;
 
     public static bool Enabled => Plugin.ModConfig.ChaserPreferenceEnabled.Synced();
 
-    /// <summary>The local player is in the airport of a modded lobby with the feature on.</summary>
-    public static bool Available =>
-        Enabled && Net.InRoom && Character.localCharacter != null && Character.localCharacter.inAirport;
+    /// <summary>The local player is in the airport, or the role window is open, in a modded lobby with the feature on.</summary>
+    public static bool Available => Enabled && Net.InRoom && Net.GetRoom(ConfigSync.RoomKey) != null && (InAirport || RoundManager.InRoleWindow);
+
+    public static bool InAirport => Character.localCharacter != null && Character.localCharacter.inAirport;
 
     public static void SetLocal(ChaserPref pref)
     {
@@ -39,45 +39,22 @@ internal static class ChaserPreference
         else Net.SendToHost(Msg.ChaserPreference, (byte)pref);
     }
 
-    /// <summary>Every client, each frame: forget the choice once the player has left the airport.</summary>
-    public static void LocalTick()
-    {
-        if (Local != ChaserPref.NoPreference && Character.localCharacter != null && !Character.localCharacter.inAirport)
-        {
-            Local = ChaserPref.NoPreference;
-        }
-    }
-
     /// <summary>Host: store a player's choice. Logged without saying whose or what, to keep it secret.</summary>
     public static void HostSet(int actor, ChaserPref pref)
     {
         if (!Net.IsHost) return;
-        if (pref == ChaserPref.NoPreference) s_HostChoices.Remove(actor);
-        else s_HostChoices[actor] = pref;
-        Plugin.Log.LogInfo($"[OTL][Odds] HOST: a chaser preference was updated ({s_HostChoices.Count} set).");
+        if (pref == ChaserPref.Chaser) s_HostVolunteers.Add(actor);
+        else s_HostVolunteers.Remove(actor);
+        Plugin.Log.LogInfo($"[OTL][Roles] HOST: a role choice was updated ({s_HostVolunteers.Count} volunteer(s)).");
     }
 
-    /// <summary>Host: a player's weight in the initial role draw.</summary>
-    public static float WeightOf(int actor)
-    {
-        var cfg = Plugin.ModConfig;
-        if (!Enabled) return 1f;
-        ChaserPref pref = s_HostChoices.TryGetValue(actor, out ChaserPref p) ? p : ChaserPref.NoPreference;
-        float weight = pref switch
-        {
-            ChaserPref.WantChaser => cfg.ChaserOddsWantChaser.Synced(),
-            ChaserPref.RatherRun => cfg.ChaserOddsRatherRun.Synced(),
-            _ => cfg.ChaserOddsNoPreference.Synced(),
-        };
-        return Mathf.Max(0f, weight);
-    }
+    /// <summary>Host: whether this player is in the chaser pool. With the feature off, everyone is.</summary>
+    public static bool WantsChaser(int actor) => !Enabled || s_HostVolunteers.Contains(actor);
 
-    /// <summary>Host: the draw is done; every choice is forgotten so the next run starts fresh.</summary>
-    public static void HostClear() => s_HostChoices.Clear();
-
+    /// <summary>Back to the default (everyone RUNNER), e.g. when everyone is back in the airport.</summary>
     public static void Clear()
     {
-        s_HostChoices.Clear();
-        Local = ChaserPref.NoPreference;
+        s_HostVolunteers.Clear();
+        Local = ChaserPref.Runner;
     }
 }

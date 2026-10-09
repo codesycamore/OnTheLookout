@@ -115,7 +115,7 @@ internal static class ItemCatalog
         string stamp = string.Join("|", cfg.BanAmulets.Synced(), cfg.BanGems.Synced(), cfg.BanRescueClaws.Synced(),
             cfg.BanHiddenItems.Synced(), cfg.AllowedHiddenItems.Synced(), cfg.BannedItems.Synced(), cfg.AllowJetpacks.Synced(), cfg.AllowGliders.Synced(),
             cfg.RunnerLegItems.Synced(), cfg.ChaserAllowedItems.Synced(), cfg.CampfireFoodItems.Synced(), cfg.ChaserForbiddenItems.Synced(),
-            cfg.RunnerBiomeItems.Synced());
+            cfg.RunnerBiomeItems.Synced(), cfg.BanGoldenBingBong.Synced());
         if (stamp != s_Stamp)
         {
             s_Cache.Clear();
@@ -132,6 +132,7 @@ internal static class ItemCatalog
         else if (cfg.BanRescueClaws.Synced() && Has<RescueHook>(item)) why = "rescue claw";
         else if (!cfg.AllowJetpacks.Synced() && (Has<JetpackItem>(item) || Has<Rocketpack>(item) || (item is Backpack bp && bp.backpackType is BackpackSlot.BackpackType.Jetpack or BackpackSlot.BackpackType.Rocketpack))) why = "jetpack";
         else if (!cfg.AllowGliders.Synced() && Has<Glider>(item)) why = "glider";
+        else if (cfg.BanGoldenBingBong.Synced() && Has<BingBongShieldWhileHolding>(item)) why = "golden Bing Bong";
         else if (MatchesList(item, cfg.BannedItems.Synced())) why = "BannedItems list";
         else if (!blowgun && cfg.BanHiddenItems.Synced() && IsHidden(item) && !AlwaysLegit(item)) why = HiddenReason;
 

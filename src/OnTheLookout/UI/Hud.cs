@@ -39,6 +39,7 @@ internal sealed class Hud : MonoBehaviour
     // Attached to PEAK's HUD canvas.
     private Canvas? _hudCanvas;
     private BlowgunCooldownUI? _blowgunCooldown;
+    private BlowgunCooldownUI? _napberryCooldown;
     private TextMeshProUGUI? _chaserList;
     private TextMeshProUGUI? _toast;
     private CanvasGroup? _toastGroup;
@@ -137,7 +138,14 @@ internal sealed class Hud : MonoBehaviour
         BuildChaserList(_hudCanvas.transform, gui.interactNameText);
         BuildToast(_hudCanvas.transform, gui.interactNameText);
         _blowgunCooldown?.Destroy();
-        if (_overlay != null) _blowgunCooldown = new BlowgunCooldownUI(_overlay, gui.heroText != null ? gui.heroText : gui.interactNameText);
+        _napberryCooldown?.Destroy();
+        if (_overlay != null)
+        {
+            TextMeshProUGUI font = gui.heroText != null ? gui.heroText : gui.interactNameText;
+            _blowgunCooldown = new BlowgunCooldownUI(_overlay, font);
+            _napberryCooldown = new BlowgunCooldownUI(_overlay, font, "Napberry", () => ChaserKit.NapberryOnCooldown,
+                () => ChaserKit.NapberryCooldownLeft, item => ChaserKit.IsNapberry(item));
+        }
         Plugin.Log.LogInfo($"[OTL][UI] HUD built on '{_hudCanvas.name}' (stamina bar found: {gui.bar != null}).");
         return true;
     }
@@ -230,8 +238,10 @@ internal sealed class Hud : MonoBehaviour
     private void Update()
     {
         UpdateCenter();
+        ChaserKit.LocalTick();
         if (!EnsureHud()) return;
         if (_blowgunCooldown is { IsValid: true }) _blowgunCooldown.Update(GUIManager.instance);
+        if (_napberryCooldown is { IsValid: true }) _napberryCooldown.Update(GUIManager.instance);
         if (Time.time >= _nextListRefresh)
         {
             _nextListRefresh = Time.time + 0.25f;
@@ -327,13 +337,15 @@ internal sealed class Hud : MonoBehaviour
 
     private void OnLegCompleted()
     {
-        if (RoundManager.IsWiped) Announce("ALL RUNNERS WERE CAUGHT", "CHASERS: USE THE SCOUT STATUE AT THE CAMPFIRE", ChaserRed, 6f);
-        else Announce("ALL RUNNERS ARE SAFE", "EVERY LIVING RUNNER MADE IT INTO THE SAFE ZONE", Warm, 5f);
+        int seconds = Mathf.CeilToInt(Mathf.Max(1f, Plugin.ModConfig.RoleWindowSeconds.Synced()));
+        string choose = $"YOU HAVE {seconds} SECONDS TO CHOOSE YOUR ROLE FOR THE NEXT LEG";
+        if (RoundManager.ChasersWonLeg) Announce("THE CHASERS WIN THIS LEG", choose, ChaserRed, seconds);
+        else Announce("THE RUNNERS WIN THIS LEG", choose, RunnerYellow, seconds);
     }
 
     private void OnRoundEnded(RoundState result)
     {
-        if (result == RoundState.RunnersWon) Announce("THE RUNNERS ESCAPED", "A RUNNER REACHED THE PEAK", RunnerYellow, 6f);
+        if (result == RoundState.RunnersWon) Announce("THE RUNNERS ESCAPED", "EVERY RUNNER REACHED THE PEAK", RunnerYellow, 6f);
         else Announce("THE CHASERS WIN", "EVERY RUNNER WAS CAUGHT", ChaserRed, 6f);
     }
 

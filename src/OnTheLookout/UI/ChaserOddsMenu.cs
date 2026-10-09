@@ -9,9 +9,10 @@ using UnityEngine.UI;
 namespace OnTheLookout.UI;
 
 /// <summary>
-/// Airport-only menu (KeyChaserOdds, "-" by default) where each player picks their chaser odds for the
-/// next run: want to be a chaser / no preference / rather run. Only the player sees their own choice; it
-/// goes privately to the host (<see cref="ChaserPreference"/>). A small hint is shown while in the airport.
+/// Role menu (KeyChaserOdds, "-" by default), open in the airport (for the first draw on the shore) and
+/// while the role window runs after each leg: every player is a RUNNER by default and can volunteer as a
+/// CHASER. Chasers are drawn at random from the volunteers. Only the player sees their own choice; it goes
+/// privately to the host (<see cref="ChaserPreference"/>). A hint is shown while the menu is available.
 /// Same PEAK-style building blocks as the host menu (<see cref="PeakMenuKit"/>).
 /// </summary>
 internal sealed class ChaserOddsMenu : MonoBehaviour
@@ -29,7 +30,6 @@ internal sealed class ChaserOddsMenu : MonoBehaviour
 
     private void Update()
     {
-        ChaserPreference.LocalTick();
         bool available = ChaserPreference.Available && GUIManager.instance != null;
         if (IsOpen && !available) Close();
         UpdateHint(available);
@@ -57,7 +57,7 @@ internal sealed class ChaserOddsMenu : MonoBehaviour
         if (_hintCanvas != null && _hintCanvas.gameObject.activeSelf != show) _hintCanvas.gameObject.SetActive(show);
         if (show && _hint != null)
         {
-            string text = $"PRESS {KeyName()} TO CHOOSE YOUR CHASER ODDS";
+            string text = $"PRESS HOTKEY ({KeyName()}) TO SELECT YOUR ROLE: {(ChaserPreference.Local == ChaserPref.Chaser ? "CHASER" : "RUNNER")}";
             if (_hint.text != text)
             {
                 _hint.text = text;
@@ -71,7 +71,7 @@ internal sealed class ChaserOddsMenu : MonoBehaviour
         GUIManager gui = GUIManager.instance;
         _hintCanvas = PeakMenuKit.CreateCanvas("OTL_ChaserOddsHint", transform, gui, 20);
         _hintCanvas.GetComponent<GraphicRaycaster>().enabled = false; // never blocks clicks
-        // Bright PEAK yellow on a dark translucent plate so it reads on snow, sky and dark airport floors alike.
+        // Bright PEAK yellow on a dark translucent plate so it reads on snow, sky and dark rock alike.
         // (A TMP outline thick enough for contrast eats into the glyphs of PEAK's bold font, so no outline.)
         var plateGo = new GameObject("Plate", typeof(RectTransform));
         plateGo.transform.SetParent(_hintCanvas.transform, false);
@@ -129,19 +129,18 @@ internal sealed class ChaserOddsMenu : MonoBehaviour
         Button? template = PeakMenuKit.ButtonTemplate(gui);
         if (template == null)
         {
-            Plugin.Log.LogWarning("[OTL][Odds] PEAK's pause menu button not found; can't build the menu.");
+            Plugin.Log.LogWarning("[OTL][Roles] PEAK's pause menu button not found; can't build the menu.");
             return false;
         }
 
         _canvas = PeakMenuKit.CreateCanvas("OTL_ChaserOdds", transform, gui, 50);
-        _panel = PeakMenuKit.CreatePanel(_canvas, template, new Vector2(720f, 600f));
+        _panel = PeakMenuKit.CreatePanel(_canvas, template, new Vector2(720f, 520f));
         TextMeshProUGUI titleFont = gui.heroText != null ? gui.heroText : gui.interactNameText;
-        PeakMenuKit.AddText(_panel, "CHASER ODDS", titleFont, 64f, Color.white, 80f);
-        PeakMenuKit.AddText(_panel, "ONLY YOU CAN SEE THIS  -  RESETS EVERY RUN", gui.interactNameText, 22f, new Color(1f, 1f, 1f, 0.7f), 32f);
+        PeakMenuKit.AddText(_panel, "YOUR ROLE", titleFont, 64f, Color.white, 80f);
+        PeakMenuKit.AddText(_panel, "ONLY YOU CAN SEE THIS  -  CHASERS ARE DRAWN FROM VOLUNTEERS", gui.interactNameText, 22f, new Color(1f, 1f, 1f, 0.7f), 32f);
 
-        AddOption(template, ChaserPref.WantChaser, "I WANT TO BE A CHASER");
-        AddOption(template, ChaserPref.NoPreference, "NO PREFERENCE");
-        AddOption(template, ChaserPref.RatherRun, "I'D RATHER BE A RUNNER");
+        AddOption(template, ChaserPref.Runner, "I WANT TO BE A RUNNER");
+        AddOption(template, ChaserPref.Chaser, "I WANT TO BE A CHASER");
         (Button close, _) = PeakMenuKit.CloneButton(_panel, template, "CLOSE");
         close.onClick.AddListener(Close);
 

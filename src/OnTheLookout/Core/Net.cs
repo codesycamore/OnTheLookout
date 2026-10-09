@@ -20,8 +20,14 @@ internal enum Msg : byte
     /// <summary>host -> one player: [viewId] an item was spawned at your feet for you; pick it up</summary>
     PickUpItem = 5,
 
-    /// <summary>client -> host only: [ChaserPref] this player's chaser odds from the airport (never broadcast)</summary>
+    /// <summary>client -> host only: [ChaserPref] this player's role choice (never broadcast)</summary>
     ChaserPreference = 6,
+
+    /// <summary>host -> one player: [] you became a chaser: drop every item and your backpack</summary>
+    DropAllItems = 7,
+
+    /// <summary>host -> one player: [] you became a runner: drop the blowgun and napberry</summary>
+    DropChaserKit = 8,
 }
 
 internal enum Notice : byte

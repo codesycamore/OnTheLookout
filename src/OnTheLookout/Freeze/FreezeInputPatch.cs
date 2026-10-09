@@ -50,7 +50,8 @@ internal static class FreezeInputPatch
 
         // On the shore before the round starts nobody can move (input only: no mid-air suspension, so the
         // intro fall and waking up play out normally).
-        if (frozen || RoundManager.InPreRound)
+        // Same during the role window at the campfire after a leg.
+        if (frozen || RoundManager.InPreRound || RoundManager.InRoleWindow)
         {
             Block(__instance);
         }

@@ -25,6 +25,9 @@ internal sealed class ModNetwork : MonoBehaviourPunCallbacks, Photon.Realtime.IO
     /// <summary>Raised on every client for host notices.</summary>
     public static event Action<Notice, int, int>? NoticeReceived;
 
+    /// <summary>Host only, ~2x per second, after the built-in host ticks.</summary>
+    public static event Action? HostTicked;
+
     private float _nextHostTick;
 
     private void Awake() => Instance = this;
@@ -49,6 +52,7 @@ internal sealed class ModNetwork : MonoBehaviourPunCallbacks, Photon.Realtime.IO
         Safe(RoundManager.HostTick);
         Safe(RewardSystem.HostTick);
         Safe(ZombieHunt.HostTick);
+        if (HostTicked != null) Safe(HostTicked);
     }
 
     // ---------- Room lifecycle ----------
@@ -158,6 +162,12 @@ internal sealed class ModNetwork : MonoBehaviourPunCallbacks, Photon.Realtime.IO
                     break;
                 case Msg.ClearHands:
                     LegLoadout.ClearLocalHands();
+                    break;
+                case Msg.DropAllItems:
+                    RoleSwap.DropAllLocal();
+                    break;
+                case Msg.DropChaserKit:
+                    RoleSwap.DropChaserKitLocal();
                     break;
                 case Msg.Notice when data.Length >= 4:
                     NoticeReceived?.Invoke((Notice)(byte)data[1], (int)data[2], (int)data[3]);

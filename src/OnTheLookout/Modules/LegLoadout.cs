@@ -12,7 +12,7 @@ namespace OnTheLookout.Modules;
 /// Host: hands out items at the start of every leg (round start and each lit campfire):
 /// chasers get their blowgun if they don't have one, and every living runner gets one random
 /// item from <c>RunnerLegItems</c> (snowball, banana or fortified milk by default).
-/// New chasers from a statue conversion get their blowgun right away.
+/// Chasers also get the chaser napberry (see <see cref="ChaserKit"/>).
 /// Before a chaser gets an item their hands are cleared: whatever they hold is dropped in front of
 /// them (by their own client, the vanilla way), then the item is given.
 /// </summary>
@@ -28,7 +28,43 @@ internal static class LegLoadout
             if (newRound) Schedule(GiveRunnerBackpacks());
         };
         RoundManager.LegCompleted += () => Schedule(StockCampfireFood());
+        ModNetwork.HostTicked += HostEnsureChaserKits;
     }
+
+    /// <summary>Host: per chaser, until when a kit hand-out is in progress (or was just tried).</summary>
+    private static readonly Dictionary<int, float> s_KitBusyUntil = new();
+
+    /// <summary>
+    /// Host, ~2x per second and at every leg start: every living chaser must carry the chaser kit (blowgun and
+    /// napberry). Whoever is missing a piece gets it, however they became a chaser (role draw at a campfire,
+    /// a role swap mid-leg) or lost it (death drops everything). One hand-out at a time per chaser, retried
+    /// at most every <see cref="KitRetrySeconds"/> so an item that couldn't be picked up isn't spammed.
+    /// </summary>
+    public static void HostEnsureChaserKits()
+    {
+        if (!Net.IsHost || !RoundManager.IsActive) return;
+        Item? blowgun = Plugin.ModConfig.ChaserBlowgun.Synced() ? ItemCatalog.Blowgun : null;
+        Item? napberry = Plugin.ModConfig.ChaserNapberry.Synced() ? ItemCatalog.FindByNames("Napberry").FirstOrDefault() : null;
+        if (blowgun == null && napberry == null) return;
+
+        foreach (int actor in RoleManager.Chasers.ToArray())
+        {
+            if (s_KitBusyUntil.TryGetValue(actor, out float busy) && Time.time < busy) continue;
+            Character? c = Net.CharacterOf(actor);
+            if (c == null || c.data.dead || c.player == null) continue;
+            bool missing = (blowgun != null && !c.player.HasInAnySlot(blowgun.itemID)) || (napberry != null && !c.player.HasInAnySlot(napberry.itemID));
+            if (!missing) continue;
+
+            s_KitBusyUntil[actor] = Time.time + KitRetrySeconds;
+            Plugin.Log.LogInfo($"[OTL][Loadout] HOST: {Net.NameOf(actor)} is a chaser without the full kit; handing it out.");
+            Schedule(GiveChaserKitRoutine(actor, blowgun, napberry));
+        }
+    }
+
+    private const float KitRetrySeconds = 15f;
+
+    /// <summary>Host: hold off this chaser's kit hand-out for a moment (e.g. while they drop their old items).</summary>
+    public static void HostDelayChaserKit(int actor, float seconds) => s_KitBusyUntil[actor] = Time.time + seconds;
 
     /// <summary>Host, after roles are assigned at round start: every runner without a backpack gets one.</summary>
     private static IEnumerator GiveRunnerBackpacks()
@@ -94,23 +130,42 @@ internal static class LegLoadout
         if (Net.IsHost) ModNetwork.Instance?.StartCoroutine(routine);
     }
 
-    public static void GiveBlowgunLater(int actor) => Schedule(GiveBlowgunRoutine(actor, 1.5f)); // after the revive has landed
-
     private static IEnumerator GiveLegItems()
     {
         yield return new WaitForSeconds(1f);
         if (!Net.IsHost || !RoundManager.IsActive) yield break;
 
-        foreach (int actor in RoleManager.Chasers.ToArray()) Schedule(GiveBlowgunRoutine(actor, 0f));
+        HostEnsureChaserKits(); // blowgun + napberry for every chaser, including runners who just became one
+
+        foreach (Character c in Character.AllCharacters.ToArray())
+        {
+            if (RoleManager.IsRunner(c) && !c.data.dead) HostGiveRunnerLegItems(c);
+        }
+    }
+
+    /// <summary>Host: the runners who already got this leg's items (leg key -> actors).</summary>
+    private static readonly HashSet<int> s_LegItemsGiven = new();
+    private static int s_LegItemsKey = -1;
+
+    /// <summary>
+    /// Host: this leg's runner items (one random RunnerLegItems item plus the biome item), once per runner per
+    /// leg. Called for every runner at the leg start and for a chaser who becomes a runner during a leg.
+    /// </summary>
+    public static void HostGiveRunnerLegItems(Character c)
+    {
+        if (!Net.IsHost || !RoundManager.IsActive || c == null || c.data.dead || !RoleManager.IsRunner(c)) return;
+        if (s_LegItemsKey != RoundManager.LegKey)
+        {
+            s_LegItemsKey = RoundManager.LegKey;
+            s_LegItemsGiven.Clear();
+        }
+
+        if (!s_LegItemsGiven.Add(Net.Actor(c))) return; // already had this leg's items
 
         List<Item> pool = ItemCatalog.FindByNames(Plugin.ModConfig.RunnerLegItems.Synced());
         Item? biomeItem = BiomeItemForLeg();
-        foreach (Character c in Character.AllCharacters.ToArray())
-        {
-            if (!RoleManager.IsRunner(c) || c.data.dead) continue;
-            if (pool.Count > 0) Give(c, pool[Random.Range(0, pool.Count)]);
-            if (biomeItem != null) Give(c, biomeItem);
-        }
+        if (pool.Count > 0) Give(c, pool[Random.Range(0, pool.Count)]);
+        if (biomeItem != null) Give(c, biomeItem);
     }
 
     /// <summary>
@@ -149,22 +204,40 @@ internal static class LegLoadout
         return null;
     }
 
-    private static IEnumerator GiveBlowgunRoutine(int actor, float delay)
+    private static IEnumerator GiveChaserKitRoutine(int actor, Item? blowgun, Item? napberry)
     {
-        if (delay > 0f) yield return new WaitForSeconds(delay);
-        if (!Net.IsHost || !Plugin.ModConfig.ChaserBlowgun.Synced() || !RoleManager.IsChaser(actor)) yield break;
         Character? c = Net.CharacterOf(actor);
-        Item? blowgun = ItemCatalog.Blowgun;
-        if (c == null || c.data.dead || blowgun == null || c.player == null || c.player.HasInAnySlot(blowgun.itemID)) yield break;
+        if (blowgun != null && c != null && c.player != null && !c.player.HasInAnySlot(blowgun.itemID))
+        {
+            // Empty hands first, then give (the blowgun lands in their hands).
+            if (c.IsLocal) ClearLocalHands();
+            else Net.SendToActor(actor, Msg.ClearHands);
+            yield return new WaitForSeconds(ClearHandsDelay);
+            if (Ready(actor, out c) && !c!.player.HasInAnySlot(blowgun.itemID)) Give(c, blowgun);
+            yield return new WaitForSeconds(1.5f); // let the pickup land before checking the slots again
+        }
 
-        // Empty hands first, then give.
-        if (c.IsLocal) ClearLocalHands();
-        else Net.SendToActor(actor, Msg.ClearHands);
-        yield return new WaitForSeconds(ClearHandsDelay);
+        // The chaser napberry (ChaserKit): reusable speed boost instead of a snack.
+        if (napberry != null && Ready(actor, out c) && !c!.player.HasInAnySlot(napberry.itemID))
+        {
+            if (c.player.itemSlots.All(s => s != null && !s.IsEmpty()))
+            {
+                // No free slot: make room the same way as for the blowgun.
+                if (c.IsLocal) ClearLocalHands();
+                else Net.SendToActor(actor, Msg.ClearHands);
+                yield return new WaitForSeconds(ClearHandsDelay);
+            }
 
-        if (c != null && !c.data.dead && !c.player.HasInAnySlot(blowgun.itemID)) Give(c, blowgun);
+            if (Ready(actor, out c) && !c!.player.HasInAnySlot(napberry.itemID)) Give(c, napberry);
+        }
     }
 
+    /// <summary>Host: <paramref name="actor"/> is still a living chaser with a character and inventory.</summary>
+    private static bool Ready(int actor, out Character? c)
+    {
+        c = Net.CharacterOf(actor);
+        return Net.IsHost && RoleManager.IsChaser(actor) && c != null && !c.data.dead && c.player != null;
+    }
     /// <summary>
     /// The local player's client: drop the held item just in front of them (as if they pressed drop).
     /// If nothing is held but every slot is full, drop the first slot's item to make room.

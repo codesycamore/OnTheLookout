@@ -1,5 +1,40 @@
 # Changelog
 
+## 1.5.0
+
+### Roles and legs
+- **New roles every leg.** When a leg ends, everyone (the dead revived) is brought next to the campfire and frozen for a **10-second role window** (`RoleWindowSeconds`): press **-** to choose **RUNNER** (the default) or **CHASER**. Then the campfire **lights itself** and new roles are drawn at random from the volunteers, **one chaser per 4 runners** at most (`RunnersPerChaser`); if nobody volunteered, one random player is the chaser. Replaces the airport chaser odds and `ChasersByPlayerCount`.
+- **Every leg has a winner:** the runners win it when every living runner reaches the next safe zone, the chasers when every runner is dead. A notification shows who won and the time left to choose.
+- **Role swaps:** a runner who becomes a chaser drops every item and their backpack, then gets the blowgun and napberry; a chaser who becomes a runner drops the blowgun and napberry and gets a backpack if they have none, plus this leg's runner items if they haven't had them. **Runners can't use napberries** any more (or blowguns). A chaser can carry only **one blowgun and one napberry**; a second can't be picked up (the cooldowns belong to the player, not the item).
+- **Airport:** the **-** menu is in the airport too, for the first leg's draw: RUNNER is pre-selected, CHASER puts you in the pool. Chasers are a random pick from the pool (no odds); nobody in it = one random chaser.
+- **Scout statues are off** during a round (`DisableScoutStatues`): no revives, no items. Statue conversions are gone.
+- Campfires can't be lit by hand during a round.
+- **Back in the airport** (game over or the host menu) the mod resets the round, roles and choices, so the airport plays like vanilla PEAK.
+
+### Chase
+- **Captures need a hold:** a chaser looks at a runner and holds interact for **1.5 s** (`CaptureHoldSeconds`), like eating a scout, with the same hold ring. Running into a runner no longer captures.
+- **Freeze lasts 10 s** (`FreezeDuration`).
+- **Fog, rising lava and rising gloom** start **5 minutes after the head start** every leg (`FogStartDelaySeconds`), instead of PEAK's own timing, and rise **2.5× faster** (`FogSpeedMultiplier`, was 1.5×).
+- **Mandrakes** are dropped at every runner outside a safe zone every minute, from 3 minutes after the head start (`MandrakeStartSeconds`, `MandrakeIntervalSeconds`).
+- Safe zone radius **20 m → 15 m**.
+- **Fireworks removed:** no more bursts above players during the chase (`FireworkIntervalSeconds` and `FireworkHeight` are gone).
+
+### Runners
+- A **3-second energy-drink boost** (no drowsiness) at the end of every head start (`HeadStartBoostSeconds`).
+- **Snowballs** thrown by runners **blind** the chaser they hit for 2.5 s (`SnowballBlindSeconds`).
+- Stamina regeneration **+18.5%** (was +12%).
+
+### Chasers
+- **Napberry boost** (`ChaserNapberry`): chasers carry a napberry that is never eaten. Using it gives, 1 s later (`NapberryDelaySeconds`), a 2.25 s energy-drink speed boost plus unlimited stamina (rainbow bar, `NapberryInfiniteStamina`), then a 1-minute cooldown that starts when the effects wear off, with a cooldown number above its slot, and adds 8% petrification; each capture removes 5% (`NapberryBoostSeconds`, `NapberryCooldownSeconds`, `NapberryPetrify`, `CapturePetrifyRelief`).
+- The **blowgun can't be dropped or thrown**, and players who stop being chasers lose it. Every chaser, including a runner who just became one, is kept supplied with the blowgun and napberry: the host checks every half second and hands out whatever is missing (making room if their slots are full).
+- Take **half** of vanilla negative statuses (was 1/3, `ChaserStatusMultiplier`).
+- Blowgun tracking smoke lasts **7 s** (was 5).
+- **Chasers glow red** for everyone: PEAK's own status glow on their body, like the yellow glow of milk's invincibility (`ChaserRedOutline`, `ChaserGlowIntensity`).
+- Can use **dynamite** and **mandrakes** (`ChaserAllowedItems`).
+
+### Items
+- The **golden Bing Bong** is removed and its invincibility shield is switched off (`BanGoldenBingBong`).
+
 ## 1.4.0
 
 ### Round flow

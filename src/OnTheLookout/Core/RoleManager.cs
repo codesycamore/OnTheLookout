@@ -35,36 +35,37 @@ internal static class RoleManager
 
     public static IEnumerable<int> Chasers => s_Roles.Where(kv => kv.Value == Role.Chaser).Select(kv => kv.Key);
 
-    /// <summary>Host: draw the chasers for a new run (ChasersByPlayerCount, weighted by airport chaser odds), always leaving at least one runner.</summary>
-    public static void AssignRandom()
+    /// <summary>
+    /// Host, at the start of every leg: draw the chasers from the players who chose CHASER in the role menu
+    /// (<see cref="ChaserPreference"/>), at most <see cref="MaxChasers"/>. If nobody volunteered, one random
+    /// player becomes the chaser. Always leaves at least one runner (a solo player stays a runner).
+    /// </summary>
+    public static void AssignFromPreferences()
     {
         if (!Net.IsHost) return;
-        // Weighted random order (Efraimidis-Spirakis: key = u^(1/weight), highest keys first): airport chaser
-        // odds raise or lower each player's chance; with every weight 1 this is a plain shuffle. Weight 0 = picked last.
-        List<int> actors = PhotonNetwork.PlayerList.Select(p => p.ActorNumber)
-            .OrderByDescending(a => DrawKey(ChaserPreference.WeightOf(a)))
-            .ToList();
-        int count = Math.Max(0, Math.Min(ChasersFor(actors.Count), actors.Count - 1));
+        List<int> actors = PhotonNetwork.PlayerList.Select(p => p.ActorNumber).ToList();
+        int max = Math.Min(MaxChasers(actors.Count), actors.Count - 1);
+
+        List<int> volunteers = actors.Where(ChaserPreference.WantsChaser).OrderBy(_ => s_Rng.Next()).ToList();
+        List<int> chosen = volunteers.Take(Math.Max(0, max)).ToList();
+        if (chosen.Count == 0 && max > 0) chosen.Add(actors[s_Rng.Next(actors.Count)]);
 
         s_Roles.Clear();
-        for (int i = 0; i < actors.Count; i++)
+        foreach (int actor in actors)
         {
-            s_Roles[actors[i]] = i < count ? Role.Chaser : Role.Runner;
+            s_Roles[actor] = chosen.Contains(actor) ? Role.Chaser : Role.Runner;
         }
 
-        Plugin.Log.LogInfo($"[OTL][Roles] HOST assigned {count} chaser(s): {string.Join(", ", Chasers.Select(Net.NameOf))}");
-        ChaserPreference.HostClear(); // odds only count for this draw; the next run starts fresh
+        Plugin.Log.LogInfo($"[OTL][Roles] HOST drew {chosen.Count} chaser(s) of max {max} ({volunteers.Count} volunteer(s)): {string.Join(", ", Chasers.Select(Net.NameOf))}");
         Publish();
     }
 
-    /// <summary>Weighted draw key: higher weight = more likely to come first. Weight 0 = always last.</summary>
-    private static double DrawKey(float weight) => weight <= 0f ? -1.0 : Math.Pow(s_Rng.NextDouble(), 1.0 / weight);
-
-    /// <summary>
-    /// Chaser count for a lobby size from <c>ChasersByPlayerCount</c> ("minPlayers:chasers, ..."):
-    /// the entry with the highest minPlayers that is still &lt;= players wins. Defaults to 1.
-    /// </summary>
-    public static int ChasersFor(int players) => CountFor(Plugin.ModConfig.ChasersByPlayerCount.Value, players);
+    /// <summary>At most one chaser per RunnersPerChaser runners: floor(players / (RunnersPerChaser + 1)), at least 1.</summary>
+    public static int MaxChasers(int players)
+    {
+        float perChaser = Math.Max(1f, Plugin.ModConfig.RunnersPerChaser.Synced());
+        return Math.Max(1, (int)Math.Floor(players / (perChaser + 1f)));
+    }
 
     /// <summary>
     /// Reads a "minPlayers:count, ..." table (e.g. "1:1, 6:2"): the entry with the highest minPlayers that
@@ -85,6 +86,14 @@ internal static class RoleManager
         }
 
         return best;
+    }
+
+    /// <summary>Host: nobody has a role (back in the airport).</summary>
+    public static void HostClearAll()
+    {
+        if (!Net.IsHost) return;
+        s_Roles.Clear();
+        Publish();
     }
 
     /// <summary>Host only.</summary>

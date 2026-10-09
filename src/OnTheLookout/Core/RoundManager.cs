@@ -15,7 +15,7 @@ internal enum RoundState : byte
 {
     Idle = 0,
     Active = 1, // a leg is being played
-    LegComplete = 2, // every living runner reached the next campfire's safe zone; waiting for a runner to light it
+    LegComplete = 2, // the leg was won (runners all safe, or all caught); role window at the campfire before the next leg
     RunnersWon = 3,
     ChasersWon = 4,
 }
@@ -43,7 +43,8 @@ internal static class RoundManager
     public static RoundState State => s_State;
 
     /// <summary>A round is in progress (roles apply).</summary>
-    public static bool IsActive => Net.InRoom && s_State is RoundState.Active or RoundState.LegComplete;
+    public static bool IsActive => Net.InRoom && (s_State is RoundState.Active or RoundState.LegComplete)
+        && !(Character.localCharacter != null && Character.localCharacter.inAirport); // the airport is always vanilla
 
     private static int RevealEnd => unchecked(s_LegStart + s_RevealMs);
     private static int ChaseStart => unchecked(RevealEnd + s_HeadStartMs);
@@ -144,7 +145,7 @@ internal static class RoundManager
         if (!Net.IsHost) return;
         ConfigSync.Publish();
         Net.SetRoom(RunKey, CurrentRunId);
-        RoleManager.AssignRandom();
+        RoleManager.AssignFromPreferences();
         SafeZoneSystem.LastLitSegment = -1;
         FreezeState.HostReset();
         RewardSystem.HostReset();
@@ -195,16 +196,16 @@ internal static class RoundManager
 
     // ---------- Campfire lit -> next leg (host) ----------
 
-    /// <summary>Room property: bit flags shared with every client (see <see cref="FlagWiped"/>).</summary>
+    /// <summary>Room property: bit flags shared with every client (see <see cref="FlagChasersWonLeg"/>, <see cref="FlagRoleWindow"/>).</summary>
     public const string FlagsKey = "otl.flags";
 
-    /// <summary>Every runner died: chasers were sent to the next campfire; the next statue converts an extra runner.</summary>
-    private const int FlagWiped = 2;
+    /// <summary>The leg that just ended was won by the chasers (every runner died).</summary>
+    private const int FlagChasersWonLeg = 2;
+
+    /// <summary>The role window is open: everyone is at the campfire, frozen, choosing their role.</summary>
+    private const int FlagRoleWindow = 4;
 
     private static int s_Flags;
-
-    /// <summary>All runners died this leg; cleared by the next scout statue or leg.</summary>
-    public static bool IsWiped => IsActive && (s_Flags & FlagWiped) != 0;
 
     private static void HostSetFlags(int flags)
     {
@@ -213,12 +214,10 @@ internal static class RoundManager
         Net.SetRoom(FlagsKey, flags);
     }
 
-    /// <summary>Host (scout statue): the extra wipe conversion has been used.</summary>
-    public static void HostClearWipe() => HostSetFlags(s_Flags & ~FlagWiped);
-
     /// <summary>
-    /// Host: a runner lit a campfire. The next leg starts right away: role reveal (everyone frozen), then
-    /// runners released for their head start while chasers stay frozen and blind.
+    /// Host: the campfire was lit (by the host when the role window closes). The next leg starts right
+    /// away: role reveal (everyone frozen), then runners released for their head start while chasers stay
+    /// frozen and blind.
     /// </summary>
     public static void HostOnCampfireLit()
     {
@@ -246,11 +245,53 @@ internal static class RoundManager
         }
     }
 
+    // ---------- Leg end -> everyone at the campfire -> role window -> next leg (host) ----------
+
+    /// <summary>Room property: server timestamp (ms) at which the current role window closes.</summary>
+    public const string WindowKey = "otl.rwin";
+
+    private static bool s_WindowPending;
+    private static float s_WindowDue;
+    private static Campfire? s_WindowFire;
+
+    /// <summary>
+    /// Between a leg's end and the next leg: everyone is at the campfire, frozen, and can update their role
+    /// choice in the role menu. When it closes the host draws new roles and lights the campfire.
+    /// </summary>
+    public static bool InRoleWindow => IsActive && (s_Flags & FlagRoleWindow) != 0;
+
+    public static float RoleWindowSecondsLeft => InRoleWindow && Net.GetRoom(WindowKey) is int end ? Net.SecondsUntil(end) : 0f;
+
+    /// <summary>Who won the leg that just ended (valid while <see cref="State"/> is LegComplete).</summary>
+    public static bool ChasersWonLeg => IsActive && (s_Flags & FlagChasersWonLeg) != 0;
+
     /// <summary>Host, ~2x per second: leg completion and win conditions.</summary>
     public static void HostTick()
     {
-        if (!Net.IsHost || !IsActive) return;
+        if (!Net.IsHost) return;
 
+        // Back in the airport (game over, or the host menu): the mod steps back and PEAK is vanilla again.
+        if (s_State != RoundState.Idle && Character.localCharacter != null && Character.localCharacter.inAirport)
+        {
+            HostResetToVanilla();
+            return;
+        }
+
+        if (!IsActive) return;
+
+        if (InRoleWindow)
+        {
+            if (!s_WindowPending)
+            {
+                // A new host after migration takes over the window the old host opened.
+                s_WindowPending = true;
+                s_WindowFire = NextCampfire();
+                s_WindowDue = Time.time + RoleWindowSecondsLeft;
+            }
+
+            if (Time.time >= s_WindowDue) HostCloseRoleWindow();
+            return;
+        }
 
         var runners = PhotonNetwork.PlayerList
             .Where(p => RoleManager.RoleOf(p.ActorNumber) == Role.Runner)
@@ -258,27 +299,21 @@ internal static class RoundManager
             .Where(c => c != null)
             .Select(c => c!)
             .ToList();
-        if (runners.Count == 0) return;
+        if (runners.Count == 0 || s_State != RoundState.Active) return;
 
-        // Every runner dead (passing out doesn't count): the chasers caught them all. The chasers go to
-        // the next campfire; the scout statue there revives everyone and converts an extra runner.
-        // With no campfire left to go to (the last stretch), the chasers win.
+        // Every runner dead (passing out doesn't count): the chasers win the leg, and everyone goes to the
+        // next campfire. With no campfire left to go to (the last stretch), the chasers win the game.
         if (runners.All(c => c.data.dead))
         {
-            if (s_State != RoundState.Active) return;
             Campfire? next = NextCampfire();
             if (next == null)
             {
                 HostSetState(RoundState.ChasersWon);
+                ZombieHunt.HostDespawnAll();
                 return;
             }
 
-            HostSetFlags(s_Flags | FlagWiped); // before the state change, so clients see it with LegCompleted
-            HostSetState(RoundState.LegComplete);
-            HostBringChasers(next.transform.position);
-            RewardSystem.HostMarkRewarded(next); // no first-runner reward when the runners are revived there
-            ZombieHunt.HostDespawnAll(); // the chase is over: clear the zombies immediately
-            Plugin.Log.LogInfo("[OTL][Round] HOST: every runner is down; chasers sent to the next campfire.");
+            HostEndLeg(next, chasersWon: true);
             return;
         }
 
@@ -294,7 +329,8 @@ internal static class RoundManager
             return;
         }
 
-        if (s_State == RoundState.Active && IsChasing)
+        // Every living runner is in the next campfire's safe zone: the runners win the leg.
+        if (IsChasing)
         {
             float radius = Plugin.ModConfig.CampfireSafeRadius.Synced();
             foreach (Campfire fire in SafeZoneSystem.Campfires)
@@ -302,39 +338,110 @@ internal static class RoundManager
                 if (!fire.isActiveAndEnabled || fire.state != Campfire.FireState.Off) continue;
                 if (alive.All(c => Vector3.Distance(c.Center, fire.transform.position) <= radius))
                 {
-                    HostSetState(RoundState.LegComplete);
-                    if (Plugin.ModConfig.TeleportChasersOnLegComplete.Synced()) HostBringChasers(fire.transform.position);
-                    ZombieHunt.HostDespawnAll(); // every runner is safe: clear the zombies immediately
+                    HostEndLeg(fire, chasersWon: false);
                     return;
                 }
             }
         }
     }
 
-    /// <summary>The unlit campfire the runners are heading for (the closest one to the chasers if there are several).</summary>
+    /// <summary>
+    /// Host: the leg is over. Everyone (the dead revived) is brought next to <paramref name="fire"/> and frozen,
+    /// and the role window opens for RoleWindowSeconds; then <see cref="HostCloseRoleWindow"/> starts the next leg.
+    /// </summary>
+    private static void HostEndLeg(Campfire fire, bool chasersWon)
+    {
+        float seconds = Mathf.Max(1f, Plugin.ModConfig.RoleWindowSeconds.Synced());
+        Net.SetRoom(WindowKey, unchecked(Net.Now + (int)(seconds * 1000f)));
+        // Flags before the state change, so clients see them together with LegCompleted.
+        HostSetFlags(FlagRoleWindow | (chasersWon ? FlagChasersWonLeg : 0));
+        HostSetState(RoundState.LegComplete);
+        if (chasersWon) RewardSystem.HostMarkRewarded(fire); // nobody earned the first-runner reward
+        ZombieHunt.HostDespawnAll();
+        HostGatherAt(fire.transform.position);
+
+        s_WindowPending = true;
+        s_WindowFire = fire;
+        s_WindowDue = Time.time + seconds;
+        Plugin.Log.LogInfo($"[OTL][Round] HOST: leg {s_LegId} won by the {(chasersWon ? "chasers" : "runners")}; role window open for {seconds:0.#}s.");
+    }
+
+    /// <summary>Host: the role window is over. New roles are drawn and the campfire lights itself, which starts the next leg.</summary>
+    private static void HostCloseRoleWindow()
+    {
+        s_WindowPending = false;
+        Campfire? fire = s_WindowFire != null ? s_WindowFire : NextCampfire();
+        s_WindowFire = null;
+        RoleManager.AssignFromPreferences();
+        if (fire != null && fire.state == Campfire.FireState.Off && fire.view != null)
+        {
+            Plugin.Log.LogInfo("[OTL][Round] HOST: role window closed; lighting the campfire.");
+            fire.view.RPC("Light_Rpc", RpcTarget.All, true, 0f); // -> SafeZoneSystem.LightPostfix -> HostOnCampfireLit
+        }
+
+        if (InRoleWindow) HostStartLeg(); // no campfire to light (or it was lit already): start the leg anyway
+    }
+
+    /// <summary>Host: everyone to the campfire. The dead are revived there (scout statues are disabled).</summary>
+    private static void HostGatherAt(Vector3 campfire)
+    {
+        int i = 0;
+        foreach (Character c in Character.AllCharacters.ToArray())
+        {
+            if (c == null || c.isBot) continue;
+            float angle = (i++ * 47f + 20f) * Mathf.Deg2Rad;
+            float distance = 3.5f + (i % 3) * 1.2f;
+            Vector3 spot = campfire + new Vector3(Mathf.Cos(angle) * distance, 1f, Mathf.Sin(angle) * distance);
+            if (c.data.dead || c.data.fullyPassedOut) c.view.RPC("RPCA_ReviveAtPosition", RpcTarget.All, spot, false, -1);
+            else c.view.RPC("WarpPlayerRPC", RpcTarget.All, spot, true);
+        }
+
+        Plugin.Log.LogInfo($"[OTL][Round] HOST: {i} player(s) brought to the campfire.");
+    }
+
+    /// <summary>
+    /// Host, back in the airport: the round, roles, freezes, rewards and role choices are cleared, so the
+    /// airport plays like vanilla PEAK. The next run starts a fresh round on the shore.
+    /// </summary>
+    public static void HostResetToVanilla()
+    {
+        if (!Net.IsHost) return;
+        s_WindowPending = false;
+        s_WindowFire = null;
+        HostSetFlags(0);
+        FreezeState.HostReset();
+        RewardSystem.HostReset();
+        ZombieHunt.HostDespawnAll();
+        RoleManager.HostClearAll();
+        ChaserPreference.Clear();
+        Publish(RoundState.Idle, 0, 0, 0, s_RoundId, s_LegId);
+        Plugin.Log.LogInfo("[OTL][Round] HOST: back in the airport; the mode is off until the next run starts.");
+    }
+
+    /// <summary>The unlit campfire the runners are heading for (the closest one to the players if there are several).</summary>
     public static Campfire? NextCampfire()
     {
-        var chasers = Character.AllCharacters.Where(c => RoleManager.IsChaser(c) && !c.data.dead).ToList();
-        Vector3 from = chasers.Count > 0 ? chasers.Aggregate(Vector3.zero, (s, c) => s + c.Center) / chasers.Count : Vector3.zero;
+        var players = Character.AllCharacters.Where(c => c != null && !c.isBot && !c.data.dead).ToList();
+        Vector3 from = players.Count > 0 ? players.Aggregate(Vector3.zero, (s, c) => s + c.Center) / players.Count : Vector3.zero;
         return SafeZoneSystem.Campfires
             .Where(f => f.isActiveAndEnabled && f.state == Campfire.FireState.Off)
             .OrderBy(f => Vector3.Distance(f.transform.position, from))
             .FirstOrDefault();
     }
 
-    /// <summary>Host: the chase is over for this leg; living chasers are brought to the campfire too.</summary>
-    private static void HostBringChasers(Vector3 campfire)
+    /// <summary>Host: living chasers are brought next to <paramref name="position"/>.</summary>
+    private static void HostBringChasers(Vector3 position)
     {
         int i = 0;
         foreach (Character c in Character.AllCharacters.ToArray())
         {
             if (!RoleManager.IsChaser(c) || c.data.dead) continue;
             float angle = (i++ * 67f + 30f) * Mathf.Deg2Rad;
-            Vector3 spot = campfire + new Vector3(Mathf.Cos(angle) * 5f, 2f, Mathf.Sin(angle) * 5f);
+            Vector3 spot = position + new Vector3(Mathf.Cos(angle) * 5f, 2f, Mathf.Sin(angle) * 5f);
             c.view.RPC("WarpPlayerRPC", RpcTarget.All, spot, true);
         }
 
-        Plugin.Log.LogInfo($"[OTL][Round] HOST: leg complete, {i} chaser(s) brought to the campfire.");
+        Plugin.Log.LogInfo($"[OTL][Round] HOST: {i} chaser(s) brought over.");
     }
 
     /// <summary>Host: every living runner reached the peak. Living chasers are warped next to them, then die.</summary>
@@ -377,6 +484,10 @@ internal static class RoundManager
         else if (s_State == RoundState.LegComplete && previous == RoundState.Active)
         {
             LegCompleted?.Invoke();
+        }
+        else if (s_State == RoundState.Idle && previous != RoundState.Idle)
+        {
+            ChaserPreference.Clear(); // back in the airport: everyone's choice resets to RUNNER
         }
         else if (s_State is RoundState.RunnersWon or RoundState.ChasersWon && previous != s_State)
         {

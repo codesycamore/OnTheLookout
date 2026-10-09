@@ -57,14 +57,16 @@ public partial class Plugin : BaseUnityPlugin
         bool tag = cfg.EnableTag.Value && TagSystem.Install(_harmony);
         bool fog = cfg.EnableFog.Value && FogSystem.Install(_harmony);
         bool items = cfg.EnableItemRules.Value && ItemRules.Install(_harmony);
-        bool conversion = cfg.EnableConversion.Value && ConversionSystem.Install(_harmony);
         bool speed = ChaserSpeed.Install(_harmony);
         bool blowgun = BlowgunSystem.Install(_harmony);
         bool tweaks = Tweaks.Install(_harmony);
         bool resilience = ChaserResilience.Install(_harmony);
         bool shroomberry = ShroomberryRules.Install(_harmony);
         bool milk = MilkRules.Install(_harmony);
+        bool kit = ChaserKit.Install(_harmony);
+        bool mandrakes = MandrakeDrops.Install();
         LegLoadout.Install();
+        RoleSwap.Install();
         RewardSystem.Enabled = cfg.EnableRewards.Value;
 
         var ui = new GameObject("OnTheLookout_UI");
@@ -82,7 +84,7 @@ public partial class Plugin : BaseUnityPlugin
 
         Log.LogInfo($"[OTL] {Name} {Version} loaded. round={round} freeze={input && cfg.EnableFreeze.Value} " +
             $"suspend={FreezeSuspendPatch.HooksAvailable} campfire={campfire} tag={tag} fog={fog} items={items} " +
-            $"conversion={conversion} speed={speed} blowgun={blowgun} tweaks={tweaks} resilience={resilience} shroomberry={shroomberry} milk={milk} nameTags={nameTags} rewards={RewardSystem.Enabled}");
+            $"speed={speed} blowgun={blowgun} tweaks={tweaks} resilience={resilience} shroomberry={shroomberry} milk={milk} kit={kit} mandrakes={mandrakes} nameTags={nameTags} rewards={RewardSystem.Enabled}");
     }
 
     private static void StartRunPostfix()

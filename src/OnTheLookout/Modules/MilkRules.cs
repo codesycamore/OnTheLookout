@@ -52,7 +52,7 @@ internal static class MilkRules
         {
             Shorten<Affliction_Invincibility>(__instance, affliction, Plugin.ModConfig.FortifiedMilkInvincibilityMultiplier.Synced());
         }
-        else if (affliction is Affliction_FasterBoi)
+        else if (affliction is Affliction_FasterBoi && !ChaserKit.ApplyingBoost) // our own boosts keep their length
         {
             // The energy drink's speed boost (shroomberries' FasterBoi is already cut to 1 s by ShroomberryRules).
             Shorten<Affliction_FasterBoi>(__instance, affliction, Plugin.ModConfig.EnergyDrinkDurationMultiplier.Synced());

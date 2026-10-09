@@ -78,7 +78,7 @@ internal sealed class AdminRestart : MonoBehaviour
     /// <summary>
     /// Host (menu): everyone back to the airport, through PEAK's own networked return
     /// (GameOverHandler.LoadAirportMaster -> LoadSceneProcess("Airport", networked: true)). The next run
-    /// started from there gets a new run id, so roles are rolled again.
+    /// started from there starts a fresh round (new role draw) once everyone is awake on the shore.
     /// </summary>
     public static void HostReturnToAirport()
     {
@@ -91,6 +91,7 @@ internal sealed class AdminRestart : MonoBehaviour
         }
 
         Plugin.Log.LogInfo("[OTL][Admin] HOST sending everyone back to the airport.");
+        RoundManager.HostResetToVanilla(); // the airport plays like vanilla PEAK; the next run starts a fresh round
         handler.LoadAirportMaster();
     }
 

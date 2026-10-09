@@ -64,7 +64,22 @@ internal static class ItemRules
     {
         if (ItemCatalog.IsBanned(item)) return "This item is banned";
         if (ItemCatalog.IsBlowgun(item)) return RoleManager.IsChaser(c) ? null : "Only chasers can use the blowgun";
+        if (RoleManager.IsRunner(c) && ChaserKit.IsNapberry(item)) return "Napberries are for chasers only";
         if (RoleManager.IsChaser(c) && !ItemCatalog.IsChaserAllowed(item)) return "Chasers can only use food and healing items";
+        return null;
+    }
+
+    /// <summary>
+    /// <see cref="Refusal"/> plus, for picking up: a chaser carries one blowgun and one napberry at most (a second
+    /// would do nothing; both cooldowns belong to the player, not the item).
+    /// </summary>
+    private static string? PickupRefusal(Character? c, Item item)
+    {
+        string? why = Refusal(c, item);
+        if (why != null || c == null || c.player == null || !RoleManager.IsChaser(c)) return why;
+        Item e = ItemCatalog.Effective(item);
+        if (ItemCatalog.IsBlowgun(e) && c.player.HasInAnySlot(e.itemID)) return "You already have a blowgun";
+        if (ChaserKit.IsNapberry(e) && c.player.HasInAnySlot(e.itemID)) return "You already have a napberry";
         return null;
     }
 
@@ -100,14 +115,14 @@ internal static class ItemRules
 
     public static bool IsInteractiblePrefix(Item __instance, Character interactor, ref bool __result)
     {
-        if (Refusal(interactor, __instance) is null) return true;
+        if (PickupRefusal(interactor, __instance) is null) return true;
         __result = false;
         return false;
     }
 
     public static bool InteractPrefix(Item __instance, Character interactor)
     {
-        string? why = Refusal(interactor, __instance);
+        string? why = PickupRefusal(interactor, __instance);
         if (why is null) return true;
         if (interactor != null && interactor.IsLocal) Hint(why);
         return false;
@@ -116,7 +131,7 @@ internal static class ItemRules
     public static bool RequestPickupPrefix(Item __instance, PhotonView characterView)
     {
         if (!Net.IsHost || characterView == null) return true;
-        string? why = Refusal(characterView.GetComponent<Character>(), __instance);
+        string? why = PickupRefusal(characterView.GetComponent<Character>(), __instance);
         if (why is null) return true;
 
         Plugin.Log.LogInfo($"[OTL][Items] HOST denied {characterView.Owner?.NickName} picking up {ItemCatalog.NameOf(__instance)}: {why}.");
@@ -128,6 +143,7 @@ internal static class ItemRules
     {
         Character holder = __instance.holderCharacter;
         if (holder == null || !holder.IsLocal) return true;
+        if (ChaserKit.HandleUse(__instance)) return false; // the chaser napberry: a boost instead of eating it
         string? why = Refusal(holder, __instance);
         if (why is null && ItemCatalog.IsBlowgun(__instance) && BlowgunSystem.OnCooldown) why = "Blowgun is recharging";
         if (why is null) return true;
@@ -147,14 +163,14 @@ internal static class ItemRules
 
     public static bool FakeIsInteractiblePrefix(FakeItem __instance, Character interactor, ref bool __result)
     {
-        if (__instance.realItemPrefab == null || Refusal(interactor, __instance.realItemPrefab) is null) return true;
+        if (__instance.realItemPrefab == null || PickupRefusal(interactor, __instance.realItemPrefab) is null) return true;
         __result = false;
         return false;
     }
 
     public static bool FakeInteractPrefix(FakeItem __instance, Character interactor)
     {
-        string? why = __instance.realItemPrefab != null ? Refusal(interactor, __instance.realItemPrefab) : null;
+        string? why = __instance.realItemPrefab != null ? PickupRefusal(interactor, __instance.realItemPrefab) : null;
         if (why is null) return true;
         if (interactor != null && interactor.IsLocal) Hint(why);
         return false;
@@ -163,7 +179,7 @@ internal static class ItemRules
     public static bool FakePickupPrefix(FakeItemManager __instance, PhotonView characterView, int fakeItemIndex)
     {
         if (!Net.IsHost || characterView == null || !__instance.TryGetFakeItem(fakeItemIndex, out FakeItem fake) || fake.realItemPrefab == null) return true;
-        string? why = Refusal(characterView.GetComponent<Character>(), fake.realItemPrefab);
+        string? why = PickupRefusal(characterView.GetComponent<Character>(), fake.realItemPrefab);
         if (why is null) return true;
 
         Plugin.Log.LogInfo($"[OTL][Items] HOST denied {characterView.Owner?.NickName} picking up {ItemCatalog.NameOf(fake.realItemPrefab)} (scenery item): {why}.");
@@ -181,7 +197,10 @@ internal static class ItemRules
     /// <summary>Why <paramref name="interactor"/> may not open <paramref name="luggage"/>, or null.</summary>
     private static string? LuggageRefusal(Luggage luggage, Character interactor)
     {
-        if (!RoundManager.IsActive || luggage is RespawnChest) return null; // scout statues work for everyone
+        if (!RoundManager.IsActive) return null;
+        // Scout statues (RespawnChest) neither revive nor give items during a round: everyone is brought
+        // back at the campfire after each leg instead.
+        if (luggage is RespawnChest) return Plugin.ModConfig.DisableScoutStatues.Synced() ? "Scout statues are disabled in this mode" : null;
         var cfg = Plugin.ModConfig;
         bool chaser = RoleManager.IsChaser(interactor);
         bool clown = IsClownLuggage(luggage);

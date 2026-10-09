@@ -8,52 +8,80 @@ using UnityEngine;
 namespace OnTheLookout.Modules;
 
 /// <summary>
-/// Capture: a chaser's body colliding with a runner's body. Collisions are observed on the clients
-/// that own either body (most accurate view) and on the host; each sends a claim, and only the host
-/// decides (roles, head start, freeze, safe zone, distance sanity), then kills the runner with the
-/// game's own RPCA_Die. Dead runners form the conversion pool (<see cref="ConversionSystem"/>).
+/// Capture: a chaser looks at a runner and holds interact for CaptureHoldSeconds, the same way a hungry
+/// scout eats another one (PEAK's CharacterInteractible "constant" interaction, with its hold ring).
+/// When the hold finishes the chaser's client sends a claim and only the host decides (roles, head start,
+/// freeze, safe zone, milk, distance), then kills the runner with the game's own RPCA_Die.
 /// </summary>
 internal static class TagSystem
 {
-    private const float ClaimInterval = 0.5f;
     private const float RunnerDebounce = 2f;
 
-    private static readonly Dictionary<long, float> s_LastClaim = new();
     private static readonly Dictionary<int, float> s_LastCapture = new();
-    private static int s_CharacterLayer = -1;
 
-    public static bool Install(Harmony harmony) =>
-        // Patch target: Bodypart.OnCollisionEnter(Collision) (postfix, private).
-        // Why: fires for every body-part contact between characters. Same hook Hide-and-PEAK uses.
-        SafePatch.Postfix(harmony, typeof(Bodypart), "OnCollisionEnter", typeof(TagSystem), nameof(CollisionPostfix), "Tag");
-
-    public static void CollisionPostfix(Bodypart __instance, Collision collision)
+    public static bool Install(Harmony harmony)
     {
-        if (!RoundManager.IsChasing || collision?.collider == null) return;
+        const string m = "Tag";
+        bool ok = true;
+        System.Type t = typeof(TagSystem);
+        System.Type ci = typeof(CharacterInteractible);
 
-        if (s_CharacterLayer < 0) s_CharacterLayer = LayerMask.NameToLayer("Character");
-        if (collision.collider.gameObject.layer != s_CharacterLayer) return;
+        // CharacterInteractible is what lets you carry, feed or eat another scout. Prefixes on its interaction
+        // methods (local player's client) turn "look at a runner as a chaser" into a hold-to-capture
+        // interaction: interactible, constant (hold), prompt "CAPTURE", hold time, and the result on finish.
+        ok &= SafePatch.Prefix(harmony, ci, nameof(CharacterInteractible.IsInteractible), t, nameof(BoolPrefix), m);
+        ok &= SafePatch.Prefix(harmony, ci, nameof(CharacterInteractible.IsPrimaryInteractible), t, nameof(BoolPrefix), m);
+        ok &= SafePatch.Prefix(harmony, ci, nameof(CharacterInteractible.IsConstantlyInteractable), t, nameof(BoolPrefix), m);
+        ok &= SafePatch.Prefix(harmony, ci, nameof(CharacterInteractible.GetInteractionText), t, nameof(TextPrefix), m);
+        ok &= SafePatch.Prefix(harmony, ci, nameof(CharacterInteractible.GetInteractTime), t, nameof(TimePrefix), m);
+        ok &= SafePatch.Prefix(harmony, ci, nameof(CharacterInteractible.Interact), t, nameof(InteractPrefix), m);
+        ok &= SafePatch.Prefix(harmony, ci, nameof(CharacterInteractible.Interact_CastFinished), t, nameof(CastFinishedPrefix), m);
+        return ok;
+    }
 
-        Character self = __instance.character;
-        if (self == null || (!self.IsLocal && !Net.IsHost)) return;
+    /// <summary>The local chaser may start capturing this character right now (the host checks again).</summary>
+    private static bool CanCapture(CharacterInteractible target, Character? interactor)
+    {
+        Character runner = target.character;
+        if (!RoundManager.IsChasing || interactor == null || !interactor.IsLocal || runner == null || runner == interactor) return false;
+        if (!RoleManager.IsChaser(interactor) || !RoleManager.IsRunner(runner)) return false;
+        if (interactor.data.dead || interactor.data.passedOut || FreezeState.IsFrozen(Net.Actor(interactor))) return false;
+        if (runner.data.dead || (runner.data.passedOut && !Plugin.ModConfig.TagPassedOutRunners.Synced())) return false;
+        return !SafeZoneSystem.IsSafe(runner.Center);
+    }
 
-        Character other = collision.collider.GetComponentInParent<Character>();
-        if (other == null || other == self) return;
+    public static bool BoolPrefix(CharacterInteractible __instance, Character interactor, ref bool __result)
+    {
+        if (!CanCapture(__instance, interactor)) return true;
+        __result = true;
+        return false;
+    }
 
-        Character chaser, runner;
-        if (RoleManager.IsChaser(self) && RoleManager.IsRunner(other)) { chaser = self; runner = other; }
-        else if (RoleManager.IsRunner(self) && RoleManager.IsChaser(other)) { chaser = other; runner = self; }
-        else return;
+    public static bool TextPrefix(CharacterInteractible __instance, ref string __result)
+    {
+        if (!CanCapture(__instance, Character.localCharacter)) return true;
+        __result = "CAPTURE";
+        return false;
+    }
 
-        int chaserActor = Net.Actor(chaser), runnerActor = Net.Actor(runner);
-        if (FreezeState.IsFrozen(chaserActor) || runner.data.dead) return;
+    public static bool TimePrefix(CharacterInteractible __instance, Character interactor, ref float __result)
+    {
+        if (!CanCapture(__instance, interactor)) return true;
+        __result = Mathf.Max(0.1f, Plugin.ModConfig.CaptureHoldSeconds.Synced());
+        return false;
+    }
 
-        long key = ((long)chaserActor << 32) | (uint)runnerActor;
-        if (s_LastClaim.TryGetValue(key, out float last) && Time.time - last < ClaimInterval) return;
-        s_LastClaim[key] = Time.time;
+    /// <summary>Pressing interact on a runner as a chaser starts the hold; it must not also carry/drop them.</summary>
+    public static bool InteractPrefix(CharacterInteractible __instance, Character interactor) => !CanCapture(__instance, interactor);
 
+    public static bool CastFinishedPrefix(CharacterInteractible __instance, Character interactor)
+    {
+        if (!CanCapture(__instance, interactor)) return true;
+        int chaserActor = Net.Actor(interactor), runnerActor = Net.Actor(__instance.character);
+        Plugin.Log.LogInfo($"[OTL][Tag] capture hold finished on {Net.NameOf(runnerActor)}; claiming.");
         if (Net.IsHost) HostHandleClaim(chaserActor, runnerActor, PhotonNetwork.LocalPlayer.ActorNumber);
         else Net.SendToHost(Msg.TagClaim, chaserActor, runnerActor);
+        return false;
     }
 
     /// <summary>
@@ -68,8 +96,8 @@ internal static class TagSystem
     {
         if (!Net.IsHost || !RoundManager.IsChasing) return;
 
-        // Only the two players involved (or the host's own simulation) may claim.
-        if (sender != chaserActor && sender != runnerActor && sender != PhotonNetwork.LocalPlayer.ActorNumber) return;
+        // Only the capturing chaser may claim.
+        if (sender != chaserActor) return;
 
         Character? chaser = Net.CharacterOf(chaserActor);
         Character? runner = Net.CharacterOf(runnerActor);
@@ -82,13 +110,13 @@ internal static class TagSystem
 
         if (Plugin.ModConfig.MilkProtectsFromCapture.Synced() && HasMilkProtection(runner))
         {
-            Plugin.Log.LogInfo($"[OTL][Tag] {Net.NameOf(runnerActor)} touched by {Net.NameOf(chaserActor)} but is protected by fortified milk.");
+            Plugin.Log.LogInfo($"[OTL][Tag] {Net.NameOf(chaserActor)} tried to capture {Net.NameOf(runnerActor)}, who is protected by fortified milk.");
             return;
         }
 
         if (SafeZoneSystem.IsSafe(runner.Center))
         {
-            Plugin.Log.LogInfo($"[OTL][Tag] {Net.NameOf(runnerActor)} touched by {Net.NameOf(chaserActor)} but is in a campfire safe zone.");
+            Plugin.Log.LogInfo($"[OTL][Tag] {Net.NameOf(chaserActor)} tried to capture {Net.NameOf(runnerActor)} in a campfire safe zone.");
             return;
         }
 

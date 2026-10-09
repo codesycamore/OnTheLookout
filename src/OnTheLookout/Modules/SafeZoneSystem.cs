@@ -34,7 +34,7 @@ internal static class SafeZoneSystem
             typeof(SafeZoneSystem), nameof(EveryoneInRangePrintoutPrefix), "Campfire", new[] { typeof(string).MakeByRefType(), typeof(float) });
 
         // Patch targets: Campfire.IsInteractible / IsConstantlyInteractable (prefixes).
-        // Why: only runners may light a campfire (chasers can still cook on a lit one).
+        // Why: during a round campfires light themselves after the role window (anyone can still cook on a lit one).
         bool c = SafePatch.Prefix(harmony, typeof(Campfire), nameof(Campfire.IsInteractible),
             typeof(SafeZoneSystem), nameof(ChaserCantLightPrefix), "Campfire");
         bool d = SafePatch.Prefix(harmony, typeof(Campfire), nameof(Campfire.IsConstantlyInteractable),
@@ -47,9 +47,10 @@ internal static class SafeZoneSystem
         return a && b && c && d && e;
     }
 
+    /// <summary>During a round nobody lights a campfire by hand: the host lights it when the role window closes.</summary>
     public static bool ChaserCantLightPrefix(Campfire __instance, Character interactor, ref bool __result)
     {
-        if (!RoundManager.IsActive || __instance.state != Campfire.FireState.Off || !RoleManager.IsChaser(interactor)) return true;
+        if (!RoundManager.IsActive || __instance.state != Campfire.FireState.Off) return true;
         __result = false;
         return false;
     }
