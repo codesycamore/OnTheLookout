@@ -41,7 +41,7 @@ internal static class SafeZoneSystem
             typeof(SafeZoneSystem), nameof(ChaserCantLightPrefix), "Campfire");
 
         // Patch target: Campfire.Light_Rpc(bool updateSegment, float) (postfix, [PunRPC] on all clients).
-        // Why: lighting a campfire (updateSegment = true) starts the next leg: chasers frozen + blind, runners get a head start.
+        // Why: lighting a campfire (updateSegment = true) ends the leg; the next one starts once a runner sees the next biome title.
         bool e = SafePatch.Postfix(harmony, typeof(Campfire), "Light_Rpc", typeof(SafeZoneSystem), nameof(LightPostfix), "Campfire");
 
         // Patch target: MountainProgressHandler.TriggerReached(ProgressPoint, bool isFurthestPoint) (postfix).
@@ -56,6 +56,11 @@ internal static class SafeZoneSystem
     public static void TitlePostfix(bool isFurthestPoint)
     {
         if (!isFurthestPoint || Time.time <= 2f || !RoundManager.IsActive) return; // same conditions as the title itself
+        ReportTitle();
+    }
+
+    private static void ReportTitle()
+    {
         if (Net.IsHost) RoundManager.HostOnBiomeTitle(Photon.Pun.PhotonNetwork.LocalPlayer.ActorNumber);
         else Net.SendToHost(Msg.BiomeTitle);
     }
@@ -82,35 +87,41 @@ internal static class SafeZoneSystem
             Plugin.Log.LogInfo("[OTL][Campfire] cleared local statuses for the new leg.");
         }
 
+        // Play goes on until a runner walks far enough to see the next biome's title (TitlePostfix); then
+        // the host freezes everyone and starts the next leg after the title.
+        bool? reached = NextTitleReached(__instance);
         if (Net.IsHost)
         {
             AdminRestart.HostRememberCampfire(__instance.transform.position);
-            RoundManager.HostOnCampfireLit(); // first, so the host is already waiting when the title below reports in
+            RoundManager.HostOnCampfireLit(titleAlreadySeen: reached == null); // no title ahead: freeze right away
         }
 
-        // Everyone is frozen until the next leg, so nobody would walk past the next biome's progress point
-        // to trigger its title: show it now, on every client, the same way PEAK does when you cross it.
-        ShowNextBiomeTitle(__instance);
+        // This runner already crossed that point before the fire was lit, so PEAK won't show the title
+        // to them again: report it now so the host doesn't wait for it.
+        if (reached == true && local != null && !local.data.dead && !RoleManager.IsChaser(local))
+        {
+            Plugin.Log.LogInfo("[OTL][Campfire] already past the next biome's title point; telling the host.");
+            ReportTitle();
+        }
     }
 
     /// <summary>
-    /// MountainProgressHandler.SetSegmentComplete(segment) marks the progress point reached and calls
-    /// TriggerReached, i.e. the biome title (+ area achievement); it won't play again when the point is
-    /// crossed later. Our TitlePostfix then tells the host, which starts the leg once the title has played.
+    /// Whether this client has already reached the progress point (biome title) the campfire leads to
+    /// (MountainProgressHandler.progressPoints[advanceToSegment].Reached); null if there is none.
     /// </summary>
-    private static void ShowNextBiomeTitle(Campfire fire)
+    private static bool? NextTitleReached(Campfire fire)
     {
         try
         {
             MountainProgressHandler? progress = Zorro.Core.Singleton<MountainProgressHandler>.Instance;
             int segment = (int)fire.advanceToSegment;
-            if (progress == null || progress.progressPoints == null || segment < 0 || segment >= progress.progressPoints.Length) return;
-            if (progress.progressPoints[segment].Reached) return; // already shown (crossed already)
-            progress.SetSegmentComplete(segment);
+            if (progress == null || progress.progressPoints == null || segment < 0 || segment >= progress.progressPoints.Length) return null;
+            return progress.progressPoints[segment].Reached;
         }
         catch (System.Exception e)
         {
-            Plugin.Log.LogWarning($"[OTL][Campfire] couldn't show the biome title: {e.Message}");
+            Plugin.Log.LogWarning($"[OTL][Campfire] couldn't read the next biome title point: {e.Message}");
+            return null;
         }
     }
 

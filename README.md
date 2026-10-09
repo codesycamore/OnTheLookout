@@ -2,7 +2,7 @@
 
 **Chasers vs Runners for PEAK.** A few scouts are secretly chosen as **chasers** and hunt everyone else up the mountain. **Runners** have to make it from campfire to campfire, and finally to the peak, without getting caught. A runner's best defence is to turn around and **look at a chaser** to freeze them in place.
 
-> **New in 1.3.0:** pick your **chaser odds** in the airport (press **-**; secret, first draw only, resets every run), runners get a **biome item** each leg (heat pack, sports drink, early worm or aloe vera), and **fortified milk** is twice as heavy with 65% shorter invincibility. See the changelog for 1.2.0 (campfire flow, zombies, host menu) and earlier.
+> **New in 1.3.1:** lighting a campfire only freezes everyone once a runner reaches the next biome title, safe zones are **20 m**, and the energy drink lasts 65% less. **1.3.0** added **chaser odds** in the airport (press **-**; secret, first draw only, resets every run), a runner **biome item** each leg and heavier **fortified milk** with shorter invincibility. See the changelog for earlier versions.
 
 > **Everyone in the lobby needs this mod** (same version). The host runs the game: roles, freezes, captures and rewards are all decided by the host and synced to everyone.
 
@@ -18,8 +18,8 @@
    - A chaser **captures** a runner by **running into them**. The runner dies with a bang.
    - A runner **freezes** a chaser by **looking at them** within 26 m, from **outside** a safe zone. The chaser can't move, act or fall for 6.5 seconds, then is immune to freezing for 8 seconds.
    - If **no chaser is alive** (all dead, or none at all, e.g. a host playing solo is a runner), the mountain takes over: from **5 minutes after the head start ends**, **mushroom zombies** are sent, each after one random runner who isn't in a safe zone yet (1 zombie per wave, more in bigger lobbies). Each lasts 2 minutes. When a wave is gone (killed or expired) there's a **2-minute cooldown** before the next one can come, until the runners reach the campfire or a chaser is back. Every spawn is announced to all players with an alarm and a screen shake, and all zombies vanish the moment every runner is safe (or every runner is caught).
-5. **Reach the campfire.** Within **30 m of a campfire** is a **safe zone**: no captures there, and runners inside can't freeze chasers. When **every living runner** is in the next campfire's safe zone, the chase for that leg is over: everyone sees *ALL RUNNERS ARE SAFE*, the chasers are brought to the campfire, and food is laid out so everyone gets something to eat.
-6. **Light the campfire.** Only a **runner** can light it. Lighting clears every negative status of everyone at the fire and **freezes everyone** while the next biome's title plays. Then the next leg starts: role reveal → runners released for their head start → chasers frozen and blind until it ends.
+5. **Reach the campfire.** Within **20 m of a campfire** is a **safe zone**: no captures there, and runners inside can't freeze chasers. When **every living runner** is in the next campfire's safe zone, the chase for that leg is over: everyone sees *ALL RUNNERS ARE SAFE*, the chasers are brought to the campfire, and food is laid out so everyone gets something to eat.
+6. **Light the campfire.** Only a **runner** can light it. Lighting ends the chase and clears every negative status of everyone at the fire. Everyone can still move until a runner walks far enough to see the next biome's title; then **everyone freezes** while it plays, and the next leg starts: role reveal → runners released for their head start → chasers frozen and blind until it ends.
 7. **Win.**
    - **Runners win** when a runner reaches **the peak**.
    - **Chasers win** when **every runner is dead** and there's no campfire left to go to (the last stretch).
@@ -55,7 +55,7 @@
 **Perks**
 - **Freeze chasers** by looking at them (26 m, 6.5 s; no stacking, 8 s immunity afterwards), but not from inside a safe zone.
 - **Head start** at every leg.
-- **Safe zones** (30 m) around every campfire.
+- **Safe zones** (20 m) around every campfire.
 - **12% faster stamina regeneration.**
 - A **backpack** at the start of the round, **one random item** at the start of every leg (a snowball, a brown berrynana or a fortified milk), plus a **biome item**: a heat pack in the Alpine, a sports drink in the Caldera, an early worm in the Gloom, aloe vera in the Mesa.
 - **Fortified milk** protects you from being captured while it's active (milk is twice as heavy and its invincibility is 65% shorter than vanilla).
@@ -128,8 +128,8 @@ Settings live in `BepInEx/config/codesycamore.OnTheLookout.cfg` (or the mod mana
 | `AutoStartRound` | true | Start automatically once everyone has woken up. |
 | `ChaserPreferenceEnabled` | true | Lets players choose their chaser odds in the airport (host decides). |
 | `ChaserOddsWantChaser` / `NoPreference` / `RatherRun` | 3 / 1 / 0.25 | Draw weights for each choice (0 = only if needed). |
-| `BiomeTitleSeconds` | 7.5 | After lighting a campfire, the next leg starts this long after the biome title appears. |
-| `NoTitleFallbackSeconds` | 12 | …or this long after lighting if no title shows. |
+| `BiomeTitleSeconds` | 7.5 | After lighting a campfire, everyone freezes when a runner reaches the next biome title; the next leg starts this long later. |
+| `NoTitleFallbackSeconds` | 5 | If that title was already seen (or there is none), everyone freezes at lighting and the leg starts this long later. |
 | `SpawnInteractLockSeconds` | 7 | No interacting on the shore until this long after the round starts. |
 | `ChaserSpeedMultiplier` | 1.15 | Chaser movement speed. |
 | `ChaserClimbSpeedMultiplier` | 1.06 | Chaser climbing speed (walls, ropes, vines). |
@@ -157,6 +157,7 @@ Settings live in `BepInEx/config/codesycamore.OnTheLookout.cfg` (or the mod mana
 | `ClearStatusesAtCampfire` | true | Lighting a campfire clears negative statuses nearby. |
 | `NoReviveCurse` | true | No curse/hunger after being revived. |
 | `EnergyDrinkDrowsyMultiplier` | 1.5 | Energy drink drowsiness when it wears off. |
+| `EnergyDrinkDurationMultiplier` | 0.35 | Energy drink speed boost duration vs. vanilla (65% shorter). |
 | `DisableScoutmaster` | true | No Scoutmaster. |
 
 ### 2b. Blowgun
@@ -200,7 +201,7 @@ Settings live in `BepInEx/config/codesycamore.OnTheLookout.cfg` (or the mod mana
 ### 5. Safe zones
 | Setting | Default | What it does |
 |---|---|---|
-| `CampfireSafeRadius` | 30 | Safe zone radius (m): no captures, no freezing from inside; also when a leg counts as complete. |
+| `CampfireSafeRadius` | 20 | Safe zone radius (m): no captures, no freezing from inside; also when a leg counts as complete. |
 | `SafeZoneRequiresLit` | false | Only lit campfires are safe. |
 
 ### 6. Fog

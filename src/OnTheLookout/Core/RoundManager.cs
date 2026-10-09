@@ -208,12 +208,18 @@ internal static class RoundManager
     /// <summary>Every runner died: chasers were sent to the next campfire; the next statue converts an extra runner.</summary>
     private const int FlagWiped = 2;
 
+    /// <summary>A campfire was lit; no chase, nobody frozen, until a runner walks far enough to see the next biome's title.</summary>
+    private const int FlagAwaitingTitle = 4;
+
     private static int s_Flags;
     private static bool s_AwaitingLeg;
     private static float s_LegDue;
 
-    /// <summary>Between lighting a campfire and the next leg starting: every player is frozen.</summary>
+    /// <summary>From a runner seeing the new biome title until the next leg starts: every player is frozen.</summary>
     public static bool InIntermission => IsActive && (s_Flags & FlagIntermission) != 0;
+
+    /// <summary>A campfire was lit and the host is waiting for a runner to see the new biome's title.</summary>
+    public static bool AwaitingTitle => IsActive && (s_Flags & FlagAwaitingTitle) != 0;
 
     /// <summary>All runners died this leg; cleared by the next scout statue or leg.</summary>
     public static bool IsWiped => IsActive && (s_Flags & FlagWiped) != 0;
@@ -229,31 +235,50 @@ internal static class RoundManager
     public static void HostClearWipe() => HostSetFlags(s_Flags & ~FlagWiped);
 
     /// <summary>
-    /// Host: a runner lit a campfire. Everyone freezes and the chase pauses; the next leg (role reveal,
-    /// timers, runners released for their head start) starts after the new biome's title has played,
-    /// or after a fallback delay.
+    /// Host: a runner lit a campfire. The chase pauses (no captures or freezes) but nobody is frozen yet:
+    /// play goes on until a runner walks far enough to see the next biome's title (<see cref="HostOnBiomeTitle"/>).
+    /// If that title was already seen (or there is none), everyone freezes right away instead.
     /// </summary>
-    public static void HostOnCampfireLit()
+    public static void HostOnCampfireLit(bool titleAlreadySeen)
     {
         if (!Net.IsHost || !IsActive) return;
-        HostSetFlags(s_Flags | FlagIntermission);
         HostSetState(RoundState.LegComplete); // no captures or freezes while waiting
-        s_AwaitingLeg = true;
-        s_LegDue = Time.time + Plugin.ModConfig.NoTitleFallbackSeconds.Value;
-        Plugin.Log.LogInfo($"[OTL][Round] HOST: campfire lit; everyone frozen until the next leg (after the biome title, max {Plugin.ModConfig.NoTitleFallbackSeconds.Value:0}s).");
+        if (titleAlreadySeen)
+        {
+            HostBeginIntermission(Plugin.ModConfig.NoTitleFallbackSeconds.Value, "campfire lit, biome title already seen");
+            return;
+        }
+
+        s_AwaitingLeg = false;
+        HostSetFlags((s_Flags & ~FlagIntermission) | FlagAwaitingTitle);
+        Plugin.Log.LogInfo("[OTL][Round] HOST: campfire lit; waiting for a runner to reach the next biome's title.");
     }
 
     /// <summary>
     /// Host: some player's client just showed a biome title (PEAK shows it per player when they cross
-    /// the next biome's progress point). The leg starts once the title has finished playing.
+    /// the next biome's progress point). If it's a living runner and we're waiting for it, everyone
+    /// freezes and the next leg starts once the title has finished playing.
     /// </summary>
     public static void HostOnBiomeTitle(int reporter)
     {
-        if (!Net.IsHost || !s_AwaitingLeg) return;
-        float due = Time.time + Plugin.ModConfig.BiomeTitleSeconds.Value;
-        if (due >= s_LegDue) return;
-        s_LegDue = due;
-        Plugin.Log.LogInfo($"[OTL][Round] HOST: {Net.NameOf(reporter)} sees the biome title; next leg in {Plugin.ModConfig.BiomeTitleSeconds.Value:0.#}s.");
+        if (!Net.IsHost || !AwaitingTitle) return;
+        Character? c = Net.CharacterOf(reporter);
+        if (RoleManager.RoleOf(reporter) != Role.Runner || c == null || c.data.dead)
+        {
+            Plugin.Log.LogInfo($"[OTL][Round] HOST: {Net.NameOf(reporter)} saw the biome title but isn't a living runner; still waiting.");
+            return;
+        }
+
+        HostBeginIntermission(Plugin.ModConfig.BiomeTitleSeconds.Value, $"{Net.NameOf(reporter)} sees the biome title");
+    }
+
+    /// <summary>Host: everyone freezes now; the next leg (reveal, timers, head start) starts after <paramref name="seconds"/>.</summary>
+    private static void HostBeginIntermission(float seconds, string why)
+    {
+        HostSetFlags((s_Flags & ~FlagAwaitingTitle) | FlagIntermission);
+        s_AwaitingLeg = true;
+        s_LegDue = Time.time + seconds;
+        Plugin.Log.LogInfo($"[OTL][Round] HOST: {why}; everyone frozen, next leg in {seconds:0.#}s.");
     }
 
     /// <summary>New host after migration: keep waiting for the next leg if the old host was.</summary>

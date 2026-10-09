@@ -11,6 +11,7 @@ namespace OnTheLookout.Modules;
 /// - its weight (Item.CarryWeight, which feeds the Weight status) is multiplied by FortifiedMilkWeightMultiplier;
 /// - the invincibility it gives (Affliction_Invincibility with isFromMilk) lasts FortifiedMilkInvincibilityMultiplier
 ///   of its vanilla time. That also shortens the capture protection milk gives runners.
+/// Same idea for the energy drink: its speed boost (Affliction_FasterBoi) lasts EnergyDrinkDurationMultiplier of its time.
 /// </summary>
 internal static class MilkRules
 {
@@ -46,12 +47,24 @@ internal static class MilkRules
 
     public static void AddAfflictionPostfix(CharacterAfflictions __instance, Affliction affliction)
     {
-        if (affliction is not Affliction_Invincibility { isFromMilk: true } incoming) return;
         if (__instance.character == null || !__instance.character.IsLocal) return;
-        float multiplier = Mathf.Clamp01(Plugin.ModConfig.FortifiedMilkInvincibilityMultiplier.Synced());
-        foreach (Affliction stored in __instance.afflictionList)
+        if (affliction is Affliction_Invincibility { isFromMilk: true })
         {
-            if (stored is Affliction_Invincibility) stored.totalTime = Mathf.Min(stored.totalTime, stored.timeElapsed + incoming.totalTime * multiplier);
+            Shorten<Affliction_Invincibility>(__instance, affliction, Plugin.ModConfig.FortifiedMilkInvincibilityMultiplier.Synced());
+        }
+        else if (affliction is Affliction_FasterBoi)
+        {
+            // The energy drink's speed boost (shroomberries' FasterBoi is already cut to 1 s by ShroomberryRules).
+            Shorten<Affliction_FasterBoi>(__instance, affliction, Plugin.ModConfig.EnergyDrinkDurationMultiplier.Synced());
+        }
+    }
+
+    private static void Shorten<T>(CharacterAfflictions afflictions, Affliction incoming, float multiplier) where T : Affliction
+    {
+        multiplier = Mathf.Clamp01(multiplier);
+        foreach (Affliction stored in afflictions.afflictionList)
+        {
+            if (stored is T) stored.totalTime = Mathf.Min(stored.totalTime, stored.timeElapsed + incoming.totalTime * multiplier);
         }
     }
 }

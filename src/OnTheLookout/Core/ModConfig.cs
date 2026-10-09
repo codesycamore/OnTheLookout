@@ -57,6 +57,7 @@ internal sealed class ModConfig
     public ConfigEntry<string> RunnerBiomeItems { get; }
     public ConfigEntry<float> FortifiedMilkWeightMultiplier { get; }
     public ConfigEntry<float> FortifiedMilkInvincibilityMultiplier { get; }
+    public ConfigEntry<float> EnergyDrinkDurationMultiplier { get; }
     public ConfigEntry<bool> RunnerBackpacks { get; }
     public ConfigEntry<string> CampfireFoodItems { get; }
     public ConfigEntry<bool> ClearStatusesAtCampfire { get; }
@@ -171,8 +172,8 @@ internal sealed class ModConfig
         ChaserOddsWantChaser = Synced(round, "ChaserOddsWantChaser", 3f, "Draw weight for players who want to be a chaser.");
         ChaserOddsNoPreference = Synced(round, "ChaserOddsNoPreference", 1f, "Draw weight for players with no preference.");
         ChaserOddsRatherRun = Synced(round, "ChaserOddsRatherRun", 0.25f, "Draw weight for players who would rather run (0 = only picked if needed).");
-        BiomeTitleSeconds = Synced(round, "BiomeTitleSeconds", 7.5f, "After a campfire is lit, the next leg (role reveal, blind chasers, head start) starts this long after the first player sees the new biome title, so it plays after the title.");
-        NoTitleFallbackSeconds = Synced(round, "NoTitleFallbackSeconds", 12f, "If nobody sees a biome title after a campfire is lit, the next leg starts this long after lighting anyway.");
+        BiomeTitleSeconds = Synced(round, "BiomeTitleSeconds", 7.5f, "After a campfire is lit, play goes on (no chase) until a runner walks far enough to see the new biome's title. Then everyone freezes and the next leg (role reveal, blind chasers, head start) starts this long later, after the title.");
+        NoTitleFallbackSeconds = Synced(round, "NoTitleFallbackSeconds", 5f, "If the new biome's title was already seen before the campfire was lit (or there is none), everyone freezes when it is lit and the next leg starts this long later.");
         SpawnInteractLockSeconds = Synced(round, "SpawnInteractLockSeconds", 7f, "At the start of a run on the shore nothing can be interacted with while everyone wakes up and for this many seconds after the round starts.");
         ChaserStatusMultiplier = Synced(round, "ChaserStatusMultiplier", 0.333f, "Chasers take this fraction of every negative status (injury, cold, poison, drowsy, ...) they would get in vanilla at the current ascent. Hunger is not reduced.");
         ChaserFallDamageMultiplier = Synced(round, "ChaserFallDamageMultiplier", 0.25f, "Fraction of vanilla fall damage chasers take (0.25 = 1/4). Still scales with the ascent like vanilla. 0 = no fall damage.");
@@ -197,6 +198,7 @@ internal sealed class ModConfig
         RunnerBiomeItems = Synced(round, "RunnerBiomeItems", "Alpine:Heat Pack, Volcano:Sports Drink, Swamp:EarlyWorm, Mesa:Aloe Vera", "Extra item every runner gets at the start of a leg in that biome, as \"Biome:Item\" pairs. Biomes use PEAK's names (Caldera = Volcano; The Gloom is assumed to be Swamp).");
         FortifiedMilkWeightMultiplier = Synced(round, "FortifiedMilkWeightMultiplier", 2f, "Fortified milk weighs this many times its vanilla weight.");
         FortifiedMilkInvincibilityMultiplier = Synced(round, "FortifiedMilkInvincibilityMultiplier", 0.35f, "Fortified milk's invincibility lasts this fraction of its vanilla time (0.35 = 65% shorter). Also shortens its capture protection.");
+        EnergyDrinkDurationMultiplier = Synced(round, "EnergyDrinkDurationMultiplier", 0.35f, "The energy drink's speed boost lasts this fraction of its vanilla time (0.35 = 65% shorter).");
         RunnerBackpacks = Synced(round, "RunnerBackpacks", true, "After roles are assigned at the start of a round, every runner without a backpack gets one.");
         CampfireFoodItems = Synced(round, "CampfireFoodItems", "Marshmallow, Glizzy", "When the chase of a leg ends at a campfire, the host makes sure there is one of these per living player near the fire (random pick each; spawns only what is missing). Glizzy = the hot dog. Empty = off.");
         ClearStatusesAtCampfire = Synced(round, "ClearStatusesAtCampfire", true, "When a campfire is lit, every player near it is cleared of negative statuses (incl. curse).");
@@ -236,7 +238,7 @@ internal sealed class ModConfig
         MilkProtectsFromCapture = Synced(tag, "MilkProtectsFromCapture", true, "Runners under the effect of fortified milk can't be captured.");
 
         const string safe = "5. SafeZones";
-        CampfireSafeRadius = Synced(safe, "CampfireSafeRadius", 30f, "Radius (m) around a campfire that is a safe zone: no captures, and runners inside can't freeze chasers. A leg ends when every living runner is inside the next campfire's safe zone.");
+        CampfireSafeRadius = Synced(safe, "CampfireSafeRadius", 20f, "Radius (m) around a campfire that is a safe zone: no captures, and runners inside can't freeze chasers. A leg ends when every living runner is inside the next campfire's safe zone.");
         SafeZoneRequiresLit = Synced(safe, "SafeZoneRequiresLit", false, "Only lit campfires are safe zones.");
 
         const string fog = "6. Fog";

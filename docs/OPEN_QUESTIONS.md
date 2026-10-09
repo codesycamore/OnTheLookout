@@ -215,3 +215,14 @@ Debug keys (host, bottom-left hint): **F7** start or restart a round, **F6** swa
 - **Runner backpacks** (`RunnerBackpacks`, 2026-10-08): after roles are assigned at round start, every runner without a backpack gets the ordinary backpack (not fanny/jet/rocket pack) in their backpack slot.
 - **Campfire food** (`CampfireFoodItems = "Marshmallow, Glizzy"`; Glizzy is PEAK's prefab name for the Hot Dog, which has a cattail variant too): when a leg's chase ends at a campfire, the host counts marshmallows and hot dogs on the ground within 15 m and spawns only the shortfall, so there's one per living player (random pick each). Hot Dog was in the "hidden" list, so items in this setting are now exempt from the hidden-item ban.
 - **To verify:** the log line "campfire food: N player(s), M already there, spawned K". It's unknown whether the campfire's own food spawner adds more when the fire is lit; if so there may be extra food.
+
+## Decided: change list 1.3.1 (2026-10-08)
+
+- **Chaser odds hint readable.** The 1.3.0 outline (0.3) ate the glyphs of PEAK's bold font and the text looked black. Now: yellow text, no outline, on a dark translucent plate sized to the text.
+- **Energy drink lasts 65% less** (`EnergyDrinkDurationMultiplier` = 0.35). Applied to every `Affliction_FasterBoi` (the only other source found in code is the random mushroom effect, already cut to 1 s); items that apply it are configured on prefabs, so another item using it would be shortened too (unverified).
+- **Campfire → title → freeze order revised.** Lighting a campfire no longer forces the biome title or freezes everyone:
+  1. Lighting ends the chase (`LegComplete`), clears statuses; nobody is frozen (flag `AwaitingTitle`).
+  2. When a **living runner** walks far enough to see the next biome's title (PEAK's own `TriggerReached`), the host freezes everyone and starts the next leg `BiomeTitleSeconds` (7.5 s) later: role reveal → head start.
+  3. A runner who already crossed that point before the fire was lit reports it right away. If the campfire leads to a segment with no progress point, everyone freezes at lighting and the leg starts `NoTitleFallbackSeconds` (now 5 s) later.
+  - **To verify:** `[OTL][Round]` lines "waiting for a runner to reach the next biome's title" then "X sees the biome title; everyone frozen, next leg in 7.5s". Chasers seeing the title first must not trigger it.
+- **Safe zone radius 30 m → 20 m** (`CampfireSafeRadius`; saved dev config updated).

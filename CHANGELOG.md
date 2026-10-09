@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.3.1
+
+### Round flow
+- **Lighting a campfire no longer freezes everyone right away.** The chase ends and everyone can move until a runner walks far enough to see the next biome's title. Then everyone freezes while it plays, and the next leg starts: role reveal → runners' head start. If the title was already seen (or there is none), everyone freezes at lighting and the leg starts `NoTitleFallbackSeconds` (now 5 s) later.
+
+### Balance
+- Safe zone radius **30 m → 20 m** (`CampfireSafeRadius`).
+
+### Items
+- **Energy drink** speed boost lasts 65% less (`EnergyDrinkDurationMultiplier` = 0.35).
+
+### HUD
+- The airport chaser-odds hint is readable again: yellow text on a dark plate instead of a thick outline that turned it black.
+
 ## 1.3.0
 
 ### Runners
@@ -7,6 +21,9 @@
 
 ### Airport
 - **Chaser odds:** in the airport every player can press **-** to pick *I want to be a chaser* / *no preference* / *I'd rather be a runner*. The choice goes privately to the host's game only and is never shown to anyone, weights the **initial** role draw (`ChaserOddsWantChaser` 3, `ChaserOddsNoPreference` 1, `ChaserOddsRatherRun` 0.25) and is cleared after every draw. Statue conversions stay fully random. The host can switch it off with `ChaserPreferenceEnabled`.
+
+### Balance
+- Safe zone radius **30 m → 20 m** (`CampfireSafeRadius`).
 
 ### Items
 - **Fortified milk** is twice as heavy (`FortifiedMilkWeightMultiplier`) and its invincibility (and so its capture protection) lasts 65% less (`FortifiedMilkInvincibilityMultiplier` = 0.35).
@@ -23,8 +40,8 @@
 - Safe zone radius **50 m → 30 m**, and runners inside a safe zone can no longer freeze chasers.
 - Runner stamina regeneration back to **+12%** (from +18%).
 
-### Airport
-- **Chaser odds:** in the airport every player can press **-** to pick *I want to be a chaser* / *no preference* / *I'd rather be a runner*. The choice goes privately to the host's game only and is never shown to anyone, weights the **initial** role draw (`ChaserOddsWantChaser` 3, `ChaserOddsNoPreference` 1, `ChaserOddsRatherRun` 0.25) and is cleared after every draw. Statue conversions stay fully random. The host can switch it off with `ChaserPreferenceEnabled`.
+### Balance
+- Safe zone radius **30 m → 20 m** (`CampfireSafeRadius`).
 
 ### Items
 - **Shroomberries** can be eaten again (runners), but every effect they cause lasts only **1 second** (`ShroomberryEffectSeconds`): timed effects end, knock-downs are cut short and negative statuses are taken back. The hunger they cure is unchanged.

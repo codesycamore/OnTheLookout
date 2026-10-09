@@ -24,6 +24,7 @@ internal sealed class ChaserOddsMenu : MonoBehaviour
     private RectTransform? _panel;
     private Canvas? _hintCanvas;
     private TextMeshProUGUI? _hint;
+    private RectTransform? _hintPlate;
     private readonly Dictionary<ChaserPref, (TextMeshProUGUI Label, string Text)> _options = new();
 
     private void Update()
@@ -56,7 +57,12 @@ internal sealed class ChaserOddsMenu : MonoBehaviour
         if (_hintCanvas != null && _hintCanvas.gameObject.activeSelf != show) _hintCanvas.gameObject.SetActive(show);
         if (show && _hint != null)
         {
-            _hint.text = $"PRESS {KeyName()} TO CHOOSE YOUR CHASER ODDS";
+            string text = $"PRESS {KeyName()} TO CHOOSE YOUR CHASER ODDS";
+            if (_hint.text != text)
+            {
+                _hint.text = text;
+                FitHintPlate();
+            }
         }
     }
 
@@ -65,14 +71,28 @@ internal sealed class ChaserOddsMenu : MonoBehaviour
         GUIManager gui = GUIManager.instance;
         _hintCanvas = PeakMenuKit.CreateCanvas("OTL_ChaserOddsHint", transform, gui, 20);
         _hintCanvas.GetComponent<GraphicRaycaster>().enabled = false; // never blocks clicks
-        // Bright PEAK yellow with a thick dark outline so it reads on snow, sky and dark airport floors alike.
-        _hint = PeakMenuKit.AddText(_hintCanvas.transform, "", gui.interactNameText, 34f, new Color(1f, 0.84f, 0.2f, 1f), 50f);
+        // Bright PEAK yellow on a dark translucent plate so it reads on snow, sky and dark airport floors alike.
+        // (A TMP outline thick enough for contrast eats into the glyphs of PEAK's bold font, so no outline.)
+        var plateGo = new GameObject("Plate", typeof(RectTransform));
+        plateGo.transform.SetParent(_hintCanvas.transform, false);
+        _hintPlate = (RectTransform)plateGo.transform;
+        _hintPlate.anchorMin = _hintPlate.anchorMax = _hintPlate.pivot = new Vector2(0.5f, 0f);
+        _hintPlate.anchoredPosition = new Vector2(0f, 36f);
+        Image plate = plateGo.AddComponent<Image>();
+        plate.color = new Color(0.04f, 0.05f, 0.08f, 0.72f);
+        plate.raycastTarget = false;
+
+        _hint = PeakMenuKit.AddText(_hintPlate, "", gui.interactNameText, 34f, new Color(1f, 0.84f, 0.2f, 1f), 50f);
         RectTransform rt = _hint.rectTransform;
-        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0f);
-        rt.sizeDelta = new Vector2(1400f, 50f);
-        rt.anchoredPosition = new Vector2(0f, 40f);
-        _hint.outlineWidth = 0.3f;
-        _hint.outlineColor = new Color32(10, 12, 20, 255);
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = rt.offsetMax = Vector2.zero;
+    }
+
+    private void FitHintPlate()
+    {
+        if (_hint == null || _hintPlate == null) return;
+        _hintPlate.sizeDelta = new Vector2(_hint.preferredWidth + 48f, _hint.preferredHeight + 16f);
     }
 
     private static string KeyName()
