@@ -249,7 +249,7 @@ internal sealed class ModConfig
         FreezePulseSlowInterval = Synced(freeze, "FreezePulseSlowInterval", 0.9f, "Seconds between cold pulses as the freeze runs out.");
 
         const string tag = "4. Tag";
-        CaptureHoldSeconds = Synced(tag, "CaptureHoldSeconds", 0.75f, "How long a chaser holds interact on a runner to capture them. The runner sees the progress too.");
+        CaptureHoldSeconds = Synced(tag, "CaptureHoldSeconds", 0.4f, "How long a chaser holds interact on a runner to capture them. The runner sees the progress too.");
         TagMaxDistance = Synced(tag, "TagMaxDistance", 5f, "Host rejects a capture if the two players are further apart than this (lag tolerance).");
         TagPassedOutRunners = Synced(tag, "TagPassedOutRunners", true, "Chasers can capture runners who are passed out.");
         MilkProtectsFromCapture = Synced(tag, "MilkProtectsFromCapture", true, "Runners under the effect of fortified milk can't be captured.");

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.1
+
+- Capture hold **0.4 s** (was 0.75, `CaptureHoldSeconds`). The runner's capture bar follows it.
+
 ## 1.6.0
 
 ### Roles

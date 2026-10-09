@@ -2,7 +2,7 @@
 
 **Chasers vs Runners for PEAK.** Every leg, a few scouts become **chasers** and hunt everyone else up the mountain. **Runners** have to make it from campfire to campfire, and finally to the peak, without getting caught. A runner's best defence is to turn around and **look at a chaser** to freeze them in place.
 
-> **New in 1.6.0:** chasers carry **Scout's Initiative** (a scout gem) instead of the napberry for their boost, captures take **0.75 s** and the runner sees the capture bar, milk-protected runners can't be captured, regular luggage holds more runner items (milk, snowballs, brown berrynanas, energy drinks), snowballs push harder and are runner-only, role choices are re-sent so none get lost, and the host sees a hint for the host menu (**+**). **1.5.1:** mandrakes scream 0.75 s after appearing. **1.5.0:** a new role every leg (volunteer as chaser in the **-** menu at the campfire), captures by **holding interact** on a runner, the campfire lights itself after a 10-second role window, scout statues are off, chasers carry a reusable **napberry boost**, snowballs blind chasers, mandrakes start dropping at runners late in a leg, and plenty of balance changes. See the changelog.
+> **New in 1.6.1:** captures take only **0.4 s** of holding interact. **1.6.0:** chasers carry **Scout's Initiative** (a scout gem) instead of the napberry for their boost, captures take **0.75 s** and the runner sees the capture bar, milk-protected runners can't be captured, regular luggage holds more runner items (milk, snowballs, brown berrynanas, energy drinks), snowballs push harder and are runner-only, role choices are re-sent so none get lost, and the host sees a hint for the host menu (**+**). **1.5.1:** mandrakes scream 0.75 s after appearing. **1.5.0:** a new role every leg (volunteer as chaser in the **-** menu at the campfire), captures by **holding interact** on a runner, the campfire lights itself after a 10-second role window, scout statues are off, chasers carry a reusable **napberry boost**, snowballs blind chasers, mandrakes start dropping at runners late in a leg, and plenty of balance changes. See the changelog.
 
 > **Everyone in the lobby needs this mod** (same version). The host runs the game: roles, freezes, captures and rewards are all decided by the host and synced to everyone.
 
@@ -15,7 +15,7 @@
 2. **Roles are drawn and revealed.** Each player sees **CHASER** (red) or **RUNNER** (yellow) in the middle of the screen. Everyone is frozen during the reveal. Chasers are picked at random from the airport volunteers, **one chaser for every 4 runners** at most; if nobody volunteered, **one random player** is the chaser.
 3. **Head start.** Runners are released and get a 20-second head start with a big countdown, and a **3-second speed boost** at the end of it. Chasers stay **frozen and blind** the whole time; their screen fades back in near the end.
 4. **The chase.** Chasers hunt the runners up the current biome.
-   - A chaser **captures** a runner by looking at them and **holding interact for 0.75 seconds**, the same way a hungry scout eats another one. The runner sees the same progress bar under their crosshair, so they know how close it is. A runner under **fortified milk** can't be captured at all. The runner dies with a bang.
+   - A chaser **captures** a runner by looking at them and **holding interact for 0.4 seconds**, the same way a hungry scout eats another one. The runner sees the same progress bar under their crosshair, so they know how close it is. A runner under **fortified milk** can't be captured at all. The runner dies with a bang.
    - A runner **freezes** a chaser by **looking at them** within 26 m, from **outside** a safe zone. The chaser can't move, act or fall and is **blinded** for 10 seconds, then is immune to freezing for 8 seconds.
    - The **fog** (and the rising **lava** in the Caldera and the rising **gloom**) starts **5 minutes** after the head start ends, and rises **2.5× faster** than vanilla.
    - From **3 minutes** after the head start, a **mandrake** is dropped at every runner outside a safe zone **every minute**.
@@ -224,7 +224,7 @@ Settings live in `BepInEx/config/codesycamore.OnTheLookout.cfg` (or the mod mana
 ### 4. Tag
 | Setting | Default | What it does |
 |---|---|---|
-| `CaptureHoldSeconds` | 0.75 | How long a chaser holds interact on a runner to capture them (the runner sees it too). |
+| `CaptureHoldSeconds` | 0.4 | How long a chaser holds interact on a runner to capture them (the runner sees it too). |
 | `TagMaxDistance` | 5 | Lag tolerance: the host rejects captures from further away. |
 | `TagPassedOutRunners` | true | Passed-out runners can be captured. |
 | `MilkProtectsFromCapture` | true | Fortified milk protects from capture. |
