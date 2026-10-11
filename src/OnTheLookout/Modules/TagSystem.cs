@@ -38,6 +38,10 @@ internal static class TagSystem
         ok &= SafePatch.Prefix(harmony, ci, nameof(CharacterInteractible.Interact), t, nameof(InteractPrefix), m);
         ok &= SafePatch.Prefix(harmony, ci, nameof(CharacterInteractible.Interact_CastFinished), t, nameof(CastFinishedPrefix), m);
         ok &= SafePatch.Prefix(harmony, ci, nameof(CharacterInteractible.CancelCast), t, nameof(CancelCastPrefix), m);
+
+        // Interaction.DoInteractableRaycasts(out IInteractible, ...) (postfix). Why: it picks what the local player
+        // would interact with; up close, a chaser's capture target must beat backpacks, stuck thorns/arrows etc.
+        ok &= SafePatch.Postfix(harmony, typeof(Interaction), nameof(Interaction.DoInteractableRaycasts), t, nameof(RaycastPostfix), m);
         return ok;
     }
 
@@ -50,8 +54,48 @@ internal static class TagSystem
         if (interactor.data.dead || interactor.data.passedOut || FreezeState.IsFrozen(Net.Actor(interactor))) return false;
         if (runner.data.dead || (runner.data.passedOut && !Plugin.ModConfig.TagPassedOutRunners.Synced())) return false;
         if (Plugin.ModConfig.MilkProtectsFromCapture.Synced() && HasMilkProtection(runner)) return false; // no capture hold on a milk-protected runner
+        if (Vector3.Distance(interactor.Center, runner.Center) > CaptureReach(runner)) return false; // practically touching
         return !SafeZoneSystem.IsSafe(runner.Center);
     }
+
+    /// <summary>CaptureRange, a little more while the local chaser is already holding on this runner (so the hold doesn't flicker).</summary>
+    private static float CaptureReach(Character runner) =>
+        Mathf.Max(0.5f, Plugin.ModConfig.CaptureRange.Synced()) + (s_HoldTarget == runner ? 0.4f : 0f);
+
+    /// <summary>
+    /// Interaction.DoInteractableRaycasts postfix (local player): for a chaser, a capturable runner within
+    /// CaptureRange in front of the camera always wins over whatever the look ray found, whichever way the
+    /// runner faces: their backpack or fanny pack, thorns/arrows/cactus balls stuck on either scout, items,
+    /// and so on. Further away, interaction works as in vanilla.
+    /// </summary>
+    public static void RaycastPostfix(ref IInteractible interactableResult)
+    {
+        Character local = Character.localCharacter;
+        if (local == null || !RoundManager.IsChasing || !RoleManager.IsChaser(local)) return;
+
+        Transform cam = MainCamera.instance != null ? MainCamera.instance.transform : local.GetBodypart(BodypartType.Head).transform;
+        CharacterInteractible? best = null;
+        float bestScore = float.MaxValue;
+        foreach (Character c in Character.AllCharacters)
+        {
+            if (c == null || c == local || !RoleManager.IsRunner(c)) continue;
+            CharacterInteractible? target = c.GetComponent<CharacterInteractible>();
+            if (target == null || !CanCapture(target, local)) continue;
+            Vector3 to = c.Center - cam.position;
+            float angle = Vector3.Angle(cam.forward, to);
+            if (angle > CaptureConeDegrees && to.magnitude > 0.9f) continue; // up close, any direction counts
+            float score = angle + Vector3.Distance(local.Center, c.Center) * 30f;
+            if (score < bestScore)
+            {
+                bestScore = score;
+                best = target;
+            }
+        }
+
+        if (best != null) interactableResult = best;
+    }
+
+    private const float CaptureConeDegrees = 80f;
 
     public static bool BoolPrefix(CharacterInteractible __instance, Character interactor, ref bool __result)
     {

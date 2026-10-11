@@ -64,6 +64,8 @@ internal static class ItemRules
     {
         // The chaser gem is a chaser kit item: allowed for chasers even though amulets are banned, never for anyone else.
         if (ChaserKit.IsGem(item)) return RoleManager.IsChaser(c) && Plugin.ModConfig.ChaserGem.Synced() ? null : "Only chasers can use this gem";
+        // Same for the runner gem (dash), the other way round.
+        if (RunnerDash.IsRunnerGem(item)) return RoleManager.IsRunner(c) && Plugin.ModConfig.RunnerGem.Synced() ? null : "Only runners can use this gem";
         if (ItemCatalog.IsBanned(item)) return "This item is banned";
         if (ItemCatalog.IsBlowgun(item)) return RoleManager.IsChaser(c) ? null : "Only chasers can use the blowgun";
         if (RoleManager.IsChaser(c) && !ItemCatalog.IsChaserAllowed(item)) return "Chasers can only use food and healing items";
@@ -77,8 +79,10 @@ internal static class ItemRules
     private static string? PickupRefusal(Character? c, Item item)
     {
         string? why = Refusal(c, item);
-        if (why != null || c == null || c.player == null || !RoleManager.IsChaser(c)) return why;
+        if (why != null || c == null || c.player == null) return why;
         Item e = ItemCatalog.Effective(item);
+        if (RunnerDash.IsRunnerGem(e) && c.player.HasInAnySlot(e.itemID)) return "You already have the gem";
+        if (!RoleManager.IsChaser(c)) return null;
         if (ItemCatalog.IsBlowgun(e) && c.player.HasInAnySlot(e.itemID)) return "You already have a blowgun";
         if (ChaserKit.IsGem(e) && c.player.HasInAnySlot(e.itemID)) return "You already have the gem";
         return null;
@@ -175,6 +179,7 @@ internal static class ItemRules
         Character holder = __instance.holderCharacter;
         if (holder == null || !holder.IsLocal) return true;
         if (ChaserKit.HandleUse(__instance)) return false; // the chaser gem: a boost instead of its vanilla power
+        if (RunnerDash.HandleUse(__instance)) return false; // the runner gem: a dash instead of its vanilla power
         string? why = Refusal(holder, __instance);
         if (why is null && ItemCatalog.IsBlowgun(__instance) && BlowgunSystem.OnCooldown) why = "Blowgun is recharging";
         if (why is null) return true;

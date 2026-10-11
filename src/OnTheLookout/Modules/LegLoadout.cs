@@ -139,8 +139,19 @@ internal static class LegLoadout
 
         foreach (Character c in Character.AllCharacters.ToArray())
         {
-            if (RoleManager.IsRunner(c) && !c.data.dead) HostGiveRunnerLegItems(c);
+            if (!RoleManager.IsRunner(c) || c.data.dead) continue;
+            HostGiveRunnerGem(c);
+            HostGiveRunnerLegItems(c);
         }
+    }
+
+    /// <summary>Host: a runner without the runner gem (the dash, see <see cref="RunnerDash"/>) gets it, into their hotbar.</summary>
+    public static void HostGiveRunnerGem(Character c)
+    {
+        if (!Net.IsHost || !RoundManager.IsActive || c == null || c.data.dead || c.player == null || !RoleManager.IsRunner(c)) return;
+        Item? gem = Plugin.ModConfig.RunnerGem.Synced() ? RunnerDash.GemPrefab : null;
+        if (gem == null || c.player.HasInAnySlot(gem.itemID)) return;
+        Give(c, gem);
     }
 
     /// <summary>Host: the runners who already got this leg's items (leg key -> actors).</summary>

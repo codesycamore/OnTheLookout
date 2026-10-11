@@ -2,7 +2,7 @@
 
 **Chasers vs Runners for PEAK.** Every leg, a few scouts become **chasers** and hunt everyone else up the mountain. **Runners** have to make it from campfire to campfire, and finally to the peak, without getting caught. A runner's best defence is to turn around and **look at a chaser** to freeze them in place.
 
-> **New in 1.6.1:** captures take only **0.4 s** of holding interact. **1.6.0:** chasers carry **Scout's Initiative** (a scout gem) instead of the napberry for their boost, captures take **0.75 s** and the runner sees the capture bar, milk-protected runners can't be captured, regular luggage holds more runner items (milk, snowballs, brown berrynanas, energy drinks), snowballs push harder and are runner-only, role choices are re-sent so none get lost, and the host sees a hint for the host menu (**+**). **1.5.1:** mandrakes scream 0.75 s after appearing. **1.5.0:** a new role every leg (volunteer as chaser in the **-** menu at the campfire), captures by **holding interact** on a runner, the campfire lights itself after a 10-second role window, scout statues are off, chasers carry a reusable **napberry boost**, snowballs blind chasers, mandrakes start dropping at runners late in a leg, and plenty of balance changes. See the changelog.
+> **New in 1.7.0:** runners get a **dash gem** (Scout's Ambition: 3.2 m dash, mid-air float, 70 s cooldown), captures need the chaser **practically touching** the runner (0.45 s hold, works from any side), the gems never use their original powers, and **only 11 settings can be changed**; every update resets the config to the new defaults. **1.6.0:** chasers carry **Scout's Initiative** (a scout gem) instead of the napberry for their boost, captures take **0.75 s** and the runner sees the capture bar, milk-protected runners can't be captured, regular luggage holds more runner items (milk, snowballs, brown berrynanas, energy drinks), snowballs push harder and are runner-only, role choices are re-sent so none get lost, and the host sees a hint for the host menu (**+**). **1.5.1:** mandrakes scream 0.75 s after appearing. **1.5.0:** a new role every leg (volunteer as chaser in the **-** menu at the campfire), captures by **holding interact** on a runner, the campfire lights itself after a 10-second role window, scout statues are off, chasers carry a reusable **napberry boost**, snowballs blind chasers, mandrakes start dropping at runners late in a leg, and plenty of balance changes. See the changelog.
 
 > **Everyone in the lobby needs this mod** (same version). The host runs the game: roles, freezes, captures and rewards are all decided by the host and synced to everyone.
 
@@ -15,7 +15,7 @@
 2. **Roles are drawn and revealed.** Each player sees **CHASER** (red) or **RUNNER** (yellow) in the middle of the screen. Everyone is frozen during the reveal. Chasers are picked at random from the airport volunteers, **one chaser for every 4 runners** at most; if nobody volunteered, **one random player** is the chaser.
 3. **Head start.** Runners are released and get a 20-second head start with a big countdown, and a **3-second speed boost** at the end of it. Chasers stay **frozen and blind** the whole time; their screen fades back in near the end.
 4. **The chase.** Chasers hunt the runners up the current biome.
-   - A chaser **captures** a runner by looking at them and **holding interact for 0.4 seconds**, the same way a hungry scout eats another one. The runner sees the same progress bar under their crosshair, so they know how close it is. A runner under **fortified milk** can't be captured at all. The runner dies with a bang.
+   - A chaser **captures** a runner by looking at them and **holding interact for 0.45 seconds**, the same way a hungry scout eats another one. The chaser has to be **practically touching** the runner (1.4 m), and then it works **whichever way the runner faces**; their backpack, fanny pack or stuck thorns, arrows and cactus balls never get in the way. The runner sees the same progress bar under their crosshair, so they know how close it is. A runner under **fortified milk** can't be captured at all. The runner dies with a bang.
    - A runner **freezes** a chaser by **looking at them** within 26 m, from **outside** a safe zone. The chaser can't move, act or fall and is **blinded** for 10 seconds, then is immune to freezing for 8 seconds.
    - The **fog** (and the rising **lava** in the Caldera and the rising **gloom**) starts **5 minutes** after the head start ends, and rises **2.5× faster** than vanilla.
    - From **3 minutes** after the head start, a **mandrake** is dropped at every runner outside a safe zone **every minute**.
@@ -32,7 +32,7 @@
 ### Roles and choices
 - Your choice in the **-** menu is private: only the host's game receives it. It stays until you change it, and resets to RUNNER when a run ends and everyone is back in the airport. There are no odds: the chasers are a random pick from the volunteers.
 - The menu opens in the **airport** (for the first leg) and during the **role window** at the campfire (for every leg after that).
-- **Switching roles:** a runner who becomes a chaser **drops every item and their backpack**, then gets the **blowgun** and the **scout gem**. A chaser who becomes a runner **drops the blowgun and gem**, gets a **backpack** if they have none, and gets the leg's **runner item** (and biome item) if they haven't had them yet.
+- **Switching roles:** a runner who becomes a chaser **drops every item and their backpack**, then gets the **blowgun** and the **chasers' scout gem**. A chaser who becomes a runner **drops the blowgun and gem**, gets the **runners' dash gem**, gets a **backpack** if they have none, and gets the leg's **runner item** (and biome item) if they haven't had them yet.
 - A chaser carries **one blowgun and one scout gem** at most; a second can't be picked up. The cooldowns belong to the chaser, not the item.
 - **Scout statues are switched off**: no revives and no items. The dead come back at the campfire after each leg instead.
 - Back in the **airport** the round and roles are cleared, so the airport plays like vanilla PEAK (only the role menu and its hint are there).
@@ -68,8 +68,9 @@
 - **Safe zones** (15 m) around every campfire.
 - **18.5% faster stamina regeneration.**
 - A **backpack** at the start of the round, **one random item** at the start of every leg (a snowball, a brown berrynana or a fortified milk), plus a **biome item**: a heat pack in the Alpine, a sports drink in the Caldera, an early worm in the Gloom, aloe vera in the Mesa.
+- **Dash gem:** runners carry **Scout's Ambition** (a scout gem) in their hotbar, whose own power is never used. Using it **dashes you 3.2 m** horizontally where you look (walls stop it; not while climbing); dashing in mid-air also lets you **float for 0.65 s**. **1 min 10 s cooldown**, counted down above its slot, and **6% petrification** per dash. Every runner who is in the safe zone when the runners win a leg loses **3%** petrification.
 - **Snowballs blind chasers** they hit, and every thrown snowball pushes **10% harder**.
-- Runners **can't use the blowgun or the scout gem** (those are chaser items).
+- Runners **can't use the blowgun or the chasers' scout gem** (chaser items), and chasers can't use the runners' dash gem.
 - **Regular luggage** can also hold **fortified milk, snowballs, brown berrynanas and energy drinks**, every leg.
 - **Fortified milk** protects you from being captured while it's active (milk is twice as heavy and its invincibility is 65% shorter than vanilla).
 - First runner into each campfire's safe zone gets a **fortified milk** (not when the chasers won the leg).
@@ -95,7 +96,7 @@
 - **Role reveal** and **head-start countdown** in the middle of the screen (translucent for runners).
 - **Leg result** and the **role window** countdown (with the **-** hint) at the campfire.
 - **Chaser list** in the top right, under the ascent label. Frozen chasers show in ice blue with their remaining time; dead chasers are crossed out.
-- **Blowgun** and **scout gem** cooldowns in seconds above their hotbar slots.
+- **Blowgun**, **chaser gem** and **dash gem** cooldowns in seconds above their hotbar slots.
 - A **capture bar** for a runner who is being captured.
 - For the host: **PRESS HOTKEY (+) FOR HOST CONTROLS** above their stamina bar.
 - Short notices for captures and rewards.
@@ -109,7 +110,7 @@
   
   The two restarts ask you to click again to confirm. Press = or Esc to close.
 - **F10:** the same "restart at previous campfire" as a direct key.
-- Debug/testing keys (F6 swap own role, F7 start/restart round with new roles, F8 freeze yourself, F9 freeze the player you look at) are **off** by default. Turn them on in the host menu or with `DebugKeys`.
+- Debug/testing keys (F6 swap own role, F7 start/restart round with new roles, F8 freeze yourself, F9 freeze the player you look at) are **off** by default. Turn them on in the host menu.
 
 ---
 
@@ -126,167 +127,23 @@
 
 Settings live in `BepInEx/config/codesycamore.OnTheLookout.cfg` (or the mod manager's **Config editor**). Change them with the game closed.
 
-**Host-synced** settings: only the **host's** values matter; they're sent to everyone when they join. Settings marked *(local)* are personal to each player.
+- **Only these settings can be changed.** Everything else in this README is built into the mod, so every host and player runs exactly the same rules for a given version.
+- **Only the host's values matter**; they're sent to everyone when they join.
+- **Every update starts fresh:** when a new version of the mod first runs, the config file is reset to that version's defaults (your old values are not kept).
 
-### 1. Modules *(local; needs a restart)*
 | Setting | Default | What it does |
 |---|---|---|
-| `EnableFreeze` | true | Runners freeze chasers by looking at them. |
-| `EnableTag` | true | Chasers capture runners by holding interact on them. |
-| `EnableSafeZones` | true | Campfires are safe zones. |
-| `EnableFog` | true | Faster fog that only hurts runners. |
-| `EnableItemRules` | true | Chaser item restrictions and removed items. |
-| `EnableRewards` | true | Reward for the first runner into each safe zone. |
-
-### 2. Round
-| Setting | Default | What it does |
-|---|---|---|
-| `RunnersPerChaser` | 4 | At most one chaser per this many runners (1 in 5 players, 2 in 10). Drawn from volunteers; nobody volunteered = one random player. Always leaves a runner. |
-| `RoleRevealSeconds` | 4 | How long the role is shown at the start of each leg. |
-| `HeadStartSeconds` | 20 | Runner head start (chasers frozen + blind). |
-| `AutoStartRound` | true | Start automatically once everyone has woken up. |
-| `ChaserPreferenceEnabled` | true | Players choose RUNNER (default) or CHASER in the airport and in the role window; chasers are drawn at random from the volunteers. Off = drawn from everyone. |
-| `RoleWindowSeconds` | 10 | After a leg ends: everyone at the campfire, frozen, choosing their role; then the campfire lights itself. |
-| `SpawnInteractLockSeconds` | 7 | No interacting on the shore until this long after the round starts. |
-| `ChaserSpeedMultiplier` | 1.15 | Chaser movement speed. |
-| `ChaserClimbSpeedMultiplier` | 1.06 | Chaser climbing speed (walls, ropes, vines). |
-| `CaptureBoostPercent` | 1 | Speed boost (%) after a capture. |
-| `CaptureBoostStackPercent` | 0.5 | Extra boost (%) per further capture during the boost. |
-| `CaptureBoostSeconds` | 5 | Capture boost duration. |
-| `CaptureMoraleBoost` | true | Capturing gives a full morale boost. |
-| `ChaserStatusMultiplier` | 0.5 | Fraction of negative statuses chasers take (not hunger). |
-| `ChaserFallDamageMultiplier` | 0.333 | Fraction of vanilla fall damage chasers take (ascent-scaled; big falls still knock them down). 0 = none. |
-| `ZombiesIgnoreChasers` | true | Mushroom zombies ignore chasers. |
-| `ZombiesWhenChasersDead` | true | Zombies hunt runners while no chaser is alive (incl. solo). |
-| `ZombieLifetimeSeconds` | 120 | How long each of those zombies lasts. |
-| `ZombieSpawnDistance` | 15 | How far from its runner a zombie appears (m). |
-| `ZombiesByPlayerCount` | `1:1, 6:2, 10:3` | Zombies per wave by lobby size (`minPlayers:zombies`); each hunts one random runner. |
-| `ZombieWaveDelaySeconds` | 120 | Cooldown after a wave is gone (killed or expired) before another can come. |
-| `ZombieStartDelaySeconds` | 300 | Zombies only start coming this long after the head start ends (each leg). |
+| `HeadStartSeconds` | 20 | Runner head start each leg (chasers frozen and blind). |
+| `HeadStartBoostSeconds` | 3 | Runners' speed boost (no drowsiness) at the end of the head start. 0 = off. |
+| `RunnersPerChaser` | 4 | At most one chaser per this many runners (1 in 5 players, 2 in 10). Drawn from the CHASER volunteers; nobody volunteered = one random player. Always leaves a runner. |
+| `FogStartDelaySeconds` | 300 | Fog, rising lava and rising gloom start this long after the head start ends (each leg). |
+| `FogSpeedMultiplier` | 2.5 | How much faster the fog, lava and gloom rise than in vanilla. |
+| `ZombieStartDelaySeconds` | 300 | With no chaser alive, zombies start coming this long after the head start ends (each leg). |
+| `ZombieWaveDelaySeconds` | 120 | Cooldown after a zombie wave is gone (killed or expired) before the next one can come. |
+| `ZombieLifetimeSeconds` | 120 | How long each zombie lasts. |
 | `MandrakeStartSeconds` | 180 | Mandrakes start dropping at runners this long after the head start. 0 = off. |
 | `MandrakeIntervalSeconds` | 60 | Then one at every runner outside a safe zone this often (s). |
 | `MandrakeFirstScreamSeconds` | 0.75 | A dropped mandrake first screams this many seconds after it appears. |
-| `HeadStartBoostSeconds` | 3 | Runners' speed boost (no drowsiness) at the end of the head start. 0 = off. |
-| `DisableScoutStatues` | true | Scout statues do nothing during a round. |
-| `PeakChasersDie` | true | When every living runner reaches the peak, the chasers are brought up there and die. |
-| `RunnerStaminaRegenMultiplier` | 1.185 | Runner stamina regeneration. |
-| `RunnerBackpacks` | true | Runners get a backpack at round start. |
-| `RunnerLegItems` | `Snowball, Brown Berrynana, Fortified Milk` | One random item per runner each leg. Empty = off. |
-| `RunnerBiomeItems` | `Alpine:Heat Pack, Volcano:Sports Drink, Swamp:EarlyWorm, Mesa:Aloe Vera` | Extra item per runner at the start of a leg in that biome (Caldera = Volcano, Gloom = Swamp). |
-| `FortifiedMilkWeightMultiplier` | 2 | Fortified milk weight vs. vanilla. |
-| `FortifiedMilkInvincibilityMultiplier` | 0.35 | Fortified milk invincibility vs. vanilla (65% shorter). |
-| `CampfireFoodItems` | `Marshmallow, Glizzy` | Food laid out (one per player) when a leg ends. `Glizzy` is the hot dog. |
-| `ClearStatusesAtCampfire` | true | Lighting a campfire clears negative statuses nearby. |
-| `NoReviveCurse` | true | No curse/hunger after being revived. |
-| `EnergyDrinkDrowsyMultiplier` | 1.5 | Energy drink drowsiness when it wears off. |
-| `EnergyDrinkDurationMultiplier` | 0.35 | Energy drink speed boost duration vs. vanilla (65% shorter). |
-| `DisableScoutmaster` | true | No Scoutmaster. |
-
-### 2b. Blowgun
-| Setting | Default | What it does |
-|---|---|---|
-| `ChaserBlowgun` | true | Chasers get an unlimited blowgun. |
-| `BlowgunCooldownSeconds` | 30 | Time between shots. |
-| `TrackingSmokeSeconds` | 7 | How long the smoke follows a darted runner. |
-| `BlowdartDrowsy` | 0.18 | Drowsiness a dart adds (0.18 = 18%). |
-| `ChaserGem` | true | Chasers carry a reusable scout gem that gives a speed boost instead of its own power. |
-| `ChaserGemItem` | `Amulet_SuperJump` | The gem item (Amulet_SuperJump = Scout's Initiative). |
-| `GemBoostSeconds` | 2.25 | Gem effect length: speed boost + unlimited stamina (s). |
-| `GemDelaySeconds` | 1 | The gem's effects start this long after use (s). |
-| `GemInfiniteStamina` | true | The gem also gives unlimited stamina (rainbow bar). |
-| `GemCooldownSeconds` | 60 | Gem cooldown; starts when its effects wear off. |
-| `GemPetrify` | 0.08 | Petrification per gem use (0.08 = 8%). |
-| `SnowballKnockbackBonus` | 0.1 | Thrown snowballs push this much harder (0.1 = 10%). |
-| `CapturePetrifyRelief` | 0.05 | Petrification a capture takes away (0.05 = 5%). |
-| `SnowballBlindSeconds` | 2.5 | A runner's snowball blinds the chaser it hits this long. 0 = off. |
-
-### 2c. Chase effects
-| Setting | Default | What it does |
-|---|---|---|
-| `ScoutmasterChaseMusic` | true | Runners hear PEAK's Scoutmaster chase music when a chaser is close (under 50 m, louder under 25 m). |
-
-### 3. Freeze
-| Setting | Default | What it does |
-|---|---|---|
-| `FreezeRange` | 26 | Max distance (m) a runner can freeze a chaser from. |
-| `FreezeConeDegrees` | 15 | How precisely the runner must look at the chaser. |
-| `FreezeDuration` | 10 | Freeze length (doesn't stack or extend). |
-| `FreezeCooldownSeconds` | 8 | Immunity after a freeze ends. |
-| `FreezeHoldGrip` | true | Frozen while climbing: keep holding on. |
-| `FreezeLockStamina` | true | Stamina doesn't drain while frozen. |
-| `FreezeBlindsChasers` | true | A frozen chaser is also blinded while the freeze lasts. |
-| `FreezeSuspendInAir` | true | Frozen mid-jump: hang in the air. |
-| `FreezeSuspendStiffness` | 10 | How firmly a mid-air chaser is held. |
-| `FreezeZeroVelocity` | false | Extra anti-slide while frozen. |
-| `FreezeBlockLook` | false | Also block looking around while frozen. |
-| `FreezePulseFastInterval` / `SlowInterval` | 0.15 / 0.9 | Icy pulse rate at the start / end of a freeze. |
-
-### 4. Tag
-| Setting | Default | What it does |
-|---|---|---|
-| `CaptureHoldSeconds` | 0.4 | How long a chaser holds interact on a runner to capture them (the runner sees it too). |
-| `TagMaxDistance` | 5 | Lag tolerance: the host rejects captures from further away. |
-| `TagPassedOutRunners` | true | Passed-out runners can be captured. |
-| `MilkProtectsFromCapture` | true | Fortified milk protects from capture. |
-
-### 5. Safe zones
-| Setting | Default | What it does |
-|---|---|---|
-| `CampfireSafeRadius` | 15 | Safe zone radius (m): no captures, no freezing from inside; also when a leg counts as complete. |
-| `SafeZoneRequiresLit` | false | Only lit campfires are safe. |
-
-### 6. Fog
-| Setting | Default | What it does |
-|---|---|---|
-| `FogSpeedMultiplier` | 2.5 | Fog, rising lava and rising gloom speed during a round. |
-| `FogStartDelaySeconds` | 300 | Fog, lava and gloom start rising this long after the head start ends (each leg). |
-
-### 7. Items
-| Setting | Default | What it does |
-|---|---|---|
-| `ChaserAutoAllowHealing` | true | Chasers can use healing items. |
-| `ChaserAutoAllowFood` | true | Chasers can eat food. |
-| `ChaserAllowedItems` | `Remedy Fungus, Cactus, Dynamite, Mandrake` | Extra items chasers may always use (names, comma separated). |
-| `ChaserForbiddenItems` | `Snowball, Energy Drink, Big Lollipop, Bounce Fungus, Cloud Fungus, Shelf Fungus, Warp Fungus, Blue Shroomberry, Green Shroomberry, Purple Shroomberry, Red Shroomberry, Yellow Shroomberry` | Items chasers can never use, even if they are food or healing. |
-| `ClownLuggageChasersOnly` | true | Only chasers open clown luggage (food/healing inside). |
-| `ChasersOnlyOpenClownLuggage` | true | Chasers can't open other luggage. |
-| `LuggageExtraItems` | `Fortified Milk, Snowball, Brown Berrynana, Energy Drink` | Items that can also come out of regular luggage during a round. |
-| `LuggageExtraChance` | 0.383 | Chance for each item a regular luggage spawns to be one of those (split evenly: about 9.6% each). |
-| `BanAmulets` / `BanGems` / `BanRescueClaws` | true | Remove these items. |
-| `BanBlowguns` | true | No blowguns in the world (chasers still get theirs). |
-| `AllowJetpacks` / `AllowGliders` | false | Turn on to allow them again. |
-| `BanHiddenItems` | true | Remove items that never spawn in normal PEAK. |
-| `AllowedHiddenItems` | `Napberry, Kingberry, Clusterberry, Shroomberry, Cactus` | Never treated as hidden (name contains, so all colours count). |
-| `BannedItems` | `Weird Shroom` | Extra items to remove. |
-| `BanGoldenBingBong` | true | Remove the golden Bing Bong and switch off its invincibility shield. |
-| `ShroomberryEffectSeconds` | 1 | How long a shroomberry's effects last (hunger cure unchanged). |
-
-### 9. Rewards
-| Setting | Default | What it does |
-|---|---|---|
-| `RewardItems` | `Fortified Milk` | Reward for the first runner into each safe zone. |
-| `RewardItemCount` | 1 | How many. |
-
-### 10–13. Network, UI, Debug, Admin
-| Setting | Default | What it does |
-|---|---|---|
-| `KickPlayersWithoutMod` *(local, host)* | false | Kick players with a missing/different mod version. |
-| `ChasersSeeGhosts` | false | Let chasers see ghosts. |
-| `ChasersSeeRunnerNames` | false | Let chasers see the name tags above runners. |
-| `ChaserRedOutline` | true | Chasers' bodies glow red for everyone. |
-| `ChaserGlowIntensity` | 0.8 | Strength of that glow (vanilla invincibility = 1). |
-| `ShowChaserList` *(local)* | true | Chaser list in the top right. |
-| `FreezeScreenFrost` *(local)* | true | Frost on your screen while you're frozen. |
-| `CountdownOpacity` *(local)* | 0.35 | Opacity of the runners' countdown. |
-| `CaptureSound` *(local)* | true | Explosion sound on capture. |
-| `DebugKeys` *(local)* | false | Host testing keys F6–F9. |
-| `LogLookChecks` *(local)* | false | Log every freeze look check. |
-| `AdminKeys` *(local)* | true | Host admin keys. |
-| `KeyRestartFromCampfire` *(local)* | F10 | Quick-restart key. |
-| `KeyHostMenu` *(local)* | = | Opens the host menu (the =/+ key; numpad + works too). |
-| `KeyChaserOdds` *(local)* | - | Opens the role menu (airport, and the role window at the campfire). |
-
-**Item names:** item settings accept PEAK's display or internal names (spaces and case don't matter). The log (`BepInEx/LogOutput.log`) lists every item name once per session, under `[OTL][Items] all items`.
 
 ---
 

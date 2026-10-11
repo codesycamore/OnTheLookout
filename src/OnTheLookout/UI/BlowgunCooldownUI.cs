@@ -31,19 +31,21 @@ internal sealed class BlowgunCooldownUI
     private readonly System.Func<bool> _onCooldown;
     private readonly System.Func<float> _secondsLeft;
     private readonly System.Func<Item, bool> _isItem;
+    private readonly System.Func<Character, bool> _forRole;
 
     public BlowgunCooldownUI(Canvas overlay, TextMeshProUGUI fontStyle)
-        : this(overlay, fontStyle, "Blowgun", () => BlowgunSystem.OnCooldown, () => BlowgunSystem.CooldownSecondsLeft, ItemCatalog.IsBlowgun)
+        : this(overlay, fontStyle, "Blowgun", () => BlowgunSystem.OnCooldown, () => BlowgunSystem.CooldownSecondsLeft, ItemCatalog.IsBlowgun, RoleManager.IsChaser)
     {
     }
 
     public BlowgunCooldownUI(Canvas overlay, TextMeshProUGUI fontStyle, string label, System.Func<bool> onCooldown,
-        System.Func<float> secondsLeft, System.Func<Item, bool> isItem)
+        System.Func<float> secondsLeft, System.Func<Item, bool> isItem, System.Func<Character, bool> forRole)
     {
         _label = label;
         _onCooldown = onCooldown;
         _secondsLeft = secondsLeft;
         _isItem = isItem;
+        _forRole = forRole;
         _overlay = (RectTransform)overlay.transform;
         var go = new GameObject("OTL_" + label + "Cooldown", typeof(RectTransform));
         _root = (RectTransform)go.transform;
@@ -67,7 +69,7 @@ internal sealed class BlowgunCooldownUI
     public void Update(GUIManager gui)
     {
         Character local = Character.localCharacter;
-        bool show = _onCooldown() && local != null && RoleManager.IsChaser(local) && !local.data.dead;
+        bool show = _onCooldown() && local != null && _forRole(local) && !local.data.dead;
         if (_root.gameObject.activeSelf != show) _root.gameObject.SetActive(show);
         if (!show)
         {

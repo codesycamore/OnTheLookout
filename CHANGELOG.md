@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.7.0
+
+- **Fewer settings, always current:** only 11 settings can still be changed (`HeadStartSeconds`, `HeadStartBoostSeconds`, `RunnersPerChaser`, `FogStartDelaySeconds`, `FogSpeedMultiplier`, `ZombieStartDelaySeconds`, `ZombieWaveDelaySeconds`, `ZombieLifetimeSeconds`, `MandrakeStartSeconds`, `MandrakeIntervalSeconds`, `MandrakeFirstScreamSeconds`). Everything else is built in, so every host runs the same rules. The config file now remembers which version wrote it; when a different version starts, the file is reset to that version's defaults, so old values never carry over.
+
+- Capture hold **0.45 s** (was 0.4, `CaptureHoldSeconds`).
+
+- **Runner dash:** runners carry **Scout's Ambition** (`RunnerGemItem`) in their hotbar; using it dashes them **3.2 m** horizontally where they look (`DashDistance`; walls stop it, not while climbing), and a dash in mid-air floats them for **0.65 s** (`DashAirFloatSeconds`), with a **70 s** cooldown shown above its slot (`DashCooldownSeconds`) and **6%** petrification per dash (`DashPetrify`). Its own power is never used and chasers can't use it. Given at every leg start and to chasers who become runners; runners who become chasers drop it with everything else.
+- **Gems only do the mod's abilities:** during a round, Scout's Ambition (runners) and Scout's Initiative (chasers) never switch on their original scout-gem power, so no stamina aura, double jump or their petrification; only the dash and the chaser boost.
+- **Safe at the campfire:** when the runners win a leg, every runner in the safe zone loses **3%** petrification (`SafeZonePetrifyRelief`).
+- **Captures up close:** a chaser has to be practically touching a runner (`CaptureRange`, 1.4 m) to start or keep a capture. Up close the capture always wins over anything else in view, whichever way the runner faces: their backpack or fanny pack, and stuck thorns, arrows or cactus balls, no longer get in the way.
+- **Chaser list:** a chaser's freeze countdown can never show more than the freeze length; if the game ever reports more, it is logged.
+
 ## 1.6.1
 
 - Capture hold **0.4 s** (was 0.75, `CaptureHoldSeconds`). The runner's capture bar follows it.

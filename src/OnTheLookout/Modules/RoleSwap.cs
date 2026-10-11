@@ -92,22 +92,31 @@ internal static class RoleSwap
         Backpack? backpack = ItemCatalog.PlainBackpack;
         if (backpack != null && c.player.backpackSlot.IsEmpty()) LegLoadout.Give(c, backpack);
 
-        // A runner item for this leg too, unless they already got this leg's items as a runner.
+        // The runner gem (dash), and a runner item for this leg unless they already got this leg's items as a runner.
         yield return new WaitForSeconds(1f);
-        if (Net.IsHost && c != null && !c.data.dead && RoleManager.IsRunner(c)) LegLoadout.HostGiveRunnerLegItems(c);
+        if (Net.IsHost && c != null && !c.data.dead && RoleManager.IsRunner(c))
+        {
+            LegLoadout.HostGiveRunnerGem(c);
+            LegLoadout.HostGiveRunnerLegItems(c);
+        }
     }
 
-    /// <summary>Every client, shortly after each leg starts: a runner never keeps a blowgun or the chaser gem.</summary>
+    /// <summary>
+    /// Every client, shortly after each leg starts: a runner never keeps a blowgun or the chaser gem, and a chaser
+    /// never keeps the runner gem.
+    /// </summary>
     private static IEnumerator LocalSafetyCheck()
     {
         yield return new WaitForSeconds(DropSettleSeconds + 1f);
         Character local = Character.localCharacter;
-        if (local == null || local.data.dead || local.player == null || !RoleManager.IsRunner(local)) yield break;
+        if (local == null || local.data.dead || local.player == null) yield break;
+        System.Func<Item, bool>? wrong = RoleManager.IsRunner(local) ? IsChaserKit : RoleManager.IsChaser(local) ? RunnerDash.IsRunnerGem : null;
+        if (wrong == null) yield break;
         foreach (ItemSlot slot in local.player.itemSlots)
         {
-            if (slot == null || slot.IsEmpty() || slot.prefab == null || !IsChaserKit(slot.prefab)) continue;
-            Plugin.Log.LogInfo("[OTL][Swap] runner still carries chaser items; dropping them.");
-            DropChaserKitLocal();
+            if (slot == null || slot.IsEmpty() || slot.prefab == null || !wrong(slot.prefab)) continue;
+            Plugin.Log.LogInfo("[OTL][Swap] carrying the other role's items; dropping them.");
+            ModNetwork.Instance?.StartCoroutine(DropItemsRoutine(wrong));
             yield break;
         }
     }
@@ -125,15 +134,15 @@ internal static class RoleSwap
     }
 
     /// <summary>The local player's client: drop the blowgun and the chaser gem (no longer a chaser).</summary>
-    public static void DropChaserKitLocal() => ModNetwork.Instance?.StartCoroutine(DropChaserKitRoutine());
+    public static void DropChaserKitLocal() => ModNetwork.Instance?.StartCoroutine(DropItemsRoutine(IsChaserKit));
 
-    private static IEnumerator DropChaserKitRoutine()
+    private static IEnumerator DropItemsRoutine(System.Func<Item, bool> which)
     {
         Character local = Character.localCharacter;
         if (local == null || local.data.dead || local.player == null) yield break;
 
         Item? held = local.data.currentItem;
-        if (held != null && IsChaserKit(held))
+        if (held != null && which(held))
         {
             local.refs.items.EquipSlot(Optionable<byte>.None); // put it away first, then drop it from its slot
             yield return new WaitForSeconds(0.3f);
@@ -144,10 +153,10 @@ internal static class RoleSwap
         for (byte i = 0; i < local.player.itemSlots.Length; i++)
         {
             ItemSlot slot = local.player.itemSlots[i];
-            if (slot == null || slot.IsEmpty() || slot.prefab == null || !IsChaserKit(slot.prefab)) continue;
+            if (slot == null || slot.IsEmpty() || slot.prefab == null || !which(slot.prefab)) continue;
             local.refs.items.photonView.RPC("DropItemFromSlotRPC", RpcTarget.All, i, spot);
             spot += Vector3.up * 0.4f;
-            Plugin.Log.LogInfo($"[OTL][Swap] now a runner: dropped {ItemCatalog.NameOf(slot.prefab)} from slot {i}.");
+            Plugin.Log.LogInfo($"[OTL][Swap] dropped {ItemCatalog.NameOf(slot.prefab)} from slot {i} (role items).");
         }
     }
 }

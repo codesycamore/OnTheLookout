@@ -40,6 +40,7 @@ internal sealed class Hud : MonoBehaviour
     private Canvas? _hudCanvas;
     private BlowgunCooldownUI? _blowgunCooldown;
     private BlowgunCooldownUI? _gemCooldown;
+    private BlowgunCooldownUI? _dashCooldown;
     private TextMeshProUGUI? _chaserList;
     private TextMeshProUGUI? _toast;
     private CanvasGroup? _toastGroup;
@@ -139,12 +140,15 @@ internal sealed class Hud : MonoBehaviour
         BuildToast(_hudCanvas.transform, gui.interactNameText);
         _blowgunCooldown?.Destroy();
         _gemCooldown?.Destroy();
+        _dashCooldown?.Destroy();
         if (_overlay != null)
         {
             TextMeshProUGUI font = gui.heroText != null ? gui.heroText : gui.interactNameText;
             _blowgunCooldown = new BlowgunCooldownUI(_overlay, font);
             _gemCooldown = new BlowgunCooldownUI(_overlay, font, "Gem", () => ChaserKit.GemOnCooldown,
-                () => ChaserKit.GemCooldownLeft, item => ChaserKit.IsGem(item));
+                () => ChaserKit.GemCooldownLeft, item => ChaserKit.IsGem(item), RoleManager.IsChaser);
+            _dashCooldown = new BlowgunCooldownUI(_overlay, font, "Dash", () => RunnerDash.OnCooldown,
+                () => RunnerDash.CooldownLeft, item => RunnerDash.IsRunnerGem(item), RoleManager.IsRunner);
         }
         Plugin.Log.LogInfo($"[OTL][UI] HUD built on '{_hudCanvas.name}' (stamina bar found: {gui.bar != null}).");
         return true;
@@ -242,6 +246,7 @@ internal sealed class Hud : MonoBehaviour
         if (!EnsureHud()) return;
         if (_blowgunCooldown is { IsValid: true }) _blowgunCooldown.Update(GUIManager.instance);
         if (_gemCooldown is { IsValid: true }) _gemCooldown.Update(GUIManager.instance);
+        if (_dashCooldown is { IsValid: true }) _dashCooldown.Update(GUIManager.instance);
         if (Time.time >= _nextListRefresh)
         {
             _nextListRefresh = Time.time + 0.25f;
@@ -318,11 +323,31 @@ internal sealed class Hud : MonoBehaviour
             Character? c = Net.CharacterOf(actor);
             string name = Net.NameOf(actor) + (actor == me ? " (you)" : "");
             if (c != null && c.data.dead) sb.Append($"<alpha=#60><s>{name}</s><alpha=#FF>\n");
-            else if (FreezeState.IsFrozen(actor)) sb.Append($"<color={IceHex}>{name}  {FreezeState.FrozenSecondsLeft(actor):0}s</color>\n");
+            else if (FreezeState.IsFrozen(actor)) sb.Append($"<color={IceHex}>{name}  {FrozenSecondsShown(actor)}s</color>\n");
             else sb.Append(name).Append('\n');
         }
 
         _chaserList.text = sb.ToString();
+    }
+
+    private float _nextFreezeWarning;
+
+    /// <summary>
+    /// Whole seconds of a chaser's freeze left, for the chaser list. A freeze never stacks or extends (the host
+    /// ignores looks while a chaser is frozen or immune), so the number is clamped to FreezeDuration; if the
+    /// replicated end time ever says more, that is logged so the cause can be found.
+    /// </summary>
+    private int FrozenSecondsShown(int actor)
+    {
+        float duration = Mathf.Max(0.1f, Plugin.ModConfig.FreezeDuration.Synced());
+        float left = FreezeState.FrozenSecondsLeft(actor);
+        if (left > duration + 0.5f && Time.time >= _nextFreezeWarning)
+        {
+            _nextFreezeWarning = Time.time + 5f;
+            Plugin.Log.LogWarning($"[OTL][UI] chaser list: {Net.NameOf(actor)} shows {left:0.0}s of freeze left, more than FreezeDuration {duration:0.#}s.");
+        }
+
+        return Mathf.Clamp(Mathf.CeilToInt(left), 0, Mathf.CeilToInt(duration));
     }
 
     // ---------- Events ----------

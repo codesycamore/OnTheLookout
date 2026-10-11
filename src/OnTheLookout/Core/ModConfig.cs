@@ -1,15 +1,44 @@
+using System.Collections.Generic;
+using System.IO;
+using BepInEx;
 using BepInEx.Configuration;
 using UnityEngine.InputSystem;
 
 namespace OnTheLookout.Core;
 
 /// <summary>
-/// All tunables. Gameplay settings are host-synced (read them with <c>.Synced()</c>);
-/// debug and personal settings are local only. Module toggles take effect after a restart.
+/// All tunables. Gameplay settings are host-synced (read them with <c>.Synced()</c>).
+/// Only the settings in <see cref="Configurable"/> are written to the config file and can be changed by players;
+/// every other setting is bound to an in-memory config that is never loaded or saved, so it always has this
+/// version's value and every player and host runs the same rules. The config file is also wiped and rewritten
+/// with the current defaults whenever a different mod version loads it (<see cref="VersionKey"/>), so an
+/// update always starts from the latest defaults.
 /// </summary>
 internal sealed class ModConfig
 {
+    /// <summary>The only settings players can change (in the config file / mod manager's config editor).</summary>
+    private static readonly HashSet<string> Configurable = new()
+    {
+        "HeadStartSeconds",
+        "RunnersPerChaser",
+        "ZombieStartDelaySeconds",
+        "ZombieWaveDelaySeconds",
+        "ZombieLifetimeSeconds",
+        "MandrakeStartSeconds",
+        "MandrakeIntervalSeconds",
+        "MandrakeFirstScreamSeconds",
+        "HeadStartBoostSeconds",
+        "FogSpeedMultiplier",
+        "FogStartDelaySeconds",
+    };
+
+    private const string VersionSection = "0. Version";
+    private const string VersionKey = "ConfigWrittenByVersion";
+
     private readonly ConfigFile _file;
+
+    /// <summary>Fixed settings: in memory only (never read from or written to disk), always the built-in values.</summary>
+    private readonly ConfigFile _fixed;
 
     // Modules
     public ConfigEntry<bool> EnableFreeze { get; }
@@ -75,6 +104,13 @@ internal sealed class ModConfig
     public ConfigEntry<float> GemCooldownSeconds { get; }
     public ConfigEntry<float> GemPetrify { get; }
     public ConfigEntry<float> SnowballKnockbackBonus { get; }
+    public ConfigEntry<bool> RunnerGem { get; }
+    public ConfigEntry<string> RunnerGemItem { get; }
+    public ConfigEntry<float> DashDistance { get; }
+    public ConfigEntry<float> DashAirFloatSeconds { get; }
+    public ConfigEntry<float> DashCooldownSeconds { get; }
+    public ConfigEntry<float> DashPetrify { get; }
+    public ConfigEntry<float> SafeZonePetrifyRelief { get; }
     public ConfigEntry<float> CapturePetrifyRelief { get; }
     public ConfigEntry<float> SnowballBlindSeconds { get; }
     public ConfigEntry<bool> ScoutmasterChaseMusic { get; }
@@ -96,6 +132,7 @@ internal sealed class ModConfig
 
     // Tag
     public ConfigEntry<float> CaptureHoldSeconds { get; }
+    public ConfigEntry<float> CaptureRange { get; }
     public ConfigEntry<float> TagMaxDistance { get; }
     public ConfigEntry<bool> TagPassedOutRunners { get; }
     public ConfigEntry<bool> MilkProtectsFromCapture { get; }
@@ -162,6 +199,8 @@ internal sealed class ModConfig
     public ModConfig(ConfigFile config)
     {
         _file = config;
+        _fixed = CreateFixedConfig();
+        ResetFileOnVersionChange(config);
 
         const string mod = "1. Modules";
         EnableFreeze = Local(mod, "EnableFreeze", true, "Runners freeze chasers by looking at them.");
@@ -225,6 +264,13 @@ internal sealed class ModConfig
         GemCooldownSeconds = Synced(blowgun, "GemCooldownSeconds", 60f, "Cooldown of the chaser gem (s). It starts when the gem's effects wear off.");
         GemPetrify = Synced(blowgun, "GemPetrify", 0.08f, "Petrification each gem use adds to the chaser (0.08 = 8%).");
         SnowballKnockbackBonus = Synced(blowgun, "SnowballKnockbackBonus", 0.1f, "Extra push a thrown snowball gives the scout it hits, as a fraction of its own impact (0.1 = 10% stronger).");
+        RunnerGem = Synced(blowgun, "RunnerGem", true, "Runners carry a scout gem (Scout's Ambition) in their hotbar: using it dashes them DashDistance forward (where they look, horizontally), with a cooldown and some petrification as the cost. Its vanilla power is never used; chasers can't use it.");
+        RunnerGemItem = Synced(blowgun, "RunnerGemItem", "Amulet_InfiniteStamina", "The scout gem item runners carry for the dash (prefab or display name). Amulet_InfiniteStamina = Scout's Ambition.");
+        DashDistance = Synced(blowgun, "DashDistance", 3.2f, "How far the runner gem's dash goes (m), horizontally in the direction the runner looks. Walls stop it.");
+        DashAirFloatSeconds = Synced(blowgun, "DashAirFloatSeconds", 0.65f, "A dash started in mid-air also keeps the runner floating (not falling) this long (s). 0 = off.");
+        DashCooldownSeconds = Synced(blowgun, "DashCooldownSeconds", 70f, "Cooldown of the runner dash (s), shown above the gem's slot.");
+        DashPetrify = Synced(blowgun, "DashPetrify", 0.06f, "Petrification each dash adds to the runner (0.06 = 6%).");
+        SafeZonePetrifyRelief = Synced(blowgun, "SafeZonePetrifyRelief", 0.03f, "Petrification every runner in the safe zone loses when the runners win a leg (0.03 = 3%).");
         CapturePetrifyRelief = Synced(blowgun, "CapturePetrifyRelief", 0.05f, "Petrification a chaser loses for each capture (0.05 = 5%).");
         SnowballBlindSeconds = Synced(blowgun, "SnowballBlindSeconds", 2.5f, "A snowball thrown by a runner blinds the chaser it hits (blue-flower blindness) for this long. 0 = off.");
         BlowdartDrowsy = Synced(blowgun, "BlowdartDrowsy", 0.18f, "Drowsiness (sleep) a dart adds to the runner it hits (0.18 = 18%).");
@@ -249,7 +295,8 @@ internal sealed class ModConfig
         FreezePulseSlowInterval = Synced(freeze, "FreezePulseSlowInterval", 0.9f, "Seconds between cold pulses as the freeze runs out.");
 
         const string tag = "4. Tag";
-        CaptureHoldSeconds = Synced(tag, "CaptureHoldSeconds", 0.4f, "How long a chaser holds interact on a runner to capture them. The runner sees the progress too.");
+        CaptureHoldSeconds = Synced(tag, "CaptureHoldSeconds", 0.45f, "How long a chaser holds interact on a runner to capture them. The runner sees the progress too.");
+        CaptureRange = Synced(tag, "CaptureRange", 1.4f, "A chaser can only start (and keep) a capture this close to the runner (m, body centre to body centre), practically touching. Up close the capture beats anything else in view (backpacks, stuck thorns or arrows) and works whichever way the runner faces.");
         TagMaxDistance = Synced(tag, "TagMaxDistance", 5f, "Host rejects a capture if the two players are further apart than this (lag tolerance).");
         TagPassedOutRunners = Synced(tag, "TagPassedOutRunners", true, "Chasers can capture runners who are passed out.");
         MilkProtectsFromCapture = Synced(tag, "MilkProtectsFromCapture", true, "Runners under the effect of fortified milk can't be captured.");
@@ -317,12 +364,44 @@ internal sealed class ModConfig
         config.SettingChanged += (_, _) => ConfigSync.Publish();
     }
 
+    /// <summary>
+    /// The config file remembers which mod version wrote it. A different version (an update, or an old file)
+    /// clears it, so every setting starts from this version's defaults and old, removed settings disappear.
+    /// </summary>
+    private static void ResetFileOnVersionChange(ConfigFile config)
+    {
+        ConfigEntry<string> written = config.Bind(VersionSection, VersionKey, "", "The mod version that wrote this file. When a different version starts, this file is reset to that version's defaults. Don't edit.");
+        if (written.Value == Plugin.Version) return;
+
+        string was = written.Value;
+        bool save = config.SaveOnConfigSet;
+        config.SaveOnConfigSet = false;
+        File.WriteAllText(config.ConfigFilePath, "");
+        config.Reload();
+        config.Clear();
+        written = config.Bind(VersionSection, VersionKey, "", "The mod version that wrote this file. When a different version starts, this file is reset to that version's defaults. Don't edit.");
+        written.Value = Plugin.Version;
+        config.SaveOnConfigSet = save;
+        config.Save();
+        Plugin.Log.LogInfo($"[OTL][Config] config written by '{(was.Length > 0 ? was : "an older version")}', now {Plugin.Version}: reset to this version's defaults.");
+    }
+
+    /// <summary>An in-memory config for the fixed settings: its file never exists, and it never saves.</summary>
+    private static ConfigFile CreateFixedConfig()
+    {
+        string path = Path.Combine(Paths.CachePath, "OnTheLookout.fixed.cfg");
+        if (File.Exists(path)) File.Delete(path);
+        return new ConfigFile(path, saveOnInit: false) { SaveOnConfigSet = false };
+    }
+
+    private ConfigFile FileFor(string key) => Configurable.Contains(key) ? _file : _fixed;
+
     private ConfigEntry<T> Local<T>(string section, string key, T value, string description) =>
-        _file.Bind(section, key, value, description);
+        FileFor(key).Bind(section, key, value, description);
 
     private ConfigEntry<T> Synced<T>(string section, string key, T value, string description)
     {
-        ConfigEntry<T> e = _file.Bind(section, key, value, description + " (host-synced)");
+        ConfigEntry<T> e = FileFor(key).Bind(section, key, value, description + " (host-synced)");
         ConfigSync.Register(e);
         return e;
     }
