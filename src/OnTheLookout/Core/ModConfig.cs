@@ -52,7 +52,6 @@ internal sealed class ModConfig
     public ConfigEntry<bool> AutoStartRound { get; }
     public ConfigEntry<bool> ChaserPreferenceEnabled { get; }
     public ConfigEntry<float> RoleWindowSeconds { get; }
-    public ConfigEntry<float> SpawnInteractLockSeconds { get; }
     public ConfigEntry<float> ChaserStatusMultiplier { get; }
     public ConfigEntry<float> ChaserFallDamageMultiplier { get; }
     public ConfigEntry<bool> ZombiesIgnoreChasers { get; }
@@ -214,7 +213,6 @@ internal sealed class ModConfig
         AutoStartRound = Synced(round, "AutoStartRound", true, "Start a round automatically once everyone has woken up on the beach (host).");
         ChaserPreferenceEnabled = Synced(round, "ChaserPreferenceEnabled", true, "Players choose RUNNER (default) or CHASER in the role menu (KeyChaserOdds) in the airport and in the role window after each leg. Chasers are drawn at random from the CHASER volunteers. Choices are private to the host. Off = chasers are drawn from everyone.");
         RoleWindowSeconds = Synced(round, "RoleWindowSeconds", 10f, "After a leg ends, everyone is brought to the campfire and frozen for this many seconds to update their role choice; then the campfire lights itself and the next leg starts with a new role draw.");
-        SpawnInteractLockSeconds = Synced(round, "SpawnInteractLockSeconds", 7f, "At the start of a run on the shore nothing can be interacted with while everyone wakes up and for this many seconds after the round starts.");
         ChaserStatusMultiplier = Synced(round, "ChaserStatusMultiplier", 0.5f, "Chasers take this fraction of every negative status (injury, cold, poison, drowsy, ...) they would get in vanilla at the current ascent. Hunger is not reduced.");
         ChaserFallDamageMultiplier = Synced(round, "ChaserFallDamageMultiplier", 0.333f, "Fraction of vanilla fall damage chasers take (0.333 = 1/3). Still scales with the ascent like vanilla, and a big fall still knocks them down. 0 = no fall damage.");
         ZombiesIgnoreChasers = Synced(round, "ZombiesIgnoreChasers", true, "Mushroom zombies don't target or bite chasers.");

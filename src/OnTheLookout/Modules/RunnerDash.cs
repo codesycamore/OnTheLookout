@@ -81,6 +81,7 @@ internal static class RunnerDash
         if (petrify > 0) holder.refs.afflictions.AddPetrify(petrify);
         float floatSeconds = holder.data.isGrounded ? 0f : Mathf.Max(0f, cfg.DashAirFloatSeconds.Synced()); // mid-air: hang in the air a moment
         ModNetwork.Instance?.StartCoroutine(Dash(holder, dir, Mathf.Max(0f, cfg.DashDistance.Synced()), floatSeconds));
+        ChaserKit.PutAwayLater(holder, item); // hands free again after the dash (the gem stays in its slot)
         Plugin.Log.LogInfo($"[OTL][Dash] dash {cfg.DashDistance.Synced():0.#}m, +{petrify}% petrify.");
         return true;
     }

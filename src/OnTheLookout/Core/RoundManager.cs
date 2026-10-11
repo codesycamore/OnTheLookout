@@ -63,9 +63,9 @@ internal static class RoundManager
     public static float HoldSecondsLeft => InHold ? Net.SecondsUntil(ChaseStart) : 0f;
 
     /// <summary>
-    /// Start of a run on the shore: nothing can be interacted with while everyone is waking up and for
-    /// SpawnInteractLockSeconds after the round starts. Only when the host runs the mod (its config is
-    /// in the room), so a vanilla host can never lock players out.
+    /// Start of a run on the shore: nothing can be interacted with while everyone is waking up and during the
+    /// role reveal after the round starts (until runners are released for their head start). Only when the host
+    /// runs the mod (its config is in the room), so a vanilla host can never lock players out.
     /// </summary>
     public static bool InSpawnLock
     {
@@ -74,7 +74,7 @@ internal static class RoundManager
             if (!Net.InRoom || Net.GetRoom(ConfigSync.RoomKey) == null) return false;
             if (s_State == RoundState.Active && s_LegId == 1)
             {
-                return Net.IsBefore(unchecked(s_LegStart + (int)(Plugin.ModConfig.SpawnInteractLockSeconds.Synced() * 1000f)));
+                return Net.IsBefore(RevealEnd); // until the role reveal ends: runners can interact as soon as they're released
             }
 
             return InPreRound;

@@ -146,7 +146,21 @@ internal static class ChaserKit
         if (petrify > 0) holder.refs.afflictions.AddPetrify(petrify);
         Plugin.Log.LogInfo($"[OTL][Kit] chaser gem used: +{petrify}% petrify, boost in {cfg.GemDelaySeconds.Synced():0.##}s.");
         ModNetwork.Instance?.StartCoroutine(GemBoostLater(holder));
+        PutAwayLater(holder, item);
         return true;
+    }
+
+    /// <summary>
+    /// After a gem's ability has fired: put the gem back in its hotbar slot so the hands are free (the same as
+    /// pressing its slot again; it is not dropped). Done a frame later, outside the item's own use call.
+    /// </summary>
+    public static void PutAwayLater(Character c, Item item) => ModNetwork.Instance?.StartCoroutine(PutAway(c, item));
+
+    private static IEnumerator PutAway(Character c, Item item)
+    {
+        yield return null;
+        if (c == null || !c.IsLocal || c.data.dead || c.data.currentItem != item) yield break; // already switched to something else
+        c.refs.items.EquipSlot(Optionable<byte>.None);
     }
 
     /// <summary>

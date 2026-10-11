@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.7.2
+
+- **Gems put themselves away:** after a gem's ability fires (the chaser boost or the runner dash), the gem goes back to its hotbar slot so the hands are free; it isn't dropped.
+- **Fix:** on the shore, runners couldn't interact with anything for the first ~3 seconds of their head start. The start-of-run interaction lock now ends exactly when the role reveal ends (`SpawnInteractLockSeconds` removed).
+
 ## 1.7.1
 
 - Runner dash **4.3 m** (was 3.2) and **5%** petrification per dash (was 6%).
