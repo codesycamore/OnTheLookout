@@ -24,9 +24,6 @@ internal sealed class ModConfig
         "ZombieStartDelaySeconds",
         "ZombieWaveDelaySeconds",
         "ZombieLifetimeSeconds",
-        "MandrakeStartSeconds",
-        "MandrakeIntervalSeconds",
-        "MandrakeFirstScreamSeconds",
         "HeadStartBoostSeconds",
         "FogSpeedMultiplier",
         "FogStartDelaySeconds",
@@ -230,7 +227,7 @@ internal sealed class ModConfig
         MandrakeStartSeconds = Synced(round, "MandrakeStartSeconds", 180f, "Mandrakes start appearing at runners this many seconds after the head start ends (each leg). 0 or less = off.");
         MandrakeIntervalSeconds = Synced(round, "MandrakeIntervalSeconds", 60f, "After that, a mandrake is dropped at every living runner outside a safe zone this often (s).");
         MandrakeFirstScreamSeconds = Synced(round, "MandrakeFirstScreamSeconds", 0.75f, "A dropped mandrake screams for the first time this many seconds after it appears (PEAK's own wait for a new mandrake is much longer). Later screams keep PEAK's timing.");
-        HeadStartBoostSeconds = Synced(round, "HeadStartBoostSeconds", 3f, "Runners get an energy-drink speed boost (no drowsiness afterwards) for the last this-many seconds of their head start. 0 = off.");
+        HeadStartBoostSeconds = Synced(round, "HeadStartBoostSeconds", 4f, "Runners get an energy-drink speed boost (no drowsiness afterwards) for the last this-many seconds of their head start. 0 = off.");
         DisableScoutStatues = Synced(round, "DisableScoutStatues", true, "Scout statues do nothing during a round (no revives, no items). Everyone is brought back at the campfire after each leg instead.");
         PeakChasersDie = Synced(round, "PeakChasersDie", true, "When every living runner has reached the peak, the runners win and every living chaser is brought to the peak and dies.");
         CaptureMoraleBoost = Synced(round, "CaptureMoraleBoost", true, "A chaser who captures a runner also gets a full morale boost (full extra-stamina bar).");
@@ -266,10 +263,10 @@ internal sealed class ModConfig
         SnowballKnockbackBonus = Synced(blowgun, "SnowballKnockbackBonus", 0.1f, "Extra push a thrown snowball gives the scout it hits, as a fraction of its own impact (0.1 = 10% stronger).");
         RunnerGem = Synced(blowgun, "RunnerGem", true, "Runners carry a scout gem (Scout's Ambition) in their hotbar: using it dashes them DashDistance forward (where they look, horizontally), with a cooldown and some petrification as the cost. Its vanilla power is never used; chasers can't use it.");
         RunnerGemItem = Synced(blowgun, "RunnerGemItem", "Amulet_InfiniteStamina", "The scout gem item runners carry for the dash (prefab or display name). Amulet_InfiniteStamina = Scout's Ambition.");
-        DashDistance = Synced(blowgun, "DashDistance", 3.2f, "How far the runner gem's dash goes (m), horizontally in the direction the runner looks. Walls stop it.");
+        DashDistance = Synced(blowgun, "DashDistance", 4.3f, "How far the runner gem's dash goes (m), horizontally in the direction the runner looks. Walls stop it.");
         DashAirFloatSeconds = Synced(blowgun, "DashAirFloatSeconds", 0.65f, "A dash started in mid-air also keeps the runner floating (not falling) this long (s). 0 = off.");
         DashCooldownSeconds = Synced(blowgun, "DashCooldownSeconds", 70f, "Cooldown of the runner dash (s), shown above the gem's slot.");
-        DashPetrify = Synced(blowgun, "DashPetrify", 0.06f, "Petrification each dash adds to the runner (0.06 = 6%).");
+        DashPetrify = Synced(blowgun, "DashPetrify", 0.05f, "Petrification each dash adds to the runner (0.05 = 5%).");
         SafeZonePetrifyRelief = Synced(blowgun, "SafeZonePetrifyRelief", 0.03f, "Petrification every runner in the safe zone loses when the runners win a leg (0.03 = 3%).");
         CapturePetrifyRelief = Synced(blowgun, "CapturePetrifyRelief", 0.05f, "Petrification a chaser loses for each capture (0.05 = 5%).");
         SnowballBlindSeconds = Synced(blowgun, "SnowballBlindSeconds", 2.5f, "A snowball thrown by a runner blinds the chaser it hits (blue-flower blindness) for this long. 0 = off.");

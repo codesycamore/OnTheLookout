@@ -2,7 +2,7 @@
 
 **Chasers vs Runners for PEAK.** Every leg, a few scouts become **chasers** and hunt everyone else up the mountain. **Runners** have to make it from campfire to campfire, and finally to the peak, without getting caught. A runner's best defence is to turn around and **look at a chaser** to freeze them in place.
 
-> **New in 1.7.0:** runners get a **dash gem** (Scout's Ambition: 3.2 m dash, mid-air float, 70 s cooldown), captures need the chaser **practically touching** the runner (0.45 s hold, works from any side), the gems never use their original powers, and **only 11 settings can be changed**; every update resets the config to the new defaults. **1.6.0:** chasers carry **Scout's Initiative** (a scout gem) instead of the napberry for their boost, captures take **0.75 s** and the runner sees the capture bar, milk-protected runners can't be captured, regular luggage holds more runner items (milk, snowballs, brown berrynanas, energy drinks), snowballs push harder and are runner-only, role choices are re-sent so none get lost, and the host sees a hint for the host menu (**+**). **1.5.1:** mandrakes scream 0.75 s after appearing. **1.5.0:** a new role every leg (volunteer as chaser in the **-** menu at the campfire), captures by **holding interact** on a runner, the campfire lights itself after a 10-second role window, scout statues are off, chasers carry a reusable **napberry boost**, snowballs blind chasers, mandrakes start dropping at runners late in a leg, and plenty of balance changes. See the changelog.
+> **New in 1.7.1:** the runner dash goes **4.3 m** for **5%** petrification, the head-start boost lasts **4 s**, and the mandrake timings are fixed. **1.7.0:** runners get a **dash gem** (Scout's Ambition: 3.2 m dash, mid-air float, 70 s cooldown), captures need the chaser **practically touching** the runner (0.45 s hold, works from any side), the gems never use their original powers, and **only 11 settings can be changed**; every update resets the config to the new defaults. **1.6.0:** chasers carry **Scout's Initiative** (a scout gem) instead of the napberry for their boost, captures take **0.75 s** and the runner sees the capture bar, milk-protected runners can't be captured, regular luggage holds more runner items (milk, snowballs, brown berrynanas, energy drinks), snowballs push harder and are runner-only, role choices are re-sent so none get lost, and the host sees a hint for the host menu (**+**). **1.5.1:** mandrakes scream 0.75 s after appearing. **1.5.0:** a new role every leg (volunteer as chaser in the **-** menu at the campfire), captures by **holding interact** on a runner, the campfire lights itself after a 10-second role window, scout statues are off, chasers carry a reusable **napberry boost**, snowballs blind chasers, mandrakes start dropping at runners late in a leg, and plenty of balance changes. See the changelog.
 
 > **Everyone in the lobby needs this mod** (same version). The host runs the game: roles, freezes, captures and rewards are all decided by the host and synced to everyone.
 
@@ -13,7 +13,7 @@
 0. **In the airport**, press **-** to choose **RUNNER** (pre-selected) or **CHASER** for the first leg. Chasers are drawn at random from the players who chose CHASER.
 1. **Wake up on the shore.** Nobody can move or interact until **everyone** has woken up and loaded in, and interacting stays locked for a few seconds after (no grabbing items before the roles are out).
 2. **Roles are drawn and revealed.** Each player sees **CHASER** (red) or **RUNNER** (yellow) in the middle of the screen. Everyone is frozen during the reveal. Chasers are picked at random from the airport volunteers, **one chaser for every 4 runners** at most; if nobody volunteered, **one random player** is the chaser.
-3. **Head start.** Runners are released and get a 20-second head start with a big countdown, and a **3-second speed boost** at the end of it. Chasers stay **frozen and blind** the whole time; their screen fades back in near the end.
+3. **Head start.** Runners are released and get a 20-second head start with a big countdown, and a **4-second speed boost** at the end of it. Chasers stay **frozen and blind** the whole time; their screen fades back in near the end.
 4. **The chase.** Chasers hunt the runners up the current biome.
    - A chaser **captures** a runner by looking at them and **holding interact for 0.45 seconds**, the same way a hungry scout eats another one. The chaser has to be **practically touching** the runner (1.4 m), and then it works **whichever way the runner faces**; their backpack, fanny pack or stuck thorns, arrows and cactus balls never get in the way. The runner sees the same progress bar under their crosshair, so they know how close it is. A runner under **fortified milk** can't be captured at all. The runner dies with a bang.
    - A runner **freezes** a chaser by **looking at them** within 26 m, from **outside** a safe zone. The chaser can't move, act or fall and is **blinded** for 10 seconds, then is immune to freezing for 8 seconds.
@@ -64,11 +64,11 @@
 
 **Perks**
 - **Freeze chasers** by looking at them (26 m, 10 s; no stacking, 8 s immunity afterwards), but not from inside a safe zone.
-- **Head start** at every leg, with a **3-second speed boost** at its end.
+- **Head start** at every leg, with a **4-second speed boost** at its end.
 - **Safe zones** (15 m) around every campfire.
 - **18.5% faster stamina regeneration.**
 - A **backpack** at the start of the round, **one random item** at the start of every leg (a snowball, a brown berrynana or a fortified milk), plus a **biome item**: a heat pack in the Alpine, a sports drink in the Caldera, an early worm in the Gloom, aloe vera in the Mesa.
-- **Dash gem:** runners carry **Scout's Ambition** (a scout gem) in their hotbar, whose own power is never used. Using it **dashes you 3.2 m** horizontally where you look (walls stop it; not while climbing); dashing in mid-air also lets you **float for 0.65 s**. **1 min 10 s cooldown**, counted down above its slot, and **6% petrification** per dash. Every runner who is in the safe zone when the runners win a leg loses **3%** petrification.
+- **Dash gem:** runners carry **Scout's Ambition** (a scout gem) in their hotbar, whose own power is never used. Using it **dashes you 4.3 m** horizontally where you look (walls stop it; not while climbing); dashing in mid-air also lets you **float for 0.65 s**. **1 min 10 s cooldown**, counted down above its slot, and **5% petrification** per dash. Every runner who is in the safe zone when the runners win a leg loses **3%** petrification.
 - **Snowballs blind chasers** they hit, and every thrown snowball pushes **10% harder**.
 - Runners **can't use the blowgun or the chasers' scout gem** (chaser items), and chasers can't use the runners' dash gem.
 - **Regular luggage** can also hold **fortified milk, snowballs, brown berrynanas and energy drinks**, every leg.
@@ -134,16 +134,13 @@ Settings live in `BepInEx/config/codesycamore.OnTheLookout.cfg` (or the mod mana
 | Setting | Default | What it does |
 |---|---|---|
 | `HeadStartSeconds` | 20 | Runner head start each leg (chasers frozen and blind). |
-| `HeadStartBoostSeconds` | 3 | Runners' speed boost (no drowsiness) at the end of the head start. 0 = off. |
+| `HeadStartBoostSeconds` | 4 | Runners' speed boost (no drowsiness) at the end of the head start. 0 = off. |
 | `RunnersPerChaser` | 4 | At most one chaser per this many runners (1 in 5 players, 2 in 10). Drawn from the CHASER volunteers; nobody volunteered = one random player. Always leaves a runner. |
 | `FogStartDelaySeconds` | 300 | Fog, rising lava and rising gloom start this long after the head start ends (each leg). |
 | `FogSpeedMultiplier` | 2.5 | How much faster the fog, lava and gloom rise than in vanilla. |
 | `ZombieStartDelaySeconds` | 300 | With no chaser alive, zombies start coming this long after the head start ends (each leg). |
 | `ZombieWaveDelaySeconds` | 120 | Cooldown after a zombie wave is gone (killed or expired) before the next one can come. |
 | `ZombieLifetimeSeconds` | 120 | How long each zombie lasts. |
-| `MandrakeStartSeconds` | 180 | Mandrakes start dropping at runners this long after the head start. 0 = off. |
-| `MandrakeIntervalSeconds` | 60 | Then one at every runner outside a safe zone this often (s). |
-| `MandrakeFirstScreamSeconds` | 0.75 | A dropped mandrake first screams this many seconds after it appears. |
 
 ---
 

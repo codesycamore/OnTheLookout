@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.7.1
+
+- Runner dash **4.3 m** (was 3.2) and **5%** petrification per dash (was 6%).
+- Runners' head-start speed boost lasts **4 s** (was 3, `HeadStartBoostSeconds`).
+- New Thunderstore summary (no more fireworks; mentions the chaser and runner abilities).
+- The mandrake settings (`MandrakeStartSeconds`, `MandrakeIntervalSeconds`, `MandrakeFirstScreamSeconds`) can no longer be changed; 8 settings remain configurable.
+
 ## 1.7.0
 
 - **Fewer settings, always current:** only 11 settings can still be changed (`HeadStartSeconds`, `HeadStartBoostSeconds`, `RunnersPerChaser`, `FogStartDelaySeconds`, `FogSpeedMultiplier`, `ZombieStartDelaySeconds`, `ZombieWaveDelaySeconds`, `ZombieLifetimeSeconds`, `MandrakeStartSeconds`, `MandrakeIntervalSeconds`, `MandrakeFirstScreamSeconds`). Everything else is built in, so every host runs the same rules. The config file now remembers which version wrote it; when a different version starts, the file is reset to that version's defaults, so old values never carry over.

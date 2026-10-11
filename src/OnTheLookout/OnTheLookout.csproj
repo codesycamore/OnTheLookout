@@ -8,7 +8,7 @@
     <!-- This is the display name of your mod. -->
     <AssemblyTitle>OnTheLookout</AssemblyTitle>
     <!-- The version number for your assembly, BepInEx plugin, and Thunderstore package. -->
-    <Version>1.7.0</Version>
+    <Version>1.7.1</Version>
   </PropertyGroup>
 
   <!-- ThunderPipe properties -->
@@ -17,7 +17,7 @@
     <IsThunderstorePackable>true</IsThunderstorePackable>
     <!-- Package name on Thunderstore. Must not contain spaces ' ' or dashes '-'. -->
     <ThunderstoreName>OnTheLookout</ThunderstoreName>
-    <ThunderstoreDescription>Chasers vs Runners: chasers hunt runners from campfire to campfire. Look at a chaser to freeze them, reach the safe zone, get to the peak. Blowguns, tracking smoke, fireworks. All players need the mod.</ThunderstoreDescription>
+    <ThunderstoreDescription>Chasers vs Runners: chasers hunt runners from campfire to campfire. Runners freeze chasers just by looking at them and dash with a scout gem; chasers get a tracking blowgun and a speed-boost gem. Pick your role every leg. All players need the mod.</ThunderstoreDescription>
     <!--
       Communities and package categories metadata for publishing with ThunderPipe.
       Communities: https://thunderstore.io/api/experimental/community/
