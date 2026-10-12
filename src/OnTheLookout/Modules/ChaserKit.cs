@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using HarmonyLib;
 using OnTheLookout.Core;
@@ -19,7 +20,8 @@ namespace OnTheLookout.Modules;
 /// - a chaser can't drop or throw their blowgun (role swaps drop the kit: <see cref="RoleSwap"/>);
 /// - runners get the same short boost for the last HeadStartBoostSeconds of their head start;
 /// - a thrown snowball pushes whoever it hits SnowballKnockbackBonus harder, and a runner's snowball blinds the
-///   chaser it hits (blue-flower blindness);
+///   chaser it hits (blue-flower blindness) for SnowballBlindSeconds;
+/// - every ability cooldown is refreshed at the start of each leg;
 /// - the golden Bing Bong's invincibility shield is switched off during a round.
 /// </summary>
 internal static class ChaserKit
@@ -29,11 +31,11 @@ internal static class ChaserKit
     private static Affliction_FasterBoi? s_EnergyDrink;
     private static bool s_EnergyDrinkLooked;
 
-    /// <summary>True while we add our own speed boost, so other rules (energy drink shortening) leave it alone.</summary>
-    public static bool ApplyingBoost { get; private set; }
-
     /// <summary>The gem's effects are pending or running; its cooldown starts when they wear off.</summary>
     private static bool s_GemActive;
+
+    /// <summary>The leg the gem was last used in.</summary>
+    private static int s_GemLeg = -1;
 
     /// <summary>The cooldown is counting down (shown above the gem's slot).</summary>
     public static bool GemOnCooldown => Time.time < s_GemReadyAt;
@@ -65,6 +67,7 @@ internal static class ChaserKit
             RelievePetrify(local);
             CaptureBoost(local);
         };
+        RoundManager.LegStarted += _ => ResetCooldowns();
         return ok;
     }
 
@@ -102,15 +105,7 @@ internal static class ChaserKit
             boost.climbDelay = template.climbDelay;
         }
 
-        ApplyingBoost = true;
-        try
-        {
-            c.refs.afflictions.AddAffliction(boost);
-        }
-        finally
-        {
-            ApplyingBoost = false;
-        }
+        c.refs.afflictions.AddAffliction(boost);
     }
 
     /// <summary>
@@ -194,6 +189,7 @@ internal static class ChaserKit
 
         var cfg = Plugin.ModConfig;
         s_GemActive = true; // the cooldown starts once the effects have worn off (GemBoostLater)
+        s_GemLeg = RoundManager.LegKey;
         int petrify = Mathf.RoundToInt(cfg.GemPetrify.Synced() * 100f);
         if (petrify > 0) holder.refs.afflictions.AddPetrify(petrify);
         Plugin.Log.LogInfo($"[OTL][Kit] chaser gem used: +{petrify}% petrify, boost in {cfg.GemDelaySeconds.Synced():0.##}s.");
@@ -243,8 +239,22 @@ internal static class ChaserKit
 
     private static void StartGemCooldown()
     {
+        if (s_GemLeg != RoundManager.LegKey) return; // a new leg started meanwhile: it refreshed every cooldown
         s_GemActive = false;
         s_GemReadyAt = Time.time + Mathf.Max(1f, Plugin.ModConfig.GemCooldownSeconds.Synced());
+    }
+
+    /// <summary>
+    /// Every client, when a leg starts: every ability cooldown of the local player is refreshed (chaser gem, blowgun,
+    /// runner dash). Freeze cooldowns are the host's and are reset by RoundManager.HostStartLeg.
+    /// </summary>
+    private static void ResetCooldowns()
+    {
+        s_GemActive = false;
+        s_GemReadyAt = 0f;
+        BlowgunSystem.ResetCooldown();
+        RunnerDash.ResetCooldown();
+        Plugin.Log.LogInfo("[OTL][Kit] new leg: ability cooldowns refreshed.");
     }
 
     private static void RelievePetrify(Character chaser)
@@ -265,32 +275,63 @@ internal static class ChaserKit
         return !ItemCatalog.IsBlowgun(c.data.currentItem); // skip the whole drop/throw for the blowgun
     }
 
-    // ---------- Snowballs blind chasers ----------
+    // ---------- Snowballs: knockback and blindness ----------
 
+    /// <summary>Snowball view id -> when it last hit someone, so one throw counts once (it touches several body parts).</summary>
+    private static readonly Dictionary<int, float> s_SnowballHits = new();
+
+    /// <summary>
+    /// Runs on the client that simulates the snowball (its owner: the thrower), the only place where the collision
+    /// has the snowball's real speed. The hit scout's own client owns their body, so the hit is sent to them
+    /// (<see cref="Msg.SnowballHit"/>) and applied there (<see cref="ApplySnowballHit"/>).
+    /// </summary>
     public static void SnowballHitPostfix(Snowball __instance, Collision other)
     {
         if (!RoundManager.IsActive || other?.collider == null) return;
         Item item = __instance.item;
-        if (item == null || item.lastThrownCharacter == null || Time.time - item.lastThrownTime > 3f) return;
-        Character hit = other.collider.GetComponentInParent<Character>();
-        if (hit == null || !hit.IsLocal || hit == item.lastThrownCharacter || hit.data.dead) return; // the hit scout's own client (it owns their physics)
+        if (item == null || item.view == null || !item.view.IsMine || item.lastThrownCharacter == null || Time.time - item.lastThrownTime > 3f) return;
+        // PEAK's own body-part collider registry first (CharacterRagdoll.RegisterBodypartColliders).
+        if (!CharacterRagdoll.TryGetCharacterFromCollider(other.collider, out Character hit)) hit = other.collider.GetComponentInParent<Character>();
+        if (hit == null || hit == item.lastThrownCharacter || hit.data.dead || hit.isBot) return;
+        int id = item.view.ViewID;
+        if (s_SnowballHits.TryGetValue(id, out float last) && Time.time - last < 1f) return;
+        s_SnowballHits[id] = Time.time;
 
-        // Stronger knockback: an extra push of SnowballKnockbackBonus times the snowball's impact momentum,
-        // on the body part it hit, away from the snowball.
+        // The extra push: SnowballKnockbackBonus of the snowball's impact momentum, away from the snowball.
+        Vector3 push = Vector3.zero;
         float bonus = Plugin.ModConfig.SnowballKnockbackBonus.Synced();
-        if (bonus > 0f && other.rigidbody != null && item.rig != null)
+        Vector3 away = (other.rigidbody != null ? other.rigidbody.worldCenterOfMass : other.collider.bounds.center) - item.transform.position;
+        if (bonus > 0f && item.rig != null && away.sqrMagnitude > 0.0001f)
         {
-            Vector3 away = other.rigidbody.worldCenterOfMass - item.transform.position;
-            if (away.sqrMagnitude > 0.0001f)
-            {
-                other.rigidbody.AddForce(away.normalized * (item.rig.mass * other.relativeVelocity.magnitude * bonus), ForceMode.Impulse);
-            }
+            push = away.normalized * (item.rig.mass * other.relativeVelocity.magnitude * bonus);
+        }
+
+        Bodypart? part = other.collider.GetComponentInParent<Bodypart>();
+        int partType = part != null ? (int)part.partType : (int)BodypartType.Hip;
+        Plugin.Log.LogInfo($"[OTL][Kit] snowball thrown by {item.lastThrownCharacter.characterName} hit {hit.characterName} ({(BodypartType)partType}), extra push {push.magnitude:0.##}.");
+        int thrower = Net.Actor(item.lastThrownCharacter);
+        if (hit.IsLocal) ApplySnowballHit(thrower, push, partType);
+        else Net.SendToActor(Net.Actor(hit), Msg.SnowballHit, thrower, push.x, push.y, push.z, partType);
+    }
+
+    /// <summary>
+    /// The hit scout's own client: the extra knockback on the body part that was hit, and if a runner's snowball hit a
+    /// chaser, SnowballBlindSeconds of blue-flower blindness (Affliction_Blind).
+    /// </summary>
+    public static void ApplySnowballHit(int throwerActor, Vector3 push, int partType)
+    {
+        Character local = Character.localCharacter;
+        if (local == null || local.data.dead || !RoundManager.IsActive) return;
+        if (push.sqrMagnitude > 0f && local.GetBodypart((BodypartType)partType) is { } part && part.Rig != null)
+        {
+            part.Rig.AddForce(push, ForceMode.Impulse);
         }
 
         float seconds = Plugin.ModConfig.SnowballBlindSeconds.Synced();
-        if (seconds <= 0f || !RoundManager.IsChasing || !RoleManager.IsRunner(item.lastThrownCharacter) || !RoleManager.IsChaser(hit)) return;
-        hit.refs.afflictions.AddAffliction(new Affliction_Blind { totalTime = seconds });
-        Plugin.Log.LogInfo($"[OTL][Kit] hit by {item.lastThrownCharacter.characterName}'s snowball: blind for {seconds:0.#}s.");
+        Character? thrower = Net.CharacterOf(throwerActor);
+        if (seconds <= 0f || !RoundManager.IsChasing || !RoleManager.IsChaser(local) || !RoleManager.IsRunner(thrower)) return;
+        local.refs.afflictions.AddAffliction(new Affliction_Blind { totalTime = seconds });
+        Plugin.Log.LogInfo($"[OTL][Kit] hit by {thrower!.characterName}'s snowball: blind for {seconds:0.#}s.");
     }
 
     // ---------- Golden Bing Bong ----------

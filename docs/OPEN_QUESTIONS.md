@@ -335,3 +335,22 @@ Debug keys (host, bottom-left hint): **F7** start or restart a round, **F6** swa
 - [ ] Chasers visibly glow red to runners (compare with milk).
 - [ ] Fog starts on vanilla timing/speed; chasers take no fog damage; Caldera lava rises on vanilla timing.
 - [ ] Leg end: log shows no "not within 5m" warning normally; if it does, everyone is regathered and roles follow 1.5 s later.
+
+### 1.8.1 (2026-10-12)
+
+- **Cooldowns per leg:** on `RoundManager.LegStarted` every client resets its own blowgun, chaser gem and dash cooldowns (`ChaserKit.ResetCooldowns`). A gem boost still running across the leg change no longer starts a cooldown when it ends (`s_GemLeg`). Freeze immunity was already reset by `FreezeState.HostReset` in `HostStartLeg`.
+- **Hunger:** the vanilla tick is `AddStatus(Hunger, deltaTime * hungerPerSecond * Ascents.hungerRateMultiplier)` in `CharacterAfflictions.UpdateNormalStatuses`. A prefix/postfix flag around that method lets an `AddStatus` prefix scale only that tick (×`HungerRateMultiplier` 0.7, ×0 for a runner in `SafeZoneSystem.IsSafe`). Food, revival etc. untouched. Applies to everyone during a round.
+- **Dash fall protection:** `CharacterMovement.CheckFallDamage` / `CharacterClimbing.CheckFallDamage` are skipped entirely (no injury, no `Character.Fall` knock-down) for the local runner between +0.5 s and +1.5 s after a dash.
+- **Energy drink:** the `MilkRules` FasterBoi shortening is gone (vanilla length); `Tweaks` still scales `drowsyOnEnd` ×1.5 in a round.
+- **Chaser sugar ban:** `ItemCatalog.IsSugar` (item has `Action_ApplyInfiniteStamina`, or an `Action_ApplyAffliction` with `Affliction_FasterBoi` / `Affliction_InfiniteStamina`) is refused to chasers and filtered out of clown loot, on top of `ChaserForbiddenItems`. No log line ever showed a chaser getting one, so the reported case is unexplained; the clown-luggage log now lists the items it chose.
+- **Snowball:** no "blind" line in any log, so the victim-side hit (`Snowball.OnCollisionEnter` on the hit scout's client) likely never fired. Now detected on the snowball owner's client (`item.view.IsMine`, the thrower, real collision speed), once per throw (1 s debounce per view id), and sent as `Msg.SnowballHit` to the hit scout, who applies the extra impulse on the hit body part and, if runner→chaser, `Affliction_Blind` for 3 s.
+
+**Test checklist (1.8.1)**
+- [ ] Use gem/dash/blowgun just before a leg ends: all three are ready when the next leg starts (log: "ability cooldowns refreshed").
+- [ ] Hunger bar grows noticeably slower than vanilla; standing in the safe zone as a runner it doesn't grow; as a chaser in the safe zone it does.
+- [ ] Dash off a ledge and land within ~1.5 s: no fall damage, no knock-down. Land after 2 s+: normal damage.
+- [ ] Runner energy drink: vanilla length, more drowsy at the end.
+- [ ] Chaser: can't pick up energy drink or lollipop; check the log for "gives a speed boost / unlimited stamina" on items you didn't expect (e.g. healing items).
+- [ ] Open clown luggage as a chaser: log line lists no energy drink / lollipop.
+- [ ] Runner snowball on a chaser: thrower's log "snowball ... hit"; chaser's screen goes blue-blind for 3 s and they get pushed.
+- [ ] Head-start countdown (runner) is yellow and still translucent; host hint smaller.

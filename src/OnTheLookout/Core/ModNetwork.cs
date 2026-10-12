@@ -172,6 +172,9 @@ internal sealed class ModNetwork : MonoBehaviourPunCallbacks, Photon.Realtime.IO
                 case Msg.CaptureProgress when data.Length >= 4:
                     UI.CaptureIndicator.OnProgress((int)data[1], (int)data[2], (int)data[3]);
                     break;
+                case Msg.SnowballHit when data.Length >= 6:
+                    ChaserKit.ApplySnowballHit((int)data[1], new Vector3((float)data[2], (float)data[3], (float)data[4]), (int)data[5]);
+                    break;
                 case Msg.Notice when data.Length >= 4:
                     NoticeReceived?.Invoke((Notice)(byte)data[1], (int)data[2], (int)data[3]);
                     break;

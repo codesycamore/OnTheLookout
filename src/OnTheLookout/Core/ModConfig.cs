@@ -78,7 +78,7 @@ internal sealed class ModConfig
     public ConfigEntry<string> RunnerBiomeItems { get; }
     public ConfigEntry<float> FortifiedMilkWeightMultiplier { get; }
     public ConfigEntry<float> FortifiedMilkInvincibilityMultiplier { get; }
-    public ConfigEntry<float> EnergyDrinkDurationMultiplier { get; }
+    public ConfigEntry<float> HungerRateMultiplier { get; }
     public ConfigEntry<bool> RunnerBackpacks { get; }
     public ConfigEntry<string> CampfireFoodItems { get; }
     public ConfigEntry<bool> ClearStatusesAtCampfire { get; }
@@ -101,6 +101,8 @@ internal sealed class ModConfig
     public ConfigEntry<string> RunnerGemItem { get; }
     public ConfigEntry<float> DashDistance { get; }
     public ConfigEntry<float> DashAirFloatSeconds { get; }
+    public ConfigEntry<float> DashFallProtectDelay { get; }
+    public ConfigEntry<float> DashFallProtectSeconds { get; }
     public ConfigEntry<float> DashCooldownSeconds { get; }
     public ConfigEntry<float> DashPetrify { get; }
     public ConfigEntry<float> SafeZonePetrifyRelief { get; }
@@ -233,7 +235,7 @@ internal sealed class ModConfig
         RunnerBiomeItems = Synced(round, "RunnerBiomeItems", "Alpine:Heat Pack, Volcano:Sports Drink, Swamp:EarlyWorm, Mesa:Aloe Vera", "Extra item every runner gets at the start of a leg in that biome, as \"Biome:Item\" pairs. Biomes use PEAK's names (Caldera = Volcano; The Gloom is assumed to be Swamp).");
         FortifiedMilkWeightMultiplier = Synced(round, "FortifiedMilkWeightMultiplier", 2f, "Fortified milk weighs this many times its vanilla weight.");
         FortifiedMilkInvincibilityMultiplier = Synced(round, "FortifiedMilkInvincibilityMultiplier", 0.35f, "Fortified milk's invincibility lasts this fraction of its vanilla time (0.35 = 65% shorter). Also shortens its capture protection.");
-        EnergyDrinkDurationMultiplier = Synced(round, "EnergyDrinkDurationMultiplier", 0.35f, "The energy drink's speed boost lasts this fraction of its vanilla time (0.35 = 65% shorter).");
+        HungerRateMultiplier = Synced(round, "HungerRateMultiplier", 0.7f, "During a round hunger grows at this fraction of the vanilla rate (still scaled by the ascent like vanilla). Runners in a safe zone get no hungrier at all.");
         RunnerBackpacks = Synced(round, "RunnerBackpacks", true, "After roles are assigned at the start of a round, every runner without a backpack gets one.");
         CampfireFoodItems = Synced(round, "CampfireFoodItems", "Marshmallow, Glizzy", "When the chase of a leg ends at a campfire, the host makes sure there is one of these per living player near the fire (random pick each; spawns only what is missing). Glizzy = the hot dog. Empty = off.");
         ClearStatusesAtCampfire = Synced(round, "ClearStatusesAtCampfire", true, "When a campfire is lit, every player near it is cleared of negative statuses (incl. curse).");
@@ -256,11 +258,13 @@ internal sealed class ModConfig
         RunnerGemItem = Synced(blowgun, "RunnerGemItem", "Amulet_InfiniteStamina", "The scout gem item runners carry for the dash (prefab or display name). Amulet_InfiniteStamina = Scout's Ambition.");
         DashDistance = Synced(blowgun, "DashDistance", 4.3f, "How far the runner gem's dash goes (m), horizontally in the direction the runner looks. Walls stop it.");
         DashAirFloatSeconds = Synced(blowgun, "DashAirFloatSeconds", 0.65f, "A dash started in mid-air also keeps the runner floating (not falling) this long (s). 0 = off.");
+        DashFallProtectDelay = Synced(blowgun, "DashFallProtectDelay", 0.5f, "Seconds after a dash before the runner's fall-damage protection starts.");
+        DashFallProtectSeconds = Synced(blowgun, "DashFallProtectSeconds", 1f, "How long a dash protects the runner from fall damage (s), starting DashFallProtectDelay after the dash. 0 = off.");
         DashCooldownSeconds = Synced(blowgun, "DashCooldownSeconds", 32f, "Cooldown of the runner dash (s), shown above the gem's slot.");
         DashPetrify = Synced(blowgun, "DashPetrify", 0.03f, "Petrification each dash adds to the runner (0.03 = 3%).");
         SafeZonePetrifyRelief = Synced(blowgun, "SafeZonePetrifyRelief", 0.03f, "Petrification every runner in the safe zone loses when the runners win a leg (0.03 = 3%).");
         CapturePetrifyRelief = Synced(blowgun, "CapturePetrifyRelief", 0.05f, "Petrification a chaser loses for each capture (0.05 = 5%).");
-        SnowballBlindSeconds = Synced(blowgun, "SnowballBlindSeconds", 2.5f, "A snowball thrown by a runner blinds the chaser it hits (blue-flower blindness) for this long. 0 = off.");
+        SnowballBlindSeconds = Synced(blowgun, "SnowballBlindSeconds", 3f, "A snowball thrown by a runner blinds the chaser it hits (blue-flower blindness) for this long. 0 = off.");
         BlowdartDrowsy = Synced(blowgun, "BlowdartDrowsy", 0.18f, "Drowsiness (sleep) a dart adds to the runner it hits (0.18 = 18%).");
 
         const string effects = "2c. ChaseEffects";

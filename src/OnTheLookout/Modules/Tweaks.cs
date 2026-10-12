@@ -5,7 +5,8 @@ using UnityEngine;
 namespace OnTheLookout.Modules;
 
 /// <summary>
-/// Small rule tweaks: runner stamina regen, no Scoutmaster, no revival curse.
+/// Small rule tweaks: runner stamina regen, no Scoutmaster, no revival curse, energy drink drowsiness, slower hunger
+/// (none for runners in a safe zone).
 /// </summary>
 internal static class Tweaks
 {
@@ -32,6 +33,14 @@ internal static class Tweaks
         ok &= SafePatch.Prefix(harmony, typeof(Peak.Afflictions.Affliction_FasterBoi), nameof(Peak.Afflictions.Affliction_FasterBoi.OnRemoved), typeof(Tweaks), nameof(EnergyDrinkEndPrefix), m);
         ok &= SafePatch.Postfix(harmony, typeof(Peak.Afflictions.Affliction_FasterBoi), nameof(Peak.Afflictions.Affliction_FasterBoi.OnRemoved), typeof(Tweaks), nameof(EnergyDrinkEndPostfix), m);
 
+        // CharacterAfflictions.UpdateNormalStatuses() (prefix + postfix, private). Why: the per-frame vanilla hunger tick
+        // (AddStatus(Hunger, deltaTime * hungerPerSecond * Ascents.hungerRateMultiplier)) happens in here; the flag lets
+        // the AddStatus prefix below scale that tick only, not food or other hunger sources.
+        ok &= SafePatch.Prefix(harmony, typeof(CharacterAfflictions), "UpdateNormalStatuses", typeof(Tweaks), nameof(NormalStatusesPrefix), m);
+        ok &= SafePatch.Postfix(harmony, typeof(CharacterAfflictions), "UpdateNormalStatuses", typeof(Tweaks), nameof(NormalStatusesPostfix), m);
+        // CharacterAfflictions.AddStatus(STATUSTYPE, float, ...) (prefix). Why: scales the hunger tick above.
+        ok &= SafePatch.Prefix(harmony, typeof(CharacterAfflictions), nameof(CharacterAfflictions.AddStatus), typeof(Tweaks), nameof(HungerTickPrefix), m);
+
         // Interaction.DoInteractableRaycasts(out IInteractible, ...) (prefix). Why: finds what the player
         // can interact with each frame; returning nothing blocks every interaction and prompt.
         ok &= SafePatch.Prefix(harmony, typeof(Interaction), nameof(Interaction.DoInteractableRaycasts), typeof(Tweaks), nameof(InteractRaycastPrefix), m);
@@ -48,6 +57,26 @@ internal static class Tweaks
     {
         float m = EnergyDrinkMultiplier;
         if (m > 0f) __instance.drowsyOnEnd /= m;
+    }
+
+    private static bool s_InStatusTick;
+
+    public static void NormalStatusesPrefix() => s_InStatusTick = true;
+
+    public static void NormalStatusesPostfix() => s_InStatusTick = false;
+
+    /// <summary>
+    /// During a round the vanilla hunger tick (already scaled by the ascent) grows at HungerRateMultiplier of its
+    /// rate, and not at all for a runner standing in a safe zone.
+    /// </summary>
+    public static void HungerTickPrefix(CharacterAfflictions __instance, CharacterAfflictions.STATUSTYPE statusType, ref float amount)
+    {
+        if (!s_InStatusTick || statusType != CharacterAfflictions.STATUSTYPE.Hunger || amount <= 0f || !RoundManager.IsActive) return;
+        Character c = __instance.character;
+        if (c == null || !c.IsLocal) return;
+        amount = RoleManager.IsRunner(c) && SafeZoneSystem.IsSafe(c.Center)
+            ? 0f
+            : amount * Mathf.Max(0f, Plugin.ModConfig.HungerRateMultiplier.Synced());
     }
 
     public static bool InteractRaycastPrefix(ref IInteractible interactableResult)

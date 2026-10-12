@@ -11,7 +11,7 @@ namespace OnTheLookout.Modules;
 /// - its weight (Item.CarryWeight, which feeds the Weight status) is multiplied by FortifiedMilkWeightMultiplier;
 /// - the invincibility it gives (Affliction_Invincibility with isFromMilk) lasts FortifiedMilkInvincibilityMultiplier
 ///   of its vanilla time. That also shortens the capture protection milk gives runners.
-/// Same idea for the energy drink: its speed boost (Affliction_FasterBoi) lasts EnergyDrinkDurationMultiplier of its time.
+/// The energy drink keeps its vanilla length (only its drowsiness afterwards is scaled: <see cref="Tweaks"/>).
 /// </summary>
 internal static class MilkRules
 {
@@ -51,11 +51,6 @@ internal static class MilkRules
         if (affliction is Affliction_Invincibility { isFromMilk: true })
         {
             Shorten<Affliction_Invincibility>(__instance, affliction, Plugin.ModConfig.FortifiedMilkInvincibilityMultiplier.Synced());
-        }
-        else if (affliction is Affliction_FasterBoi && !ChaserKit.ApplyingBoost) // our own boosts keep their length
-        {
-            // The energy drink's speed boost (shroomberries' FasterBoi is already cut to 1 s by ShroomberryRules).
-            Shorten<Affliction_FasterBoi>(__instance, affliction, Plugin.ModConfig.EnergyDrinkDurationMultiplier.Synced());
         }
     }
 

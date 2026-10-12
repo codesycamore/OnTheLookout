@@ -120,7 +120,7 @@ internal static class ItemRules
             __result[i] = loot[UnityEngine.Random.Range(0, loot.Count)].gameObject;
         }
 
-        Plugin.Log.LogInfo($"[OTL][Items] clown luggage filled with {__result.Count} food/healing item(s).");
+        Plugin.Log.LogInfo($"[OTL][Items] clown luggage filled with: {string.Join(", ", __result.Select(g => g.GetComponent<Item>() is { } i ? ItemCatalog.NameOf(i) : g.name))}.");
     }
 
     /// <summary>

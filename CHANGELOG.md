@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.8.1
+
+- **Cooldowns refresh every leg:** when a leg starts, the blowgun, chaser gem and dash gem cooldowns are reset for everyone (freeze immunity was already reset).
+- **Hunger:** grows at **0.7×** the vanilla rate during a round (still scaled by the ascent, `HungerRateMultiplier`), and not at all for a runner in a safe zone.
+- **Dash fall protection:** from 0.5 s after a dash, the runner takes no fall damage (and isn't knocked down by a fall) for 1 s (`DashFallProtectDelay`, `DashFallProtectSeconds`).
+- **Energy drinks** last their vanilla time again (`EnergyDrinkDurationMultiplier` removed); the drowsiness when they wear off stays at 1.5×.
+- **No energy drinks or lollipops for chasers:** besides the name list, any item that gives the energy-drink speed boost or unlimited stamina is now refused to chasers and kept out of clown luggage. The host log lists what each clown luggage was filled with.
+- **Snowballs:** the hit is now detected on the thrower's client (which simulates the snowball) and sent to the scout it hit, who gets the extra **10%** push and, if a runner's snowball hit a chaser, **3 s** of blindness (was 2.5 s).
+- The runners' head-start countdown is in PEAK yellow (same style and transparency).
+- The host-controls hint uses a smaller font.
+
 ## 1.8.0
 
 - **Fog, lava and gloom back to vanilla:** they start rising on PEAK's own timer and at PEAK's own speed (no more 5-minute start and 2.5x speed). `FogStartDelaySeconds` and `FogSpeedMultiplier` are removed; 6 settings remain configurable. The fog still never hurts chasers.

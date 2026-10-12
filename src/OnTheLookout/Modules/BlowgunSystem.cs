@@ -18,6 +18,8 @@ internal static class BlowgunSystem
 
     public static float CooldownSecondsLeft => Mathf.Max(0f, s_CooldownUntil - Time.time);
 
+    public static void ResetCooldown() => s_CooldownUntil = 0f;
+
     public static bool Install(Harmony harmony)
     {
         const string m = "Blowgun";

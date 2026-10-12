@@ -124,7 +124,7 @@ internal sealed class HostMenu : MonoBehaviour
         plate.color = new Color(0.04f, 0.05f, 0.08f, 0.45f);
         plate.raycastTarget = false;
 
-        _hint = PeakMenuKit.AddText(_hintPlate, "", gui.interactNameText, 22f, new Color(1f, 0.84f, 0.2f, 1f), 30f);
+        _hint = PeakMenuKit.AddText(_hintPlate, "", gui.interactNameText, 18f, new Color(1f, 0.84f, 0.2f, 1f), 30f);
         RectTransform rt = _hint.rectTransform;
         rt.anchorMin = Vector2.zero;
         rt.anchorMax = Vector2.one;

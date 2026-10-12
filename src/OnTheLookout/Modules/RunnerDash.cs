@@ -12,6 +12,7 @@ namespace OnTheLookout.Modules;
 /// runner's own ragdoll (their client owns it): for a short moment every body part's horizontal velocity is set
 /// so the body covers the distance, then the extra speed is taken away again, so walls and slopes still stop
 /// it like any movement. Dashing in mid-air also floats the runner for DashAirFloatSeconds (no falling).
+/// From DashFallProtectDelay after the dash, the runner takes no fall damage for DashFallProtectSeconds.
 /// Each dash adds DashPetrify petrification and starts a DashCooldownSeconds cooldown
 /// (shown above the gem's slot). When the runners win a leg, every runner in the safe zone loses
 /// SafeZonePetrifyRelief petrification.
@@ -27,6 +28,13 @@ internal static class RunnerDash
     public static bool OnCooldown => Time.time < s_ReadyAt;
 
     public static float CooldownLeft => Mathf.Max(0f, s_ReadyAt - Time.time);
+
+    public static void ResetCooldown() => s_ReadyAt = 0f;
+
+    private static float s_FallSafeFrom, s_FallSafeUntil;
+
+    /// <summary>The local runner is inside their dash's fall-damage protection window (DashFallProtectDelay .. +DashFallProtectSeconds).</summary>
+    public static bool FallProtected => Time.time >= s_FallSafeFrom && Time.time < s_FallSafeUntil && RoleManager.IsRunner(Character.localCharacter);
 
     public static bool Install(Harmony harmony)
     {
@@ -79,6 +87,9 @@ internal static class RunnerDash
         s_ReadyAt = Time.time + Mathf.Max(1f, cfg.DashCooldownSeconds.Synced());
         int petrify = Mathf.RoundToInt(cfg.DashPetrify.Synced() * 100f);
         if (petrify > 0) holder.refs.afflictions.AddPetrify(petrify);
+        float protectFrom = Time.time + Mathf.Max(0f, cfg.DashFallProtectDelay.Synced());
+        s_FallSafeFrom = protectFrom;
+        s_FallSafeUntil = protectFrom + Mathf.Max(0f, cfg.DashFallProtectSeconds.Synced());
         float floatSeconds = holder.data.isGrounded ? 0f : Mathf.Max(0f, cfg.DashAirFloatSeconds.Synced()); // mid-air: hang in the air a moment
         ModNetwork.Instance?.StartCoroutine(Dash(holder, dir, Mathf.Max(0f, cfg.DashDistance.Synced()), floatSeconds));
         ChaserKit.PutAwayLater(holder, item); // hands free again after the dash (the gem stays in its slot)

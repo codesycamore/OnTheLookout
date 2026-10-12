@@ -103,10 +103,26 @@ internal static class ItemCatalog
         var cfg = Plugin.ModConfig;
         return info.BanReason == null
             && !MatchesList(e, cfg.ChaserForbiddenItems.Synced()) // explicit block-list beats the food/healing rules
+            && !IsSugar(e) // energy drinks, lollipops and anything else that gives a speed boost or unlimited stamina
             && (info.Blowgun
                 || MatchesList(e, cfg.ChaserAllowedItems.Synced())
                 || (cfg.ChaserAutoAllowHealing.Synced() && info.Healing)
                 || (cfg.ChaserAutoAllowFood.Synced() && info.Food));
+    }
+
+    private static readonly Dictionary<ushort, bool> s_Sugar = new();
+
+    /// <summary>
+    /// Gives the energy-drink speed boost (Affliction_FasterBoi) or the lollipop's unlimited stamina
+    /// (Action_ApplyInfiniteStamina / Affliction_InfiniteStamina) when used: never for chasers, never in clown luggage.
+    /// </summary>
+    public static bool IsSugar(Item item)
+    {
+        if (s_Sugar.TryGetValue(item.itemID, out bool cached)) return cached;
+        bool sugar = Has<Action_ApplyInfiniteStamina>(item)
+            || item.GetComponentsInChildren<Action_ApplyAffliction>(true).Any(a => a.affliction is Peak.Afflictions.Affliction_FasterBoi or Peak.Afflictions.Affliction_InfiniteStamina);
+        if (sugar) Plugin.Log.LogInfo($"[OTL][Items] {NameOf(item)} gives a speed boost / unlimited stamina: never for chasers.");
+        return s_Sugar[item.itemID] = sugar;
     }
 
     private static Info Classify(Item item)
@@ -260,7 +276,7 @@ internal static class ItemCatalog
             return s_ClownLoot ??= AllItems()
                 .Where(i => s_Legit != null && s_Legit.Contains(i.itemID) && i.isSecretlyOtherItemPrefab == null)
                 .Where(i => i.GetComponent<LootData>() is { } loot && loot.spawnLocations != SpawnPool.None)
-                .Where(i => !RemoveFromWorld(i) && (Classify(i).Food || Classify(i).Healing) && !MatchesList(i, Plugin.ModConfig.ChaserForbiddenItems.Synced()))
+                .Where(i => !RemoveFromWorld(i) && (Classify(i).Food || Classify(i).Healing) && !MatchesList(i, Plugin.ModConfig.ChaserForbiddenItems.Synced()) && !IsSugar(i))
                 .ToList();
         }
     }

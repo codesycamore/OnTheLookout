@@ -9,7 +9,8 @@ namespace OnTheLookout.Modules;
 /// - they take only a fraction (default 1/3) of every negative status they would get in vanilla
 ///   (injury, cold, poison, drowsy, ...; ascent scaling is already in the vanilla amount). Hunger is
 ///   left exactly as vanilla, the same as for runners;
-/// - fall damage is reduced (default 1/4 of vanilla, still scaled by the ascent like vanilla);
+/// - fall damage is reduced (default 1/3 of vanilla, still scaled by the ascent like vanilla);
+/// - (runners) no fall damage at all shortly after a dash (<see cref="RunnerDash"/>);
 /// - mushroom zombies ignore them and their bites do nothing to them.
 /// Statuses are owned by each player's own client, so all of this runs on the chaser's client.
 /// </summary>
@@ -43,7 +44,17 @@ internal static class ChaserResilience
         return ok;
     }
 
-    public static void FallPrefix() => s_FallFrame = Time.frameCount;
+    /// <summary>
+    /// Skips the whole check (no damage, no knock-down) for the local runner inside their dash's fall protection
+    /// (<see cref="RunnerDash.FallProtected"/>); otherwise marks the frame so the injury can be scaled for chasers.
+    /// </summary>
+    public static bool FallPrefix(Character ___character)
+    {
+        if (___character != null && ___character.IsLocal && RunnerDash.FallProtected) return false;
+
+        s_FallFrame = Time.frameCount;
+        return true;
+    }
 
     public static void FallPostfix() => s_FallFrame = -1;
 

@@ -31,6 +31,9 @@ internal enum Msg : byte
 
     /// <summary>chaser -> the runner being captured: [chaserActor, startServerTime, durationMs] (durationMs 0 = stopped)</summary>
     CaptureProgress = 9,
+
+    /// <summary>snowball owner -> the scout it hit: [throwerActor, pushX, pushY, pushZ, bodypartType]</summary>
+    SnowballHit = 10,
 }
 
 internal enum Notice : byte

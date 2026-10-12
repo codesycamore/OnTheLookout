@@ -262,6 +262,7 @@ internal sealed class Hud : MonoBehaviour
         bool chaser = local != null && RoundManager.IsActive && RoleManager.RoleOf(Net.Actor(local)) == Role.Chaser;
         string main = "", sub = "";
         Color color = Color.white;
+        Color subColor = Color.white;
         float alpha = 1f;
 
         if (Time.time < _announceUntil)
@@ -281,6 +282,7 @@ internal sealed class Hud : MonoBehaviour
             main = Mathf.CeilToInt(RoundManager.HoldSecondsLeft).ToString();
             sub = chaser ? "THE HUNT BEGINS IN" : "YOU HAVE A HEADSTART... RUN!";
             alpha = chaser ? 1f : Mathf.Clamp01(Plugin.ModConfig.CountdownOpacity.Value);
+            if (!chaser) color = subColor = RunnerYellow; // the runners' head start message in PEAK yellow
         }
 
         if (main != _lastCenter)
@@ -294,7 +296,7 @@ internal sealed class Hud : MonoBehaviour
         _centerMain.text = main;
         _centerSub.text = sub;
         _centerMain.color = new Color(color.r, color.g, color.b, alpha);
-        _centerSub.color = new Color(1f, 1f, 1f, alpha * 0.85f);
+        _centerSub.color = new Color(subColor.r, subColor.g, subColor.b, alpha * 0.85f);
 
         // Chasers are blind during the reveal and head start; the blackness fades over the last 40%.
         float blind = 0f;
