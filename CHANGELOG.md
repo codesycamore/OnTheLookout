@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.8.0
+
+- **Fog, lava and gloom back to vanilla:** they start rising on PEAK's own timer and at PEAK's own speed (no more 5-minute start and 2.5x speed). `FogStartDelaySeconds` and `FogSpeedMultiplier` are removed; 6 settings remain configurable. The fog still never hurts chasers.
+- **Captures fixed:** a runner's backpack or fanny pack, thorns, arrows and stuck items can no longer take over a chaser's interaction (the backpack menu could open in place of the capture when the chaser was just outside capture range). A capture starts with the cursor anywhere on the runner, from any side, and once started keeps going while the runner moves; it only breaks if they get clearly out of reach (1 m beyond `CaptureRange`), drink fortified milk or reach a safe zone.
+- **Chasers can only capture runners:** no carrying a passed-out runner, no using items on them, no opening their backpack or fanny pack, no pulling thorns, arrows or stuck items off them.
+- **Capture rush:** each capture now gives the chaser an energy drink + lollipop for **4 s** (speed boost and unlimited stamina, no drowsiness; `CaptureBoostSeconds`), and each further capture while it runs adds **3 s** (`CaptureBoostExtendSeconds`). Replaces the small speed boost and the morale boost.
+- Chaser gem cooldown **20 s** (was 60) and **3%** petrification (was 8%).
+- Runner dash cooldown **32 s** (was 70) and **3%** petrification (was 5%).
+- Freezes last **8 s** (was 10).
+- **Red glow on chasers fixed:** it is now kept up every frame at full strength, exactly like fortified milk's glow, instead of fading between refreshes and losing to PEAK's other status pulses.
+- **Gathering at the campfire:** after a leg everyone is placed within about 4 m of the campfire. When the role window closes, anyone more than 5 m away (or still dead) gets everyone brought there once more, and roles and timers start 1.5 s later. A chaser frozen in mid-air when the leg ends is no longer pulled back to where they froze.
+
 ## 1.7.2
 
 - **Gems put themselves away:** after a gem's ability fires (the chaser boost or the runner dash), the gem goes back to its hotbar slot so the hands are free; it isn't dropped.

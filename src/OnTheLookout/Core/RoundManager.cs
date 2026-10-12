@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Linq;
+using System.Collections.Generic;
 using ExitGames.Client.Photon;
 using Hashtable = ExitGames.Client.Photon.Hashtable;
 using OnTheLookout.Freeze;
@@ -255,6 +256,15 @@ internal static class RoundManager
     private static float s_WindowDue;
     private static Campfire? s_WindowFire;
 
+    /// <summary>Everyone was already brought to the campfire a second time this role window.</summary>
+    private static bool s_Regathered;
+
+    /// <summary>When the role window closes, everyone must be at most this far from the campfire (m, horizontally).</summary>
+    private const float GatherCheckRadius = 5f;
+
+    /// <summary>Wait after bringing everyone to the campfire a second time, before roles are drawn (s).</summary>
+    private const float RegatherSettleSeconds = 1.5f;
+
     /// <summary>
     /// Between a leg's end and the next leg: everyone is at the campfire, frozen, and can update their role
     /// choice in the role menu. When it closes the host draws new roles and lights the campfire.
@@ -363,6 +373,7 @@ internal static class RoundManager
         HostGatherAt(fire.transform.position);
 
         s_WindowPending = true;
+        s_Regathered = false;
         s_WindowFire = fire;
         s_WindowDue = Time.time + seconds;
         Plugin.Log.LogInfo($"[OTL][Round] HOST: leg {s_LegId} won by the {(chasersWon ? "chasers" : "runners")}; role window open for {seconds:0.#}s.");
@@ -371,8 +382,20 @@ internal static class RoundManager
     /// <summary>Host: the role window is over. New roles are drawn and the campfire lights itself, which starts the next leg.</summary>
     private static void HostCloseRoleWindow()
     {
-        s_WindowPending = false;
         Campfire? fire = s_WindowFire != null ? s_WindowFire : NextCampfire();
+
+        // Everyone must be at the campfire before roles are drawn and the timers start. Anyone who isn't (a warp
+        // that didn't take, a revive still settling, someone who slid off): bring everyone there once more.
+        if (fire != null && !s_Regathered && HostFarFromCampfire(fire.transform.position) is { Count: > 0 } far)
+        {
+            s_Regathered = true;
+            Plugin.Log.LogWarning($"[OTL][Round] HOST: {string.Join(", ", far)} not within {GatherCheckRadius:0}m of the campfire; bringing everyone there again.");
+            HostGatherAt(fire.transform.position);
+            s_WindowDue = Time.time + RegatherSettleSeconds;
+            return;
+        }
+
+        s_WindowPending = false;
         s_WindowFire = null;
         RoleManager.AssignFromPreferences();
         if (fire != null && fire.state == Campfire.FireState.Off && fire.view != null)
@@ -384,7 +407,22 @@ internal static class RoundManager
         if (InRoleWindow) HostStartLeg(); // no campfire to light (or it was lit already): start the leg anyway
     }
 
-    /// <summary>Host: everyone to the campfire. The dead are revived there (scout statues are disabled).</summary>
+    /// <summary>Host: the names of the players (living or dead) further than GatherCheckRadius from the campfire.</summary>
+    private static List<string> HostFarFromCampfire(Vector3 campfire)
+    {
+        var far = new List<string>();
+        foreach (Character c in Character.AllCharacters)
+        {
+            if (c == null || c.isBot) continue;
+            Vector3 offset = c.Center - campfire;
+            offset.y = 0f;
+            if (c.data.dead || offset.magnitude > GatherCheckRadius) far.Add(c.characterName);
+        }
+
+        return far;
+    }
+
+    /// <summary>Host: everyone to the campfire (within 2.5-4.1 m of it). The dead are revived there (scout statues are disabled).</summary>
     private static void HostGatherAt(Vector3 campfire)
     {
         int i = 0;
@@ -392,7 +430,7 @@ internal static class RoundManager
         {
             if (c == null || c.isBot) continue;
             float angle = (i++ * 47f + 20f) * Mathf.Deg2Rad;
-            float distance = 3.5f + (i % 3) * 1.2f;
+            float distance = 2.5f + (i % 3) * 0.8f;
             Vector3 spot = campfire + new Vector3(Mathf.Cos(angle) * distance, 1f, Mathf.Sin(angle) * distance);
             if (c.data.dead || c.data.fullyPassedOut) c.view.RPC("RPCA_ReviveAtPosition", RpcTarget.All, spot, false, -1);
             else c.view.RPC("WarpPlayerRPC", RpcTarget.All, spot, true);

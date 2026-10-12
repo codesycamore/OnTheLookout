@@ -21,23 +21,26 @@ namespace OnTheLookout.UI;
 /// </summary>
 internal sealed class ChaseEffects : MonoBehaviour
 {
-    private void Update() => UpdateChaserGlow();
+    private void LateUpdate()
+    {
+        UpdateChaserGlow();
+        UpdateChaseMusic();
+    }
 
     // ---------- Red glow on chasers ----------
 
     private static readonly Color ChaserGlow = new(1f, 0.08f, 0.05f);
-    private float _nextGlow;
 
     /// <summary>
     /// Every living chaser glows red, on every client: PEAK's own status glow on the character's body
-    /// (CharacterCustomization.PulseStatus), refreshed before it fades, the way the yellow invincibility glow of
-    /// fortified milk is kept up (Affliction_Invincibility.UpdateEffectNetworked). A frozen chaser shows the
+    /// (CharacterCustomization.PulseStatus), kept up the same way as the yellow invincibility glow of fortified milk
+    /// (Affliction_Invincibility.UpdateEffectNetworked): refreshed every frame. It runs in LateUpdate, after PEAK's
+    /// own status pulses (petrification, cold, ...), so the red wins every frame. A frozen chaser shows the
     /// icy freeze pulses instead, and an invincible one PEAK's own glow.
     /// </summary>
     private void UpdateChaserGlow()
     {
-        if (!RoundManager.IsActive || !Plugin.ModConfig.ChaserRedOutline.Synced() || Time.time < _nextGlow) return;
-        _nextGlow = Time.time + 0.1f;
+        if (!RoundManager.IsActive || !Plugin.ModConfig.ChaserRedOutline.Synced()) return;
         float intensity = Mathf.Clamp(Plugin.ModConfig.ChaserGlowIntensity.Synced(), 0f, 2f);
         foreach (Character c in Character.AllCharacters)
         {
@@ -58,7 +61,7 @@ internal sealed class ChaseEffects : MonoBehaviour
     /// We do the same for the local runner with the nearest living chaser, so it plays (continuously, with
     /// vanilla fading) exactly like being hunted by the Scoutmaster.
     /// </summary>
-    private void LateUpdate()
+    private void UpdateChaseMusic()
     {
         if (!RoundManager.IsChasing || !Plugin.ModConfig.ScoutmasterChaseMusic.Synced()) return;
         Character local = Character.localCharacter;

@@ -69,6 +69,13 @@ internal static class FreezeSuspendPatch
             return;
         }
 
+        // The leg ended (everyone is brought to the campfire): a mid-air hold must not pull them back out to where they froze.
+        if (!RoundManager.IsChasing)
+        {
+            End();
+            return;
+        }
+
         // Pull the whole body back toward the anchor; kills jump momentum and any drift from
         // animation forces while still letting the ragdoll hold its pose.
         Vector3 hip = character.GetBodypart(BodypartType.Hip).Rig.position;

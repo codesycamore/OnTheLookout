@@ -33,6 +33,7 @@ internal static class TagSystem
         ok &= SafePatch.Prefix(harmony, ci, nameof(CharacterInteractible.IsInteractible), t, nameof(BoolPrefix), m);
         ok &= SafePatch.Prefix(harmony, ci, nameof(CharacterInteractible.IsPrimaryInteractible), t, nameof(BoolPrefix), m);
         ok &= SafePatch.Prefix(harmony, ci, nameof(CharacterInteractible.IsConstantlyInteractable), t, nameof(BoolPrefix), m);
+        ok &= SafePatch.Prefix(harmony, ci, nameof(CharacterInteractible.IsSecondaryInteractible), t, nameof(SecondaryPrefix), m); // using an item on them (feeding, healing)
         ok &= SafePatch.Prefix(harmony, ci, nameof(CharacterInteractible.GetInteractionText), t, nameof(TextPrefix), m);
         ok &= SafePatch.Prefix(harmony, ci, nameof(CharacterInteractible.GetInteractTime), t, nameof(TimePrefix), m);
         ok &= SafePatch.Prefix(harmony, ci, nameof(CharacterInteractible.Interact), t, nameof(InteractPrefix), m);
@@ -58,29 +59,80 @@ internal static class TagSystem
         return !SafeZoneSystem.IsSafe(runner.Center);
     }
 
-    /// <summary>CaptureRange, a little more while the local chaser is already holding on this runner (so the hold doesn't flicker).</summary>
+    /// <summary>
+    /// CaptureRange; once the local chaser is holding on this runner, HoldExtraReach more, so the hold keeps going
+    /// while the runner moves about and only breaks when they really got away.
+    /// </summary>
     private static float CaptureReach(Character runner) =>
-        Mathf.Max(0.5f, Plugin.ModConfig.CaptureRange.Synced()) + (s_HoldTarget == runner ? 0.4f : 0f);
+        Mathf.Max(0.5f, Plugin.ModConfig.CaptureRange.Synced()) + (s_HoldTarget == runner ? HoldExtraReach : 0f);
+
+    private const float HoldExtraReach = 1f;
+
+    /// <summary>How far the look ray checks for a runner's body (m from the camera).</summary>
+    private const float LookRayDistance = 4f;
 
     /// <summary>
-    /// Interaction.DoInteractableRaycasts postfix (local player): for a chaser, a capturable runner within
-    /// CaptureRange in front of the camera always wins over whatever the look ray found, whichever way the
-    /// runner faces: their backpack or fanny pack, thorns/arrows/cactus balls stuck on either scout, items,
-    /// and so on. Further away, interaction works as in vanilla.
+    /// Interaction.DoInteractableRaycasts postfix (local player). For a chaser during a round:
+    /// - while holding a capture, the runner stays the target as long as they can be captured (in reach, no milk,
+    ///   not in a safe zone), however they move or turn and wherever the chaser's cursor drifts;
+    /// - a capturable runner the cursor is on (any part of their body, their backpack or fanny pack, anything stuck
+    ///   on them), or anywhere near the middle of the view, is the target, whichever way the runner faces: it
+    ///   always wins over whatever the look ray found (their pack, thorns/arrows/cactus balls, items, ...);
+    /// - otherwise nothing that belongs to a runner can be interacted with: no carrying them, no opening their
+    ///   backpack or fanny pack, no pulling thorns, arrows or stuck items off them.
     /// </summary>
     public static void RaycastPostfix(ref IInteractible interactableResult)
     {
         Character local = Character.localCharacter;
-        if (local == null || !RoundManager.IsChasing || !RoleManager.IsChaser(local)) return;
+        if (local == null || !RoundManager.IsActive || !RoleManager.IsChaser(local)) return;
+
+        CharacterInteractible? target = RoundManager.IsChasing ? CaptureTarget(local) : null;
+        if (target != null)
+        {
+            interactableResult = target;
+            return;
+        }
+
+        Character? owner = OwnerOf(interactableResult);
+        if (owner != null && owner != local && RoleManager.IsRunner(owner)) interactableResult = null!;
+    }
+
+    private static CharacterInteractible? CaptureTarget(Character local)
+    {
+        // Keep holding on the runner being captured.
+        CharacterInteractible? held = s_HoldTarget != null ? s_HoldTarget.refs.interactible : null;
+        if (held != null && CanCapture(held, local)) return held;
 
         Transform cam = MainCamera.instance != null ? MainCamera.instance.transform : local.GetBodypart(BodypartType.Head).transform;
+
+        // The cursor is on a runner (their body or anything on it): the first thing the look ray hits, not counting
+        // the chaser's own body or held item.
+        int hits = Physics.RaycastNonAlloc(cam.position, cam.forward, s_RayHits, LookRayDistance,
+            HelperFunctions.GetMask(HelperFunctions.LayerType.AllPhysical), QueryTriggerInteraction.Collide);
+        Collider? first = null;
+        float firstDistance = float.MaxValue;
+        for (int i = 0; i < hits; i++)
+        {
+            RaycastHit hit = s_RayHits[i];
+            if (hit.collider == null || hit.distance >= firstDistance) continue;
+            Character? owner = hit.collider.GetComponentInParent<Character>();
+            if (owner == local) continue;
+            if (owner == null && Item.TryGetItemFromCollider(hit.collider, out Item heldItem) && heldItem != null && heldItem.holderCharacter == local) continue;
+            first = hit.collider;
+            firstDistance = hit.distance;
+        }
+
+        Character? looked = first != null ? first.GetComponentInParent<Character>() : null;
+        if (looked != null && RoleManager.IsRunner(looked) && looked.refs.interactible is { } lookedAt && CanCapture(lookedAt, local)) return lookedAt;
+
+        // Otherwise the capturable runner nearest the middle of the view (up close: in any direction).
         CharacterInteractible? best = null;
         float bestScore = float.MaxValue;
         foreach (Character c in Character.AllCharacters)
         {
             if (c == null || c == local || !RoleManager.IsRunner(c)) continue;
-            CharacterInteractible? target = c.GetComponent<CharacterInteractible>();
-            if (target == null || !CanCapture(target, local)) continue;
+            CharacterInteractible? candidate = c.refs.interactible;
+            if (candidate == null || !CanCapture(candidate, local)) continue;
             Vector3 to = c.Center - cam.position;
             float angle = Vector3.Angle(cam.forward, to);
             if (angle > CaptureConeDegrees && to.magnitude > 0.9f) continue; // up close, any direction counts
@@ -88,19 +140,55 @@ internal static class TagSystem
             if (score < bestScore)
             {
                 bestScore = score;
-                best = target;
+                best = candidate;
             }
         }
 
-        if (best != null) interactableResult = best;
+        return best;
     }
 
     private const float CaptureConeDegrees = 80f;
 
+    private static readonly RaycastHit[] s_RayHits = new RaycastHit[32];
+
+    /// <summary>The scout an interactable belongs to: the scout themselves, their pack, thorns/arrows in them, items stuck on them.</summary>
+    private static Character? OwnerOf(IInteractible? interactable)
+    {
+        switch (interactable)
+        {
+            case null:
+                return null;
+            case CharacterInteractible ci:
+                return ci.character;
+            case BackpackOnBackVisuals pack:
+                return pack.character;
+            case ThornOnMe thorn:
+                return thorn.character;
+            case Item item when item.GetComponent<StickyItemComponent>() is { } sticky && sticky.stuckToCharacter != null:
+                return sticky.stuckToCharacter;
+        }
+
+        Transform? t = interactable.GetTransform();
+        return t != null ? t.GetComponentInParent<Character>() : null;
+    }
+
+    /// <summary>A chaser and a runner during a round: the only interaction between them is the capture (no carrying, feeding, ...).</summary>
+    private static bool ChaserOnRunner(CharacterInteractible target, Character? interactor) =>
+        RoundManager.IsActive && interactor != null && target.character != null && target.character != interactor
+        && RoleManager.IsChaser(interactor) && RoleManager.IsRunner(target.character);
+
     public static bool BoolPrefix(CharacterInteractible __instance, Character interactor, ref bool __result)
     {
-        if (!CanCapture(__instance, interactor)) return true;
-        __result = true;
+        if (CanCapture(__instance, interactor)) __result = true;
+        else if (ChaserOnRunner(__instance, interactor)) __result = false;
+        else return true;
+        return false;
+    }
+
+    public static bool SecondaryPrefix(CharacterInteractible __instance, Character interactor, ref bool __result)
+    {
+        if (!ChaserOnRunner(__instance, interactor)) return true;
+        __result = false;
         return false;
     }
 
@@ -121,7 +209,7 @@ internal static class TagSystem
     /// <summary>Pressing interact on a runner as a chaser starts the hold; it must not also carry/drop them.</summary>
     public static bool InteractPrefix(CharacterInteractible __instance, Character interactor)
     {
-        if (!CanCapture(__instance, interactor)) return true;
+        if (!CanCapture(__instance, interactor)) return !ChaserOnRunner(__instance, interactor); // never carries a runner
         // Tell the runner a capture is under way, so they see the same progress (CaptureIndicator).
         int ms = Mathf.RoundToInt(Mathf.Max(0.1f, Plugin.ModConfig.CaptureHoldSeconds.Synced()) * 1000f);
         SendProgress(__instance.character, Net.Actor(interactor), ms);
@@ -149,7 +237,7 @@ internal static class TagSystem
 
     public static bool CastFinishedPrefix(CharacterInteractible __instance, Character interactor)
     {
-        if (!CanCapture(__instance, interactor)) return true;
+        if (!CanCapture(__instance, interactor)) return !ChaserOnRunner(__instance, interactor);
         int chaserActor = Net.Actor(interactor), runnerActor = Net.Actor(__instance.character);
         Plugin.Log.LogInfo($"[OTL][Tag] capture hold finished on {Net.NameOf(runnerActor)}; claiming.");
         if (Net.IsHost) HostHandleClaim(chaserActor, runnerActor, PhotonNetwork.LocalPlayer.ActorNumber);

@@ -317,3 +317,21 @@ Debug keys (host, bottom-left hint): **F7** start or restart a round, **F6** swa
 - **Revised (2026-10-11):** `DashDistance` 4.3 m, `DashPetrify` 0.05, `HeadStartBoostSeconds` 4 s; mandrake settings removed from `ModConfig.Configurable` (8 configurable settings left). Dev profile config set to reset on its next launch (`ConfigWrittenByVersion` blanked).
 - **Shore interaction lock (2026-10-11):** `RoundManager.InSpawnLock` on leg 1 now lasts until the reveal ends (`RevealEnd`) instead of 7 s from the leg start (which ran ~3 s into the head start). `SpawnInteractLockSeconds` removed.
 - **Gems auto put away (2026-10-11):** after the chaser boost or the runner dash actually fires, the user's client calls `CharacterItems.EquipSlot(None)` one frame later (only if they still hold that gem), same as pressing the slot again. Not on a press during cooldown.
+
+### 1.8.0 (2026-10-11)
+
+- **Fog, lava and gloom vanilla again** (user: "just want it to be like vanilla ... default start rising timer and default speed"): the `OrbFogHandler.Move`/`WaitToMove`, `Fog.Move` and `LavaRising.Update` patches are gone, and so are `FogStartDelaySeconds`/`FogSpeedMultiplier`. Kept: fog damage gate for chasers (`FogSphere.SetSharderVars` transpiler, `Fog.MakePlayerCold`).
+- **Capture "bug" cause:** vanilla interaction reaches 2 m from the camera, capture only 1.4 m between bodies, so between the two the runner's `BackpackOnBackVisuals` (0.25 s hold, shorter than the capture) won and opened the backpack wheel. Now, for a chaser, anything owned by a runner (`CharacterInteractible`, `BackpackOnBackVisuals`, `ThornOnMe`/`ArrowOnMe`, items stuck to them) is never a target except the capture itself. Target selection: hold target first (reach +1 m while holding), then a look ray onto the runner's body, then the old cone. `IsInteractible` / `IsPrimaryInteractible` / `IsConstantlyInteractable` / `IsSecondaryInteractible` return false chaser→runner when no capture is possible, and `Interact` never carries.
+- **Red glow:** milk calls `PulseStatus(gold, 1)` every frame (`Affliction_Invincibility.UpdateEffectNetworked`). Ours ran every 0.1 s at 0.8, each pulse fading over 0.5 s, and lost to PEAK's own status pulses. It now runs every frame in `LateUpdate` at 1.0.
+- **Capture rush:** `ChaserKit.ApplySugarRush`: lengthens an existing `Affliction_FasterBoi` / `Affliction_InfiniteStamina` (`totalTime = timeElapsed + seconds`) instead of stacking. `InfiniteStamina.Stack` would NRE on a lollipop's drowsy part.
+- **Gather check:** `HostGatherAt` spots 2.5-4.1 m; at window close any player >5 m horizontally (or dead) triggers one more gather and a 1.5 s settle. `FreezeSuspendPatch` releases the mid-air anchor when not chasing.
+
+**Test checklist (1.8.0)**
+- [ ] Chaser 1.5-2 m behind a runner with a backpack: no "open" prompt; walking closer shows CAPTURE and the hold completes.
+- [ ] Capture while the runner strafes/turns: hold completes; runner sprinting away (>2.4 m) breaks it.
+- [ ] Chaser on a passed-out runner: only CAPTURE, never carry; in a safe zone: no prompt at all.
+- [ ] Runner with thorns/arrows: chaser gets no "remove" prompt.
+- [ ] Capture: speed + rainbow stamina bar for 4 s; second capture within it adds 3 s; no drowsiness after.
+- [ ] Chasers visibly glow red to runners (compare with milk).
+- [ ] Fog starts on vanilla timing/speed; chasers take no fog damage; Caldera lava rises on vanilla timing.
+- [ ] Leg end: log shows no "not within 5m" warning normally; if it does, everyone is regathered and roles follow 1.5 s later.

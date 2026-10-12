@@ -25,8 +25,6 @@ internal sealed class ModConfig
         "ZombieWaveDelaySeconds",
         "ZombieLifetimeSeconds",
         "HeadStartBoostSeconds",
-        "FogSpeedMultiplier",
-        "FogStartDelaySeconds",
     };
 
     private const string VersionSection = "0. Version";
@@ -67,15 +65,14 @@ internal sealed class ModConfig
     public ConfigEntry<float> HeadStartBoostSeconds { get; }
     public ConfigEntry<bool> DisableScoutStatues { get; }
     public ConfigEntry<bool> PeakChasersDie { get; }
-    public ConfigEntry<bool> CaptureMoraleBoost { get; }
+
     public ConfigEntry<float> EnergyDrinkDrowsyMultiplier { get; }
     public ConfigEntry<float> BlowdartDrowsy { get; }
     public ConfigEntry<string> RewardItems { get; }
     public ConfigEntry<float> ChaserSpeedMultiplier { get; }
     public ConfigEntry<float> ChaserClimbSpeedMultiplier { get; }
-    public ConfigEntry<float> CaptureBoostPercent { get; }
-    public ConfigEntry<float> CaptureBoostStackPercent { get; }
     public ConfigEntry<float> CaptureBoostSeconds { get; }
+    public ConfigEntry<float> CaptureBoostExtendSeconds { get; }
     public ConfigEntry<float> RunnerStaminaRegenMultiplier { get; }
     public ConfigEntry<string> RunnerLegItems { get; }
     public ConfigEntry<string> RunnerBiomeItems { get; }
@@ -137,9 +134,6 @@ internal sealed class ModConfig
     public ConfigEntry<float> CampfireSafeRadius { get; }
     public ConfigEntry<bool> SafeZoneRequiresLit { get; }
 
-    // Fog
-    public ConfigEntry<float> FogSpeedMultiplier { get; }
-    public ConfigEntry<float> FogStartDelaySeconds { get; }
 
     // Items
     public ConfigEntry<string> ChaserAllowedItems { get; }
@@ -202,7 +196,7 @@ internal sealed class ModConfig
         EnableFreeze = Local(mod, "EnableFreeze", true, "Runners freeze chasers by looking at them.");
         EnableTag = Local(mod, "EnableTag", true, "Chasers capture runners by holding interact on them (like eating a scout).");
         EnableSafeZones = Local(mod, "EnableSafeZones", true, "Campfires are safe zones.");
-        EnableFog = Local(mod, "EnableFog", true, "Faster fog that only hurts runners.");
+        EnableFog = Local(mod, "EnableFog", true, "Fog never hurts chasers (fog, lava and gloom otherwise rise as in vanilla).");
         EnableItemRules = Local(mod, "EnableItemRules", true, "Chaser item restrictions and banned items.");
         EnableRewards = Local(mod, "EnableRewards", true, "First runner into each campfire safe zone gets a reward item (see 9. Rewards).");
 
@@ -228,13 +222,12 @@ internal sealed class ModConfig
         HeadStartBoostSeconds = Synced(round, "HeadStartBoostSeconds", 4f, "Runners get an energy-drink speed boost (no drowsiness afterwards) for the last this-many seconds of their head start. 0 = off.");
         DisableScoutStatues = Synced(round, "DisableScoutStatues", true, "Scout statues do nothing during a round (no revives, no items). Everyone is brought back at the campfire after each leg instead.");
         PeakChasersDie = Synced(round, "PeakChasersDie", true, "When every living runner has reached the peak, the runners win and every living chaser is brought to the peak and dies.");
-        CaptureMoraleBoost = Synced(round, "CaptureMoraleBoost", true, "A chaser who captures a runner also gets a full morale boost (full extra-stamina bar).");
+
         EnergyDrinkDrowsyMultiplier = Synced(round, "EnergyDrinkDrowsyMultiplier", 1.5f, "Multiplier for the drowsiness an energy drink causes when it wears off.");
         ChaserSpeedMultiplier = Synced(round, "ChaserSpeedMultiplier", 1.15f, "Chaser movement speed multiplier (they can't use most items).");
         ChaserClimbSpeedMultiplier = Synced(round, "ChaserClimbSpeedMultiplier", 1.06f, "Chaser climbing speed on walls, ropes and vines (1.06 = 6% faster).");
-        CaptureBoostPercent = Synced(round, "CaptureBoostPercent", 1f, "Temporary chaser speed boost (%) after a capture.");
-        CaptureBoostStackPercent = Synced(round, "CaptureBoostStackPercent", 0.5f, "Extra boost (%) for each further capture while the boost is still active.");
-        CaptureBoostSeconds = Synced(round, "CaptureBoostSeconds", 5f, "How long the capture boost lasts (refreshed by each capture).");
+        CaptureBoostSeconds = Synced(round, "CaptureBoostSeconds", 4f, "A chaser who captures a runner gets an energy drink + lollipop boost (speed and unlimited stamina, no drowsiness afterwards) for this long (s). 0 = off.");
+        CaptureBoostExtendSeconds = Synced(round, "CaptureBoostExtendSeconds", 3f, "Each further capture while that boost is still running adds this many seconds to it.");
         RunnerStaminaRegenMultiplier = Synced(round, "RunnerStaminaRegenMultiplier", 1.185f, "Runner stamina regeneration multiplier (1.185 = 18.5% faster).");
         RunnerLegItems = Synced(round, "RunnerLegItems", "Snowball, Brown Berrynana, Fortified Milk", "At the start of each leg every runner gets ONE random item from this list (prefab or display names, comma separated). Empty = off.");
         RunnerBiomeItems = Synced(round, "RunnerBiomeItems", "Alpine:Heat Pack, Volcano:Sports Drink, Swamp:EarlyWorm, Mesa:Aloe Vera", "Extra item every runner gets at the start of a leg in that biome, as \"Biome:Item\" pairs. Biomes use PEAK's names (Caldera = Volcano; The Gloom is assumed to be Swamp).");
@@ -256,15 +249,15 @@ internal sealed class ModConfig
         GemBoostSeconds = Synced(blowgun, "GemBoostSeconds", 2.25f, "Length of the chaser gem's effects (speed boost and unlimited stamina) (s).");
         GemDelaySeconds = Synced(blowgun, "GemDelaySeconds", 1f, "The chaser gem's effects start this long after it is used (s).");
         GemInfiniteStamina = Synced(blowgun, "GemInfiniteStamina", true, "The chaser gem also gives unlimited stamina (the rainbow stamina bar) for its duration, without drowsiness afterwards.");
-        GemCooldownSeconds = Synced(blowgun, "GemCooldownSeconds", 60f, "Cooldown of the chaser gem (s). It starts when the gem's effects wear off.");
-        GemPetrify = Synced(blowgun, "GemPetrify", 0.08f, "Petrification each gem use adds to the chaser (0.08 = 8%).");
+        GemCooldownSeconds = Synced(blowgun, "GemCooldownSeconds", 20f, "Cooldown of the chaser gem (s). It starts when the gem's effects wear off.");
+        GemPetrify = Synced(blowgun, "GemPetrify", 0.03f, "Petrification each gem use adds to the chaser (0.03 = 3%).");
         SnowballKnockbackBonus = Synced(blowgun, "SnowballKnockbackBonus", 0.1f, "Extra push a thrown snowball gives the scout it hits, as a fraction of its own impact (0.1 = 10% stronger).");
         RunnerGem = Synced(blowgun, "RunnerGem", true, "Runners carry a scout gem (Scout's Ambition) in their hotbar: using it dashes them DashDistance forward (where they look, horizontally), with a cooldown and some petrification as the cost. Its vanilla power is never used; chasers can't use it.");
         RunnerGemItem = Synced(blowgun, "RunnerGemItem", "Amulet_InfiniteStamina", "The scout gem item runners carry for the dash (prefab or display name). Amulet_InfiniteStamina = Scout's Ambition.");
         DashDistance = Synced(blowgun, "DashDistance", 4.3f, "How far the runner gem's dash goes (m), horizontally in the direction the runner looks. Walls stop it.");
         DashAirFloatSeconds = Synced(blowgun, "DashAirFloatSeconds", 0.65f, "A dash started in mid-air also keeps the runner floating (not falling) this long (s). 0 = off.");
-        DashCooldownSeconds = Synced(blowgun, "DashCooldownSeconds", 70f, "Cooldown of the runner dash (s), shown above the gem's slot.");
-        DashPetrify = Synced(blowgun, "DashPetrify", 0.05f, "Petrification each dash adds to the runner (0.05 = 5%).");
+        DashCooldownSeconds = Synced(blowgun, "DashCooldownSeconds", 32f, "Cooldown of the runner dash (s), shown above the gem's slot.");
+        DashPetrify = Synced(blowgun, "DashPetrify", 0.03f, "Petrification each dash adds to the runner (0.03 = 3%).");
         SafeZonePetrifyRelief = Synced(blowgun, "SafeZonePetrifyRelief", 0.03f, "Petrification every runner in the safe zone loses when the runners win a leg (0.03 = 3%).");
         CapturePetrifyRelief = Synced(blowgun, "CapturePetrifyRelief", 0.05f, "Petrification a chaser loses for each capture (0.05 = 5%).");
         SnowballBlindSeconds = Synced(blowgun, "SnowballBlindSeconds", 2.5f, "A snowball thrown by a runner blinds the chaser it hits (blue-flower blindness) for this long. 0 = off.");
@@ -277,7 +270,7 @@ internal sealed class ModConfig
         const string freeze = "3. Freeze";
         FreezeRange = Synced(freeze, "FreezeRange", 26f, "A runner can only freeze a chaser that is within this distance (m).");
         FreezeConeDegrees = Synced(freeze, "FreezeConeDegrees", 15f, "Half-angle of the look cone (degrees).");
-        FreezeDuration = Synced(freeze, "FreezeDuration", 10f, "Seconds a chaser stays frozen. Does not stack or extend.");
+        FreezeDuration = Synced(freeze, "FreezeDuration", 8f, "Seconds a chaser stays frozen. Does not stack or extend.");
         FreezeCooldownSeconds = Synced(freeze, "FreezeCooldownSeconds", 8f, "Seconds after a freeze ends before that chaser can be frozen again (immunity).");
         FreezeHoldGrip = Synced(freeze, "FreezeHoldGrip", true, "Frozen while climbing: keep holding the wall.");
         FreezeLockStamina = Synced(freeze, "FreezeLockStamina", true, "Keep stamina constant while frozen.");
@@ -300,9 +293,6 @@ internal sealed class ModConfig
         CampfireSafeRadius = Synced(safe, "CampfireSafeRadius", 15f, "Radius (m) around a campfire that is a safe zone: no captures, and runners inside can't freeze chasers. A leg ends when every living runner is inside the next campfire's safe zone.");
         SafeZoneRequiresLit = Synced(safe, "SafeZoneRequiresLit", false, "Only lit campfires are safe zones.");
 
-        const string fog = "6. Fog";
-        FogSpeedMultiplier = Synced(fog, "FogSpeedMultiplier", 2.5f, "During a round the fog, the rising lava and the rising gloom move this many times faster.");
-        FogStartDelaySeconds = Synced(fog, "FogStartDelaySeconds", 300f, "During a round the fog, the rising lava and the rising gloom start this many seconds after the head start ends (each leg), instead of PEAK's own timing.");
 
         const string items = "7. Items";
         ChaserAllowedItems = Synced(items, "ChaserAllowedItems", "Remedy Fungus, Cactus, Dynamite, Mandrake", "Extra item names chasers may pick up/use (comma separated, prefab or display name).");
@@ -336,7 +326,7 @@ internal sealed class ModConfig
         ChasersSeeGhosts = Synced(ui, "ChasersSeeGhosts", false, "Whether chasers can see ghosts (spectators). Off = ghosts are invisible to living chasers, since a ghost floats around the runner it spectates.");
         ChasersSeeRunnerNames = Synced(ui, "ChasersSeeRunnerNames", false, "Whether chasers see the name tags above runners. Off = chasers have to spot runners by sight.");
         ChaserRedOutline = Synced(ui, "ChaserRedOutline", true, "Chasers' bodies glow red for everyone (PEAK's status glow, like the yellow glow of fortified milk's invincibility).");
-        ChaserGlowIntensity = Synced(ui, "ChaserGlowIntensity", 0.8f, "Strength of the chasers' red glow (vanilla invincibility uses 1).");
+        ChaserGlowIntensity = Synced(ui, "ChaserGlowIntensity", 1f, "Strength of the chasers' red glow (vanilla invincibility uses 1).");
         ShowChaserList = Local(ui, "ShowChaserList", true, "Show the chaser list under the ascent label (top right).");
         FreezeScreenFrost = Local(ui, "FreezeScreenFrost", true, "Play PEAK's cold screen effect on your own screen while you are frozen.");
         CountdownOpacity = Local(ui, "CountdownOpacity", 0.35f, "Opacity of the big head-start countdown on runners' screens (0-1).");
