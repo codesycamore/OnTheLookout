@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.8.3
+
+- **Mandrakes:** waves come **every 45 seconds** (was 20); each dropped mandrake is removed **10 s** after it appears if it is still lying on the ground (`MandrakeLifetimeSeconds`).
+- **Mandrakes no longer make runners drowsy** (`MandrakeNoRunnerSleep`), and chasers get **90%** of their vanilla drowsiness (`MandrakeChaserSleepMultiplier`).
+- **Mandrakes only in the first two biomes** (`MandrakeLastSegment`).
+- **Explosion sounds** are now on their own timer (every **2 minutes** at each runner outside a safe zone, in every leg) and **switched off for now** (a code switch, not a setting). `MandrakeExplosionSound` is removed.
+- **Petrification is cleared** for every player when a leg ends (and again when the next starts; `ClearPetrifyEachLeg`). Replaces the 3% safe-zone relief (`SafeZonePetrifyRelief` removed).
+- **Blowgun:** a dart no longer marks the runner with flare smoke (`TrackingSmokeSeconds` removed); it adds **20%** drowsiness (was 18%). Firing takes **1.65×** as long as in vanilla (`BlowgunUseTimeMultiplier`), and the cooldown is **72 s** (was 30).
+- **Capture rush** no longer adds up: a capture while it runs starts its **4 s** over (`CaptureBoostExtendSeconds` removed).
+- **Chaser gem grows with captures:** each capture makes that chaser's gem speed boost **1.7%** stronger for the rest of the leg (its length stays the same; `GemCaptureBonus`); reset every leg.
+- **Chaser gem:** **5%** petrification per use (was 3%); the runners' flare smoke lasts **3 s** (was 5).
+- **Runner dash:** goes **7 m** (was 4.3) and **lifts the runner up**, like Scout's Initiative's double jump at half the height (`DashLiftFactor`). Dashing while falling fast (8 m/s or more) cancels **80%** of the fall speed and fall time (`DashFallMomentumCancel`). The mid-air float no longer stops the lift. The chasers' flare smoke lasts **5 s** (was 3).
+
 ## 1.8.2
 
 - **Mandrakes sooner and more often:** they start dropping **1 minute** after the head start (was 3) and come **every 20 seconds** (was 60).

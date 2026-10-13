@@ -64,7 +64,7 @@ public partial class Plugin : BaseUnityPlugin
         bool shroomberry = ShroomberryRules.Install(_harmony);
         bool milk = MilkRules.Install(_harmony);
         bool kit = ChaserKit.Install(_harmony);
-        bool mandrakes = MandrakeDrops.Install();
+        bool mandrakes = MandrakeDrops.Install(_harmony);
         LegLoadout.Install();
         RoleSwap.Install();
         bool gems = RunnerDash.Install(_harmony);

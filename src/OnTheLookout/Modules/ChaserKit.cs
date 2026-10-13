@@ -15,8 +15,10 @@ namespace OnTheLookout.Modules;
 ///   vanilla power; instead it gives a short energy-drink speed boost and unlimited stamina (no drowsiness),
 ///   starting GemDelaySeconds after use, with a GemCooldownSeconds cooldown once the effects wear off, at the
 ///   cost of GemPetrify petrification. Each capture takes CapturePetrifyRelief of it away again;
-/// - each capture gives the chaser an energy drink + lollipop boost (CaptureBoostSeconds, +CaptureBoostExtendSeconds
-///   for every further capture while it runs);
+/// - each capture gives the chaser an energy drink + lollipop boost (CaptureBoostSeconds; a further capture while it
+///   runs restarts it, it doesn't add up), and makes their gem's speed boost GemCaptureBonus stronger for the rest of
+///   the leg (not longer);
+/// - everyone's petrification is cleared when a leg ends (ClearPetrifyEachLeg);
 /// - a chaser can't drop or throw their blowgun (role swaps drop the kit: <see cref="RoleSwap"/>);
 /// - runners get the same short boost for the last HeadStartBoostSeconds of their head start;
 /// - a thrown snowball pushes whoever it hits SnowballKnockbackBonus harder, and a runner's snowball blinds the
@@ -70,8 +72,14 @@ internal static class ChaserKit
             if (notice != Notice.Captured || Character.localCharacter is not { } local || Net.Actor(local) != a || local.data.dead) return;
             RelievePetrify(local);
             CaptureBoost(local);
+            CountCapture();
         };
-        RoundManager.LegStarted += _ => ResetCooldowns();
+        RoundManager.LegStarted += _ =>
+        {
+            ResetCooldowns();
+            ClearPetrify("new leg");
+        };
+        RoundManager.LegCompleted += () => ClearPetrify("leg over");
         return ok;
     }
 
@@ -113,7 +121,7 @@ internal static class ChaserKit
     }
 
     /// <summary>An energy-drink speed boost for <paramref name="seconds"/>, without the drowsiness afterwards.</summary>
-    public static void ApplyBoost(Character c, float seconds)
+    public static void ApplyBoost(Character c, float seconds, float strength = 1f)
     {
         if (seconds <= 0f || c == null || !c.IsLocal) return;
         Affliction_FasterBoi? template = EnergyDrink();
@@ -129,6 +137,8 @@ internal static class ChaserKit
             boost.climbDelay = template.climbDelay;
         }
 
+        boost.moveSpeedMod *= strength;
+        boost.climbSpeedMod *= strength;
         c.refs.afflictions.AddAffliction(boost);
     }
 
@@ -137,17 +147,31 @@ internal static class ChaserKit
     /// PEAK's unlimited stamina (Affliction_InfiniteStamina, the rainbow "sugar rush" bar), both lasting at least
     /// <paramref name="seconds"/> from now. Effects already running are lengthened instead of stacked.
     /// </summary>
-    public static void ApplySugarRush(Character c, float seconds)
+    public static void ApplySugarRush(Character c, float seconds, float strength = 1f)
     {
         if (seconds <= 0f || c == null || !c.IsLocal) return;
         CharacterAfflictions afflictions = c.refs.afflictions;
         if (afflictions.HasAfflictionType(Affliction.AfflictionType.FasterBoi, out Affliction speed))
         {
             speed.totalTime = Mathf.Max(speed.totalTime, speed.timeElapsed + seconds);
+            if (strength > 1f && speed is Affliction_FasterBoi running && EnergyDrink() is { } template
+                && running.moveSpeedMod < template.moveSpeedMod * strength)
+            {
+                // A stronger boost replaces the running one. Its speed is added in OnApplied and taken off in OnRemoved,
+                // so it is swapped rather than edited; its drowsiness-on-end moves to the replacement.
+                float left = running.totalTime - running.timeElapsed, drowsy = running.drowsyOnEnd;
+                running.drowsyOnEnd = 0f;
+                afflictions.RemoveAffliction(running);
+                ApplyBoost(c, left, strength);
+                if (afflictions.HasAfflictionType(Affliction.AfflictionType.FasterBoi, out Affliction replaced) && replaced is Affliction_FasterBoi boost)
+                {
+                    boost.drowsyOnEnd = drowsy;
+                }
+            }
         }
         else
         {
-            ApplyBoost(c, seconds);
+            ApplyBoost(c, seconds, strength);
         }
 
         if (afflictions.HasAfflictionType(Affliction.AfflictionType.InfiniteStamina, out Affliction stamina))
@@ -162,23 +186,39 @@ internal static class ChaserKit
 
     // ---------- Capture boost ----------
 
-    private static float s_CaptureBoostUntil;
-
     /// <summary>
-    /// The local chaser captured a runner (host's capture notice): energy drink + lollipop for CaptureBoostSeconds;
-    /// a capture while that boost is still running adds CaptureBoostExtendSeconds to it instead.
+    /// The local chaser captured a runner (host's capture notice): energy drink + lollipop for CaptureBoostSeconds.
+    /// A capture while that boost is still running makes it last CaptureBoostSeconds from now (no extra time on top).
     /// </summary>
     private static void CaptureBoost(Character chaser)
     {
-        var cfg = Plugin.ModConfig;
-        float seconds = cfg.CaptureBoostSeconds.Synced();
+        float seconds = Plugin.ModConfig.CaptureBoostSeconds.Synced();
         if (seconds <= 0f) return;
-        bool extend = Time.time < s_CaptureBoostUntil;
-        s_CaptureBoostUntil = extend ? s_CaptureBoostUntil + Mathf.Max(0f, cfg.CaptureBoostExtendSeconds.Synced()) : Time.time + seconds;
-        float left = s_CaptureBoostUntil - Time.time;
-        ApplySugarRush(chaser, left);
-        Plugin.Log.LogInfo($"[OTL][Kit] capture boost {(extend ? "extended" : "started")}: {left:0.#}s left.");
+        ApplySugarRush(chaser, seconds);
+        Plugin.Log.LogInfo($"[OTL][Kit] capture boost: {seconds:0.#}s.");
     }
+
+    // ---------- Captures make the gem stronger ----------
+
+    private static int s_Captures, s_CapturesLeg = -1;
+
+    /// <summary>Captures by the local chaser in the current leg.</summary>
+    private static int CapturesThisLeg => s_CapturesLeg == RoundManager.LegKey ? s_Captures : 0;
+
+    private static void CountCapture()
+    {
+        if (s_CapturesLeg != RoundManager.LegKey)
+        {
+            s_CapturesLeg = RoundManager.LegKey;
+            s_Captures = 0;
+        }
+
+        s_Captures++;
+        Plugin.Log.LogInfo($"[OTL][Kit] capture {s_Captures} this leg: gem boost x{GemStrength:0.###}.");
+    }
+
+    /// <summary>The gem's speed boost strength: +GemCaptureBonus per capture this leg (its length stays the same).</summary>
+    private static float GemStrength => 1f + Mathf.Max(0f, Plugin.ModConfig.GemCaptureBonus.Synced()) * CapturesThisLeg;
 
     /// <summary>Every client, each frame (from Hud): runners' boost at the tail end of their head start.</summary>
     public static void LocalTick()
@@ -253,10 +293,11 @@ internal static class ChaserKit
             yield break;
         }
 
-        if (cfg.GemInfiniteStamina.Synced()) ApplySugarRush(chaser, seconds);
-        else ApplyBoost(chaser, seconds);
+        float strength = GemStrength;
+        if (cfg.GemInfiniteStamina.Synced()) ApplySugarRush(chaser, seconds, strength);
+        else ApplyBoost(chaser, seconds, strength);
 
-        Plugin.Log.LogInfo($"[OTL][Kit] chaser gem: boost{(cfg.GemInfiniteStamina.Synced() ? " + unlimited stamina" : "")} for {seconds:0.##}s.");
+        Plugin.Log.LogInfo($"[OTL][Kit] chaser gem: boost x{strength:0.###}{(cfg.GemInfiniteStamina.Synced() ? " + unlimited stamina" : "")} for {seconds:0.##}s.");
 
         if (seconds > 0f) yield return new WaitForSeconds(seconds);
         StartGemCooldown();
@@ -280,6 +321,17 @@ internal static class ChaserKit
         BlowgunSystem.ResetCooldown();
         RunnerDash.ResetCooldown();
         Plugin.Log.LogInfo("[OTL][Kit] new leg: ability cooldowns refreshed.");
+    }
+
+    /// <summary>Every client, when a leg ends and when the next one starts: the local player's petrification is cleared.</summary>
+    private static void ClearPetrify(string why)
+    {
+        Character local = Character.localCharacter;
+        if (local == null || local.data.dead || !RoundManager.IsActive || !Plugin.ModConfig.ClearPetrifyEachLeg.Synced()) return;
+        int current = local.data.petrifyAmount;
+        if (current <= 0) return;
+        local.refs.afflictions.AddPetrify(-current);
+        Plugin.Log.LogInfo($"[OTL][Kit] {why}: petrification cleared (-{current}%).");
     }
 
     private static void RelievePetrify(Character chaser)

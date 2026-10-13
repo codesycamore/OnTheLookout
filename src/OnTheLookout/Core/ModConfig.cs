@@ -62,7 +62,10 @@ internal sealed class ModConfig
     public ConfigEntry<float> MandrakeStartSeconds { get; }
     public ConfigEntry<float> MandrakeIntervalSeconds { get; }
     public ConfigEntry<float> MandrakeFirstScreamSeconds { get; }
-    public ConfigEntry<bool> MandrakeExplosionSound { get; }
+    public ConfigEntry<float> MandrakeLifetimeSeconds { get; }
+    public ConfigEntry<int> MandrakeLastSegment { get; }
+    public ConfigEntry<bool> MandrakeNoRunnerSleep { get; }
+    public ConfigEntry<float> MandrakeChaserSleepMultiplier { get; }
     public ConfigEntry<float> HeadStartBoostSeconds { get; }
     public ConfigEntry<bool> DisableScoutStatues { get; }
     public ConfigEntry<bool> PeakChasersDie { get; }
@@ -73,7 +76,7 @@ internal sealed class ModConfig
     public ConfigEntry<float> ChaserSpeedMultiplier { get; }
     public ConfigEntry<float> ChaserClimbSpeedMultiplier { get; }
     public ConfigEntry<float> CaptureBoostSeconds { get; }
-    public ConfigEntry<float> CaptureBoostExtendSeconds { get; }
+    public ConfigEntry<float> GemCaptureBonus { get; }
     public ConfigEntry<float> RunnerStaminaRegenMultiplier { get; }
     public ConfigEntry<string> RunnerLegItems { get; }
     public ConfigEntry<string> RunnerBiomeItems { get; }
@@ -89,7 +92,7 @@ internal sealed class ModConfig
     // Blowgun (chasers)
     public ConfigEntry<bool> ChaserBlowgun { get; }
     public ConfigEntry<float> BlowgunCooldownSeconds { get; }
-    public ConfigEntry<float> TrackingSmokeSeconds { get; }
+    public ConfigEntry<float> BlowgunUseTimeMultiplier { get; }
     public ConfigEntry<float> GemRevealSeconds { get; }
     public ConfigEntry<float> DashRevealSeconds { get; }
     public ConfigEntry<bool> ChaserGem { get; }
@@ -108,7 +111,9 @@ internal sealed class ModConfig
     public ConfigEntry<float> DashFallProtectSeconds { get; }
     public ConfigEntry<float> DashCooldownSeconds { get; }
     public ConfigEntry<float> DashPetrify { get; }
-    public ConfigEntry<float> SafeZonePetrifyRelief { get; }
+    public ConfigEntry<bool> ClearPetrifyEachLeg { get; }
+    public ConfigEntry<float> DashLiftFactor { get; }
+    public ConfigEntry<float> DashFallMomentumCancel { get; }
     public ConfigEntry<float> CapturePetrifyRelief { get; }
     public ConfigEntry<float> SnowballBlindSeconds { get; }
     public ConfigEntry<bool> ScoutmasterChaseMusic { get; }
@@ -222,9 +227,12 @@ internal sealed class ModConfig
         ZombieWaveDelaySeconds = Synced(round, "ZombieWaveDelaySeconds", 120f, "Cooldown (s) after a wave of zombies is gone (killed or expired) before the host checks again for living chasers and sends another.");
         ZombieStartDelaySeconds = Synced(round, "ZombieStartDelaySeconds", 300f, "Zombies can only start coming this many seconds after the head start ends (each leg).");
         MandrakeStartSeconds = Synced(round, "MandrakeStartSeconds", 60f, "Mandrakes start appearing at runners this many seconds after the head start ends (each leg). 0 or less = off.");
-        MandrakeIntervalSeconds = Synced(round, "MandrakeIntervalSeconds", 20f, "After that, a mandrake is dropped at every living runner outside a safe zone this often (s).");
+        MandrakeIntervalSeconds = Synced(round, "MandrakeIntervalSeconds", 45f, "After that, a mandrake is dropped at every living runner outside a safe zone this often (s).");
         MandrakeFirstScreamSeconds = Synced(round, "MandrakeFirstScreamSeconds", 0.75f, "A dropped mandrake screams for the first time this many seconds after it appears (PEAK's own wait for a new mandrake is much longer). Later screams keep PEAK's timing.");
-        MandrakeExplosionSound = Synced(round, "MandrakeExplosionSound", true, "When a mandrake is dropped at a runner, everyone hears a dynamite explosion at that runner (sound only, no damage).");
+        MandrakeLifetimeSeconds = Synced(round, "MandrakeLifetimeSeconds", 10f, "A dropped mandrake is removed this many seconds after it appears (if it is still lying on the ground). 0 = it stays.");
+        MandrakeLastSegment = Synced(round, "MandrakeLastSegment", 1, "Mandrakes are only dropped up to this map segment (0 = Shore, 1 = the second biome).");
+        MandrakeNoRunnerSleep = Synced(round, "MandrakeNoRunnerSleep", true, "A screaming mandrake makes no runner drowsy (chasers are still affected).");
+        MandrakeChaserSleepMultiplier = Synced(round, "MandrakeChaserSleepMultiplier", 0.9f, "Drowsiness a screaming mandrake gives a chaser, relative to vanilla (0.9 = 90%).");
         HeadStartBoostSeconds = Synced(round, "HeadStartBoostSeconds", 4f, "Runners get an energy-drink speed boost (no drowsiness afterwards) for the last this-many seconds of their head start. 0 = off.");
         DisableScoutStatues = Synced(round, "DisableScoutStatues", true, "Scout statues do nothing during a round (no revives, no items). Everyone is brought back at the campfire after each leg instead.");
         PeakChasersDie = Synced(round, "PeakChasersDie", true, "When every living runner has reached the peak, the runners win and every living chaser is brought to the peak and dies.");
@@ -233,7 +241,7 @@ internal sealed class ModConfig
         ChaserSpeedMultiplier = Synced(round, "ChaserSpeedMultiplier", 1.15f, "Chaser movement speed multiplier (they can't use most items).");
         ChaserClimbSpeedMultiplier = Synced(round, "ChaserClimbSpeedMultiplier", 1.06f, "Chaser climbing speed on walls, ropes and vines (1.06 = 6% faster).");
         CaptureBoostSeconds = Synced(round, "CaptureBoostSeconds", 4f, "A chaser who captures a runner gets an energy drink + lollipop boost (speed and unlimited stamina, no drowsiness afterwards) for this long (s). 0 = off.");
-        CaptureBoostExtendSeconds = Synced(round, "CaptureBoostExtendSeconds", 3f, "Each further capture while that boost is still running adds this many seconds to it.");
+        GemCaptureBonus = Synced(round, "GemCaptureBonus", 0.017f, "Each capture makes that chaser's gem speed boost this much stronger for the rest of the leg (0.017 = +1.7% per capture; the length stays the same). Reset every leg.");
         RunnerStaminaRegenMultiplier = Synced(round, "RunnerStaminaRegenMultiplier", 1.185f, "Runner stamina regeneration multiplier (1.185 = 18.5% faster).");
         RunnerLegItems = Synced(round, "RunnerLegItems", "Snowball, Brown Berrynana, Fortified Milk", "At the start of each leg every runner gets ONE random item from this list (prefab or display names, comma separated). Empty = off.");
         RunnerBiomeItems = Synced(round, "RunnerBiomeItems", "Alpine:Heat Pack, Volcano:Sports Drink, Swamp:EarlyWorm, Mesa:Aloe Vera", "Extra item every runner gets at the start of a leg in that biome, as \"Biome:Item\" pairs. Biomes use PEAK's names (Caldera = Volcano; The Gloom is assumed to be Swamp).");
@@ -247,31 +255,33 @@ internal sealed class ModConfig
         DisableScoutmaster = Synced(round, "DisableScoutmaster", true, "Don't spawn the Scoutmaster (he hunts the runner furthest from the group).");
 
         const string blowgun = "2b. Blowgun";
-        ChaserBlowgun = Synced(blowgun, "ChaserBlowgun", true, "Chasers get a blowgun with unlimited uses. A dart doesn't put runners to sleep; it marks them with flare smoke instead.");
-        BlowgunCooldownSeconds = Synced(blowgun, "BlowgunCooldownSeconds", 30f, "Seconds between blowgun shots.");
-        TrackingSmokeSeconds = Synced(blowgun, "TrackingSmokeSeconds", 7f, "How long the tracking smoke follows a darted runner.");
-        GemRevealSeconds = Synced(blowgun, "GemRevealSeconds", 5f, "When a chaser uses their gem, every living runner gives off flare smoke in their own colour for this long (s). 0 = off.");
-        DashRevealSeconds = Synced(blowgun, "DashRevealSeconds", 3f, "When a runner dashes, every living chaser gives off flare smoke in their own colour for this long (s). 0 = off.");
+        ChaserBlowgun = Synced(blowgun, "ChaserBlowgun", true, "Chasers get a blowgun with unlimited uses. A dart doesn't knock runners out; it makes them drowsy (BlowdartDrowsy).");
+        BlowgunCooldownSeconds = Synced(blowgun, "BlowgunCooldownSeconds", 72f, "Seconds between blowgun shots.");
+        BlowgunUseTimeMultiplier = Synced(blowgun, "BlowgunUseTimeMultiplier", 1.65f, "How long a chaser takes to fire the blowgun, relative to vanilla (1.65 = 1.65x as long).");
+        GemRevealSeconds = Synced(blowgun, "GemRevealSeconds", 3f, "When a chaser uses their gem, every living runner gives off flare smoke in their own colour for this long (s). 0 = off.");
+        DashRevealSeconds = Synced(blowgun, "DashRevealSeconds", 5f, "When a runner dashes, every living chaser gives off flare smoke in their own colour for this long (s). 0 = off.");
         ChaserGem = Synced(blowgun, "ChaserGem", true, "Chasers also carry a scout gem (Scout's Initiative) that never runs out: using it gives, after a short delay, an energy-drink speed boost and unlimited stamina (no drowsiness), with a cooldown and some petrification as the cost. Its vanilla power is never activated.");
         ChaserGemItem = Synced(blowgun, "ChaserGemItem", "Amulet_SuperJump", "The scout gem item chasers carry for that ability (prefab or display name). Amulet_SuperJump = Scout's Initiative.");
         GemBoostSeconds = Synced(blowgun, "GemBoostSeconds", 2.25f, "Length of the chaser gem's effects (speed boost and unlimited stamina) (s).");
         GemDelaySeconds = Synced(blowgun, "GemDelaySeconds", 1f, "The chaser gem's effects start this long after it is used (s).");
         GemInfiniteStamina = Synced(blowgun, "GemInfiniteStamina", true, "The chaser gem also gives unlimited stamina (the rainbow stamina bar) for its duration, without drowsiness afterwards.");
         GemCooldownSeconds = Synced(blowgun, "GemCooldownSeconds", 20f, "Cooldown of the chaser gem (s). It starts when the gem's effects wear off.");
-        GemPetrify = Synced(blowgun, "GemPetrify", 0.03f, "Petrification each gem use adds to the chaser (0.03 = 3%).");
+        GemPetrify = Synced(blowgun, "GemPetrify", 0.05f, "Petrification each gem use adds to the chaser (0.05 = 5%).");
         SnowballKnockbackBonus = Synced(blowgun, "SnowballKnockbackBonus", 0.1f, "Extra push a thrown snowball gives the scout it hits, as a fraction of its own impact (0.1 = 10% stronger).");
         RunnerGem = Synced(blowgun, "RunnerGem", true, "Runners carry a scout gem (Scout's Ambition) in their hotbar: using it dashes them DashDistance forward (where they look, horizontally), with a cooldown and some petrification as the cost. Its vanilla power is never used; chasers can't use it.");
         RunnerGemItem = Synced(blowgun, "RunnerGemItem", "Amulet_InfiniteStamina", "The scout gem item runners carry for the dash (prefab or display name). Amulet_InfiniteStamina = Scout's Ambition.");
-        DashDistance = Synced(blowgun, "DashDistance", 4.3f, "How far the runner gem's dash goes (m), horizontally in the direction the runner looks. Walls stop it.");
+        DashDistance = Synced(blowgun, "DashDistance", 7f, "How far the runner gem's dash goes (m), horizontally in the direction the runner looks. Walls stop it.");
         DashAirFloatSeconds = Synced(blowgun, "DashAirFloatSeconds", 0.65f, "A dash started in mid-air also keeps the runner floating (not falling) this long (s). 0 = off.");
         DashFallProtectDelay = Synced(blowgun, "DashFallProtectDelay", 0.5f, "Seconds after a dash before the runner's fall-damage protection starts.");
         DashFallProtectSeconds = Synced(blowgun, "DashFallProtectSeconds", 1f, "How long a dash protects the runner from fall damage (s), starting DashFallProtectDelay after the dash. 0 = off.");
         DashCooldownSeconds = Synced(blowgun, "DashCooldownSeconds", 32f, "Cooldown of the runner dash (s), shown above the gem's slot.");
         DashPetrify = Synced(blowgun, "DashPetrify", 0.03f, "Petrification each dash adds to the runner (0.03 = 3%).");
-        SafeZonePetrifyRelief = Synced(blowgun, "SafeZonePetrifyRelief", 0.03f, "Petrification every runner in the safe zone loses when the runners win a leg (0.03 = 3%).");
+        ClearPetrifyEachLeg = Synced(blowgun, "ClearPetrifyEachLeg", true, "When a leg ends (and when the next one starts), every player's petrification is cleared.");
+        DashLiftFactor = Synced(blowgun, "DashLiftFactor", 0.5f, "The dash also lifts the runner up, like Scout's Initiative's double jump but reaching this fraction of its height (0.5 = half). 0 = off.");
+        DashFallMomentumCancel = Synced(blowgun, "DashFallMomentumCancel", 0.8f, "Dashing while falling fast takes this fraction of the falling speed (and fall time) away (0.8 = 80%).");
         CapturePetrifyRelief = Synced(blowgun, "CapturePetrifyRelief", 0.05f, "Petrification a chaser loses for each capture (0.05 = 5%).");
         SnowballBlindSeconds = Synced(blowgun, "SnowballBlindSeconds", 3f, "A snowball thrown by a runner blinds the chaser it hits (blue-flower blindness) for this long. 0 = off.");
-        BlowdartDrowsy = Synced(blowgun, "BlowdartDrowsy", 0.18f, "Drowsiness (sleep) a dart adds to the runner it hits (0.18 = 18%).");
+        BlowdartDrowsy = Synced(blowgun, "BlowdartDrowsy", 0.2f, "Drowsiness (sleep) a dart adds to the runner it hits (0.2 = 20%).");
 
         const string effects = "2c. ChaseEffects";
 

@@ -7,8 +7,8 @@ using UnityEngine;
 namespace OnTheLookout.Modules;
 
 /// <summary>
-/// The chasers' blowgun: unlimited uses, a cooldown between shots, and instead of putting a runner
-/// to sleep a dart marks them with flare smoke that follows them for a few seconds.
+/// The chasers' blowgun: unlimited uses, a cooldown between shots, a slower shot (BlowgunUseTimeMultiplier), and
+/// instead of knocking a runner out a dart makes them a bit drowsy (BlowdartDrowsy).
 /// </summary>
 internal static class BlowgunSystem
 {
@@ -26,8 +26,8 @@ internal static class BlowgunSystem
         bool ok = true;
 
         // Action_RaycastDart.RPC_DartImpact(int characterID, ...) (prefix, [PunRPC] on all clients).
-        // Why: on hit, the target's own client applies the sleep afflictions here. We mark the target
-        // with smoke instead and pass characterID = -1 so the dart's visuals still play but no sleep.
+        // Why: on hit, the target's own client applies the sleep afflictions here. We add a little drowsiness
+        // instead and pass characterID = -1 so the dart's visuals still play but no knock-out.
         ok &= SafePatch.Prefix(harmony, typeof(Action_RaycastDart), "RPC_DartImpact", typeof(BlowgunSystem), nameof(DartImpactPrefix), m);
 
         // Action_RaycastDart.FireDart() (postfix, shooter only). Why: starts the local cooldown.
@@ -35,6 +35,11 @@ internal static class BlowgunSystem
 
         // Action_ReduceUses.RunAction() (prefix). Why: this is what spends a use; chasers' blowguns never run out.
         ok &= SafePatch.Prefix(harmony, typeof(Action_ReduceUses), nameof(Action_ReduceUses.RunAction), typeof(BlowgunSystem), nameof(ReduceUsesPrefix), m);
+
+        // Item.ContinueUsePrimary() (prefix + postfix). Why: the only place usingTimePrimary drives the cast progress;
+        // a chaser's blowgun takes BlowgunUseTimeMultiplier times as long for the duration of the call.
+        ok &= SafePatch.Prefix(harmony, typeof(Item), nameof(Item.ContinueUsePrimary), typeof(BlowgunSystem), nameof(ContinueUsePrefix), m);
+        ok &= SafePatch.Postfix(harmony, typeof(Item), nameof(Item.ContinueUsePrimary), typeof(BlowgunSystem), nameof(ContinueUsePostfix), m);
         return ok;
     }
 
@@ -47,8 +52,6 @@ internal static class BlowgunSystem
 
         if (PhotonNetwork.GetPhotonView(characterID) is { } view && view.GetComponent<Character>() is { } target && RoleManager.IsRunner(target))
         {
-            TrackingSmoke.Attach(target, Plugin.ModConfig.TrackingSmokeSeconds.Synced());
-
             // A small dose of sleep instead of the vanilla knock-out; statuses belong to the runner's own client.
             float drowsy = Plugin.ModConfig.BlowdartDrowsy.Synced();
             if (target.IsLocal && drowsy > 0f) target.refs.afflictions.AddStatus(CharacterAfflictions.STATUSTYPE.Drowsy, drowsy);
@@ -67,6 +70,36 @@ internal static class BlowgunSystem
 
     public static bool ReduceUsesPrefix(Action_ReduceUses __instance) =>
         !(ItemCatalog.IsBlowgun(__instance.item) && ChasersBlowgun(__instance.item));
+
+    private static bool s_LoggedUseTime;
+
+    // The blowgun lengthened by the running ContinueUsePrimary call and its vanilla use time (a static rather than
+    // __state, so the postfix stays safe if another prefix skips ours).
+    private static Item? s_Lengthened;
+    private static float s_VanillaUseTime;
+
+    public static void ContinueUsePrefix(Item __instance)
+    {
+        if (!ItemCatalog.IsBlowgun(__instance) || !ChasersBlowgun(__instance)) return;
+        float scale = Mathf.Max(0.1f, Plugin.ModConfig.BlowgunUseTimeMultiplier.Synced());
+        if (!s_LoggedUseTime)
+        {
+            s_LoggedUseTime = true;
+            Plugin.Log.LogInfo($"[OTL][Blowgun] vanilla use time {__instance.usingTimePrimary:0.##}s -> {__instance.usingTimePrimary * scale:0.##}s"
+                + (__instance.usingTimePrimary > 0f ? "." : " (instant in vanilla: nothing to lengthen)."));
+        }
+
+        s_Lengthened = __instance;
+        s_VanillaUseTime = __instance.usingTimePrimary;
+        __instance.usingTimePrimary *= scale;
+    }
+
+    public static void ContinueUsePostfix(Item __instance)
+    {
+        if (s_Lengthened != __instance) return;
+        __instance.usingTimePrimary = s_VanillaUseTime;
+        s_Lengthened = null;
+    }
 }
 
 /// <summary>

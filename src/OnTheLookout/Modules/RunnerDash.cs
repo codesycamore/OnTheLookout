@@ -14,8 +14,8 @@ namespace OnTheLookout.Modules;
 /// it like any movement. Dashing in mid-air also floats the runner for DashAirFloatSeconds (no falling).
 /// From DashFallProtectDelay after the dash, the runner takes no fall damage for DashFallProtectSeconds.
 /// Each dash adds DashPetrify petrification and starts a DashCooldownSeconds cooldown
-/// (shown above the gem's slot). When the runners win a leg, every runner in the safe zone loses
-/// SafeZonePetrifyRelief petrification.
+/// (shown above the gem's slot). The dash also lifts the runner up (DashLiftFactor of the height of Scout's Initiative's
+/// double jump), and dashing while falling fast first takes DashFallMomentumCancel of the fall away.
 /// Neither of the mod's gems (this one and the chaser gem) ever uses its original scout-gem power.
 /// </summary>
 internal static class RunnerDash
@@ -38,7 +38,6 @@ internal static class RunnerDash
 
     public static bool Install(Harmony harmony)
     {
-        RoundManager.LegCompleted += LocalSafeZoneRelief;
         const string m = "Gems";
         bool ok = true;
 
@@ -91,7 +90,9 @@ internal static class RunnerDash
         s_FallSafeFrom = protectFrom;
         s_FallSafeUntil = protectFrom + Mathf.Max(0f, cfg.DashFallProtectSeconds.Synced());
         float floatSeconds = holder.data.isGrounded ? 0f : Mathf.Max(0f, cfg.DashAirFloatSeconds.Synced()); // mid-air: hang in the air a moment
+        CancelFall(holder);
         ModNetwork.Instance?.StartCoroutine(Dash(holder, dir, Mathf.Max(0f, cfg.DashDistance.Synced()), floatSeconds));
+        Lift(holder);
         ChaserKit.PutAwayLater(holder, item); // hands free again after the dash (the gem stays in its slot)
         ModNetwork.Broadcast(Notice.DashReveal, Net.Actor(holder), 0); // every chaser smokes for DashRevealSeconds
         Plugin.Log.LogInfo($"[OTL][Dash] dash {cfg.DashDistance.Synced():0.#}m, +{petrify}% petrify.");
@@ -129,7 +130,7 @@ internal static class RunnerDash
         s_Dashing = false;
     }
 
-    /// <summary>No vertical speed for this physics step (the float).</summary>
+    /// <summary>No falling for this physics step (the float); rising from the dash's lift is kept.</summary>
     private static void HoldAltitude(Character c)
     {
         foreach (Bodypart part in c.refs.ragdoll.partList)
@@ -137,7 +138,55 @@ internal static class RunnerDash
             Rigidbody? rig = part != null ? part.Rig : null;
             if (rig == null || rig.isKinematic) continue;
             Vector3 v = rig.linearVelocity;
-            rig.linearVelocity = new Vector3(v.x, 0f, v.z);
+            if (v.y < 0f) rig.linearVelocity = new Vector3(v.x, 0f, v.z);
+        }
+    }
+
+    /// <summary>Falling faster than this (m/s) counts as a fall from a great height: PEAK's fall damage by landing
+    /// speed starts at 10 m/s (CharacterMovement.MaxVelDmg).</summary>
+    private const float FastFallSpeed = 8f;
+
+    /// <summary>
+    /// Dashing during a fast fall takes DashFallMomentumCancel of it away: of the downward speed of every body part,
+    /// and of the fall time PEAK's fall damage counts (CharacterMovement.FallTime: min(sinceJump, sinceGrounded)).
+    /// </summary>
+    private static void CancelFall(Character c)
+    {
+        float cancel = Mathf.Clamp01(Plugin.ModConfig.DashFallMomentumCancel.Synced());
+        float fallSpeed = -c.data.avarageVelocity.y;
+        if (cancel <= 0f || c.data.isGrounded || fallSpeed < FastFallSpeed) return;
+        float keep = 1f - cancel;
+        foreach (Bodypart part in c.refs.ragdoll.partList)
+        {
+            Rigidbody? rig = part != null ? part.Rig : null;
+            if (rig == null || rig.isKinematic) continue;
+            Vector3 v = rig.linearVelocity;
+            if (v.y < 0f) rig.linearVelocity = new Vector3(v.x, v.y * keep, v.z);
+        }
+
+        c.data.sinceGrounded *= keep;
+        c.data.sinceJump *= keep;
+        Plugin.Log.LogInfo($"[OTL][Dash] falling at {fallSpeed:0.#} m/s: {cancel:P0} of the fall cancelled.");
+    }
+
+    /// <summary>
+    /// The upward kick of Scout's Initiative (Amulet_SuperJump), scaled to DashLiftFactor of its height. Its power is an
+    /// extra jump that counts double (CharacterMovement.JumpRpc: jumpMult 2), i.e. one physics step of
+    /// up * jumpImpulse * 2 as acceleration on every body part. Jump height grows with the square of the kick, so
+    /// half the height takes sqrt(0.5) of the kick. Like a jump, the runner is marked as jumping (PEAK's lighter
+    /// jump gravity) and the fall timers restart.
+    /// </summary>
+    private static void Lift(Character c)
+    {
+        float factor = Mathf.Max(0f, Plugin.ModConfig.DashLiftFactor.Synced());
+        if (factor <= 0f) return;
+        float accel = c.refs.movement.jumpImpulse * 2f * Mathf.Sqrt(factor);
+        c.data.isJumping = true;
+        c.data.sinceGrounded = 0f;
+        c.data.sinceJump = 0f;
+        foreach (Bodypart part in c.refs.ragdoll.partList)
+        {
+            if (part != null && part.Rig != null && !part.Rig.isKinematic) part.AddForce(Vector3.up * accel, ForceMode.Acceleration);
         }
     }
 
@@ -149,17 +198,5 @@ internal static class RunnerDash
             if (rig == null || rig.isKinematic) continue;
             rig.linearVelocity = new Vector3(horizontal.x, rig.linearVelocity.y, horizontal.z);
         }
-    }
-
-    /// <summary>Each client, when a leg ends: the runners won it and the local runner is in the safe zone -> less petrification.</summary>
-    private static void LocalSafeZoneRelief()
-    {
-        Character local = Character.localCharacter;
-        if (local == null || local.data.dead || RoundManager.ChasersWonLeg || !RoleManager.IsRunner(local) || !SafeZoneSystem.IsSafe(local.Center)) return;
-        int relief = Mathf.RoundToInt(Plugin.ModConfig.SafeZonePetrifyRelief.Synced() * 100f);
-        int current = local.data.petrifyAmount;
-        if (relief <= 0 || current <= 0) return;
-        local.refs.afflictions.AddPetrify(-Mathf.Min(relief, current));
-        Plugin.Log.LogInfo($"[OTL][Dash] safe at the campfire: -{Mathf.Min(relief, current)}% petrify.");
     }
 }

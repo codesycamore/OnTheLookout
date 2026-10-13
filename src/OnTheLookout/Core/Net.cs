@@ -44,7 +44,7 @@ internal enum Notice : byte
     MissingMod = 4, // A has no / a different OnTheLookout version (host only)
     Restarted = 5, // the host (A) restarted from the last campfire
     ZombieHunt = 6, // a zombie was sent after runner A (all chasers are dead)
-    MandrakeBoom = 7, // a mandrake was dropped at runner A: explosion sound there
+    MandrakeBoom = 7, // explosion sound at runner A
     GemReveal = 8, // chaser A used their gem: every runner smokes
     DashReveal = 9, // runner A dashed: every chaser smokes
 }

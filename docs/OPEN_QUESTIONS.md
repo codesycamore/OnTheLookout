@@ -366,3 +366,37 @@ Debug keys (host, bottom-left hint): **F7** start or restart a round, **F6** swa
 - [ ] A boom is heard at each runner when their mandrake appears; nobody takes damage. Log: "explosion sound: ..." names the sound (or says it wasn't found).
 - [ ] Chaser uses the gem: every runner (seen by everyone) smokes in their colour for 5 s.
 - [ ] Runner dashes: every chaser smokes in their colour for 3 s.
+
+### 1.8.3 (2026-10-13)
+
+- **Mandrakes:** `MandrakeIntervalSeconds` 40. Each dropped mandrake is removed by the host (`PhotonNetwork.Destroy`) `MandrakeLifetimeSeconds` (10) after it appears, if it lies on the ground; one a player holds is re-checked every second until dropped (or the leg ends). One stashed in a pack is no longer a scene object, so it stays.
+- **No mandrake sleep for runners:** how the scream applies drowsiness lives in the mandrake prefab (serialized, not in the decompiled code), probably an `AOE` fired through `Mandrake.timeEvent`. While a `TimeEvent.Update` or `AOE.Explode` on an object under a `Mandrake` / `MandrakeScreamFX` runs, `CharacterAfflictions.AddStatus(Drowsy)` and `AddAffliction(Affliction_AdjustDrowsyOverTime)` are skipped for runners. Applies to every mandrake during a round, not only our drops. Unverified: if the sleep comes from somewhere else, the "drowsiness ... was blocked" log line never appears.
+- **Mandrakes only in the first two biomes:** "after the second biome" read as map segments 0-1 (Shore + Tropics/Roots), `MandrakeLastSegment` = 1, using the same leg segment as `LegLoadout` (last lit campfire's `advanceToSegment`). Waves still run in every leg and still broadcast `MandrakeBoom` per runner outside a safe zone.
+- Chaser gem `GemPetrify` 0.05, `GemRevealSeconds` 3; runner `DashDistance` 7, `DashRevealSeconds` 5.
+
+**Test checklist (1.8.3)**
+- [ ] Mandrake waves every 40 s; each mandrake disappears ~10 s after it appears (log "removed a dropped mandrake").
+- [ ] A runner next to a screaming mandrake doesn't get drowsy (log "drowsiness on runner ... was blocked"); a chaser next to one does.
+- [ ] Shore and Tropics/Roots: mandrakes + booms. Alpine/Mesa onwards: booms only (log "segment N: 0 mandrake(s) dropped, X explosion(s)").
+- [ ] Chaser gem: +5% petrification; runners smoke for 3 s.
+- [ ] Runner dash: ~7 m, walls still stop it; chasers smoke for 5 s.
+
+**1.8.3, second change list (2026-10-13)**
+
+- **Explosion sounds:** split from the mandrake waves into their own host timer (`MandrakeDrops.HostTickBooms`: every 120 s of the chase, per living runner outside a safe zone, every leg). Off via `ExplosionsEnabled = false` (static readonly in code, deliberately not a config key). Flip it to true to bring them back.
+- **Mandrake drowsiness on chasers ×0.9:** same mandrake context as the runner block; `AddStatus(Drowsy)` amount ×`MandrakeChaserSleepMultiplier`, and an `Affliction_AdjustDrowsyOverTime` is replaced by a scaled copy (the original may be the prefab's serialized instance). Same unverified assumption about where the sleep comes from.
+- **Capture rush:** no more extension: `ApplySugarRush(4 s)` makes it last at least 4 s from now.
+- **Gem bonus per capture:** "enhance the gem's effects by 1.7%" read as the gem's energy-drink speed (move + climb `Affliction_FasterBoi` mods ×(1 + 0.017 × captures this leg)); unlimited stamina can't be "stronger", and duration stays. Counted on the chaser's own client from the `Captured` notice, keyed to `LegKey` (so it resets every leg). If a speed boost is already running, a stronger one replaces it (remove + add, since FasterBoi adds its speed in `OnApplied` and subtracts in `OnRemoved`; editing it would leave speed behind). The old one's `drowsyOnEnd` carries over.
+- **Petrification cleared every leg:** each client clears its own (`AddPetrify(-petrifyAmount)`) on `RoundManager.LegCompleted` and again on `LegStarted`. Replaces `SafeZonePetrifyRelief`. Capture relief (-5%) stays.
+- **Blowgun:** `TrackingSmoke` no longer attached on a dart hit (still used by the gem reveals). `BlowdartDrowsy` 0.2 ("20% stamina" read as 20% drowsiness, the same bar the dart already fills). Use time: `Item.ContinueUsePrimary` prefix/postfix multiplies `usingTimePrimary` ×1.65 during the call for a chaser's blowgun. That is the only place the cast time is used (`Item.cs`). **Unverified:** the blowgun's vanilla `usingTimePrimary` (prefab data). If it's 0 (instant shot), there is nothing to lengthen; the log prints "vanilla use time …" on the first shot. `BlowgunCooldownSeconds` 72.
+- **Dash lift:** Scout's Initiative = `Amulet_SuperJump` / `DoubleJumpAmulet`, whose power is an extra jump with `jumpMult` 2 (`CharacterMovement.JumpRpc`: `part.AddForce(up * jumpImpulse * jumpMult, Acceleration)`). The dash applies `up * jumpImpulse * 2 * sqrt(0.5)` the same way (height ∝ kick², so half the height), sets `isJumping` and resets `sinceGrounded`/`sinceJump` like a jump. The mid-air float now only stops falling, not rising.
+- **Fall cancel:** if the runner falls at ≥ 8 m/s (`avarageVelocity.y`; PEAK's landing-speed damage starts at 10 m/s, `MaxVelDmg`), downward speed of every part ×0.2 and `sinceGrounded`/`sinceJump` ×0.2, before the dash and lift.
+
+**Test checklist (1.8.3, second list)**
+- [ ] No explosion sounds at all; mandrake waves every 45 s (Shore, Tropics/Roots only).
+- [ ] Chaser near a screaming mandrake gets a bit less drowsy than vanilla; runner gets none.
+- [ ] Two captures in one leg: log "capture 2 this leg: gem boost x1.034"; gem boost noticeably same length. Next leg: back to x1.
+- [ ] Capture rush: a second capture during it doesn't lengthen it beyond 4 s.
+- [ ] Petrify up via gem/dash, finish the leg: petrification gone for everyone (log "petrification cleared").
+- [ ] Blowgun: no smoke on the hit runner; runner +20% drowsy; shot takes longer to charge (check the "vanilla use time" log line); cooldown 72 s.
+- [ ] Dash on flat ground: small hop up + 7 m. Dash while falling off a cliff: fall visibly slows (log "falling at … m/s"), landing hurts much less.
