@@ -198,6 +198,8 @@ internal static class ItemCatalog
 
     public static Flare? FlarePrefab => AllItems().Select(i => i.GetComponentInChildren<Flare>(true)).FirstOrDefault(f => f != null);
 
+    public static Dynamite? DynamitePrefab => AllItems().Select(i => i.GetComponentInChildren<Dynamite>(true)).FirstOrDefault(d => d != null);
+
     /// <summary>Items matching a comma-separated list of prefab/display names (spaces and case ignored).</summary>
     public static List<Item> FindByNames(string csv)
     {

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.8.2
+
+- **Mandrakes sooner and more often:** they start dropping **1 minute** after the head start (was 3) and come **every 20 seconds** (was 60).
+- **Mandrake boom:** each mandrake drop comes with the dynamite's explosion sound at that runner, heard by everyone (sound only: no damage, no knockback; `MandrakeExplosionSound`).
+- **Chaser gem reveals runners:** using the chaser gem makes every living runner give off flare smoke in their own colour for **5 s** (`GemRevealSeconds`).
+- **Runner dash reveals chasers:** each dash makes every living chaser give off flare smoke in their own colour for **3 s** (`DashRevealSeconds`).
+
 ## 1.8.1
 
 - **Cooldowns refresh every leg:** when a leg starts, the blowgun, chaser gem and dash gem cooldowns are reset for everyone (freeze immunity was already reset).

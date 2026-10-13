@@ -22,6 +22,8 @@ namespace OnTheLookout.Modules;
 /// - a thrown snowball pushes whoever it hits SnowballKnockbackBonus harder, and a runner's snowball blinds the
 ///   chaser it hits (blue-flower blindness) for SnowballBlindSeconds;
 /// - every ability cooldown is refreshed at the start of each leg;
+/// - using the chaser gem makes every runner smoke for GemRevealSeconds, and a runner's dash makes every chaser smoke
+///   for DashRevealSeconds (flare smoke in their own colour);
 /// - the golden Bing Bong's invincibility shield is switched off during a round.
 /// </summary>
 internal static class ChaserKit
@@ -63,12 +65,34 @@ internal static class ChaserKit
 
         ModNetwork.NoticeReceived += (notice, a, _) =>
         {
+            if (notice == Notice.GemReveal) SmokeAll(RoleManager.IsRunner, Plugin.ModConfig.GemRevealSeconds.Synced(), "chaser gem");
+            if (notice == Notice.DashReveal) SmokeAll(RoleManager.IsChaser, Plugin.ModConfig.DashRevealSeconds.Synced(), "runner dash");
             if (notice != Notice.Captured || Character.localCharacter is not { } local || Net.Actor(local) != a || local.data.dead) return;
             RelievePetrify(local);
             CaptureBoost(local);
         };
         RoundManager.LegStarted += _ => ResetCooldowns();
         return ok;
+    }
+
+    // ---------- Gem reveals ----------
+
+    /// <summary>
+    /// Every client: each living scout of one role gives off flare smoke in their own colour for <paramref name="seconds"/>
+    /// (the blowgun's tracking smoke). Chaser gem -> all runners (GemRevealSeconds); runner dash -> all chasers (DashRevealSeconds).
+    /// </summary>
+    private static void SmokeAll(System.Func<Character, bool> role, float seconds, string why)
+    {
+        if (seconds <= 0f || !RoundManager.IsChasing) return;
+        int count = 0;
+        foreach (Character c in Character.AllCharacters)
+        {
+            if (c == null || c.data.dead || !role(c)) continue;
+            TrackingSmoke.Attach(c, seconds);
+            count++;
+        }
+
+        Plugin.Log.LogInfo($"[OTL][Kit] {why}: {count} scout(s) revealed by smoke for {seconds:0.#}s.");
     }
 
     // ---------- Speed boost ----------
@@ -194,6 +218,7 @@ internal static class ChaserKit
         if (petrify > 0) holder.refs.afflictions.AddPetrify(petrify);
         Plugin.Log.LogInfo($"[OTL][Kit] chaser gem used: +{petrify}% petrify, boost in {cfg.GemDelaySeconds.Synced():0.##}s.");
         ModNetwork.Instance?.StartCoroutine(GemBoostLater(holder));
+        ModNetwork.Broadcast(Notice.GemReveal, Net.Actor(holder), 0); // every runner smokes for GemRevealSeconds
         PutAwayLater(holder, item);
         return true;
     }

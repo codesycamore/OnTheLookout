@@ -354,3 +354,15 @@ Debug keys (host, bottom-left hint): **F7** start or restart a round, **F6** swa
 - [ ] Open clown luggage as a chaser: log line lists no energy drink / lollipop.
 - [ ] Runner snowball on a chaser: thrower's log "snowball ... hit"; chaser's screen goes blue-blind for 3 s and they get pushed.
 - [ ] Head-start countdown (runner) is yellow and still translucent; host hint smaller.
+
+### 1.8.2 (2026-10-12)
+
+- **Mandrakes:** `MandrakeStartSeconds` 60, `MandrakeIntervalSeconds` 20.
+- **Mandrake boom:** the host broadcasts `Notice.MandrakeBoom` (runner actor) with each drop; every client plays the sound at that runner. Only the sounds of `Dynamite.explosionPrefab` are played (its `SFX_PlayOneShot.sfx/sfxs`, falling back to its `AudioSource` clips); the prefab itself is never spawned, so there is no damage, knockback or visual. Read "sync with the mandrakes" as "at the moment the mandrake appears" (its first scream follows 0.75 s later).
+- **Gem reveals:** the user of the gem broadcasts `Notice.GemReveal` / `Notice.DashReveal`; every client attaches the blowgun's `TrackingSmoke` (flare VFX, player colour) to every living runner (5 s) / chaser (3 s). Only while chasing.
+
+**Test checklist (1.8.2)**
+- [ ] First mandrake ~60 s after the head start ends, then every 20 s; runners in a safe zone get none.
+- [ ] A boom is heard at each runner when their mandrake appears; nobody takes damage. Log: "explosion sound: ..." names the sound (or says it wasn't found).
+- [ ] Chaser uses the gem: every runner (seen by everyone) smokes in their colour for 5 s.
+- [ ] Runner dashes: every chaser smokes in their colour for 3 s.
