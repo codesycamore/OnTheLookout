@@ -26,7 +26,11 @@ internal static class RoleSwap
     /// <summary>Host: everyone's role at the end of the last leg; null when there is nothing to compare.</summary>
     private static Dictionary<int, Role>? s_Snapshot;
 
-    public static void Install() => RoundManager.LegStarted += _ => ModNetwork.Instance?.StartCoroutine(LocalSafetyCheck());
+    public static void Install()
+    {
+        RoundManager.LegStarted += _ => ModNetwork.Instance?.StartCoroutine(LocalSafetyCheck());
+        RoundManager.FreshStart += () => s_Snapshot = null;
+    }
 
     /// <summary>Host, when a leg ends (before the role window): remember who was a chaser and who a runner.</summary>
     public static void HostSnapshot()

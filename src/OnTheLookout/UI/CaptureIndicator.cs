@@ -23,6 +23,8 @@ internal sealed class CaptureIndicator : MonoBehaviour
     private TextMeshProUGUI? _label;
 
     /// <summary>Local runner's client: a chaser started (durationMs &gt; 0) or stopped (0) capturing them.</summary>
+    static CaptureIndicator() => RoundManager.FreshStart += () => s_StartedAt = -1f;
+
     public static void OnProgress(int chaserActor, int startServerTime, int durationMs)
     {
         if (durationMs <= 0)

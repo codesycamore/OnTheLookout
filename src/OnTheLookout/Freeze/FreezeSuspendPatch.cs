@@ -52,6 +52,18 @@ internal static class FreezeSuspendPatch
         !(s_Anchor.HasValue && __instance.character == Character.localCharacter);
 
     /// <summary>
+    /// Patch target: <c>Character.CanRegenStamina()</c> (prefix). PEAK only regenerates stamina on the ground
+    /// (sinceGrounded &lt;= 0.2) or on a climb handle; the suspension below keeps sinceGrounded at 0, so without this
+    /// a chaser frozen in mid-air would regenerate as if standing.
+    /// </summary>
+    public static bool RegenPrefix(Character __instance, ref bool __result)
+    {
+        if (!s_Anchor.HasValue || __instance != Character.localCharacter) return true;
+        __result = false;
+        return false;
+    }
+
+    /// <summary>
     /// Patch target: <c>CharacterMovement.FixedUpdate()</c> (postfix).
     /// Why: runs after the game queued this step's forces and toggled useGravity, but before the
     /// physics step, so our overrides are the last word for this step.

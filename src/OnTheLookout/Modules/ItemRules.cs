@@ -66,6 +66,8 @@ internal static class ItemRules
         if (ChaserKit.IsGem(item)) return RoleManager.IsChaser(c) && Plugin.ModConfig.ChaserGem.Synced() ? null : "Only chasers can use this gem";
         // Same for the runner gem (dash), the other way round.
         if (RunnerDash.IsRunnerGem(item)) return RoleManager.IsRunner(c) && Plugin.ModConfig.RunnerGem.Synced() ? null : "Only runners can use this gem";
+        // The runner luggage extras (faerie lantern, anti-rope cannon and spool) are runner items: never for chasers.
+        if (RoundManager.IsActive && ItemCatalog.MatchesNames(ItemCatalog.Effective(item), Plugin.ModConfig.LuggageRareExtraItems.Synced())) return RoleManager.IsRunner(c) ? null : "Only runners can use this item";
         if (ItemCatalog.IsBanned(item)) return "This item is banned";
         if (ItemCatalog.IsBlowgun(item)) return RoleManager.IsChaser(c) ? null : "Only chasers can use the blowgun";
         if (RoleManager.IsChaser(c) && !ItemCatalog.IsChaserAllowed(item)) return "Chasers can only use food and healing items";
@@ -106,6 +108,7 @@ internal static class ItemRules
     public static void GetObjectsToSpawnPostfix(Spawner __instance, ref List<GameObject> __result)
     {
         if (__result == null || __instance is not Luggage luggage || luggage is RespawnChest) return;
+        RemoveExcluded(luggage, __result);
         if (!IsClownLuggage(luggage))
         {
             AddLuggageExtras(__result);
@@ -124,8 +127,40 @@ internal static class ItemRules
     }
 
     /// <summary>
-    /// Regular (non-clown) luggage during a round: each item it is about to spawn has a LuggageExtraChance chance
-    /// to be one of LuggageExtraItems instead (fortified milk, snowball, brown berrynana by default), every leg.
+    /// Any luggage during a round: LuggageExcludedItems (flares, compasses, pirate compasses) never come out. Each one
+    /// is rerolled from the luggage's own loot pool the way PEAK picks luggage loot (Spawner.GetObjectsToSpawn ->
+    /// LootData.GetRandomItems); if every reroll hits an excluded item too, that spot stays empty.
+    /// </summary>
+    private static void RemoveExcluded(Luggage luggage, List<GameObject> spawns)
+    {
+        string excluded = Plugin.ModConfig.LuggageExcludedItems.Synced();
+        if (!RoundManager.IsActive || string.IsNullOrWhiteSpace(excluded)) return;
+        bool IsExcluded(GameObject? go) => go != null && go.GetComponent<Item>() is { } item && ItemCatalog.MatchesNames(item, excluded);
+
+        int rerolled = 0, emptied = 0;
+        for (int i = 0; i < spawns.Count; i++)
+        {
+            if (!IsExcluded(spawns[i])) continue;
+            GameObject? replacement = null;
+            for (int attempt = 0; attempt < 8 && replacement == null; attempt++)
+            {
+                List<GameObject> roll = LootData.GetRandomItems(luggage.GetSpawnPool(), 1, true, luggage.fallbackSpawn);
+                if (roll.Count > 0 && roll[0] != null && !IsExcluded(roll[0])) replacement = roll[0];
+            }
+
+            spawns[i] = replacement!; // null = nothing spawns there (Spawner.SpawnItems skips null)
+            if (replacement != null) rerolled++;
+            else emptied++;
+        }
+
+        if (rerolled + emptied > 0) Plugin.Log.LogInfo($"[OTL][Items] luggage: {rerolled} excluded item(s) rerolled, {emptied} left empty.");
+    }
+
+    /// <summary>
+    /// Regular (non-clown) luggage during a round: each item it is about to spawn may be swapped for a runner extra
+    /// instead, every leg. Each LuggageExtraItems item (fortified milk, snowball, brown berrynana, energy drink) has
+    /// LuggageExtraChance / their count; each LuggageRareExtraItems item (faerie lantern, anti-rope cannon, anti-rope
+    /// spool) LuggageRareExtraWeight times that.
     /// </summary>
     private static void AddLuggageExtras(List<GameObject> spawns)
     {
@@ -135,12 +170,24 @@ internal static class ItemRules
         List<Item> extras = ItemCatalog.FindByNames(cfg.LuggageExtraItems.Synced());
         if (extras.Count == 0) return;
 
+        float share = chance / extras.Count;
+        var odds = extras.Select(item => (item, share)).ToList();
+        string rare = cfg.LuggageRareExtraItems.Synced();
+        float rareShare = share * Mathf.Max(0f, cfg.LuggageRareExtraWeight.Synced());
+        if (!string.IsNullOrWhiteSpace(rare) && rareShare > 0f) odds.AddRange(ItemCatalog.FindByNames(rare).Select(item => (item, rareShare)));
+
         int swapped = 0;
         for (int i = 0; i < spawns.Count; i++)
         {
-            if (UnityEngine.Random.value >= chance) continue;
-            spawns[i] = extras[UnityEngine.Random.Range(0, extras.Count)].gameObject;
-            swapped++;
+            float roll = UnityEngine.Random.value, cumulative = 0f;
+            foreach ((Item item, float p) in odds)
+            {
+                cumulative += p;
+                if (roll >= cumulative) continue;
+                spawns[i] = item.gameObject;
+                swapped++;
+                break;
+            }
         }
 
         if (swapped > 0) Plugin.Log.LogInfo($"[OTL][Items] luggage: {swapped} of {spawns.Count} item(s) swapped for runner extras.");

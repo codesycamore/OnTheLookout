@@ -28,6 +28,12 @@ internal static class LegLoadout
             if (newRound) Schedule(GiveRunnerBackpacks());
         };
         RoundManager.LegCompleted += () => Schedule(StockCampfireFood());
+        RoundManager.FreshStart += () =>
+        {
+            s_KitBusyUntil.Clear();
+            s_LegItemsGiven.Clear();
+            s_LegItemsKey = -1;
+        };
         ModNetwork.HostTicked += HostEnsureChaserKits;
     }
 

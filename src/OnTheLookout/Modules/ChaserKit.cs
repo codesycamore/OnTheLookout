@@ -52,6 +52,15 @@ internal static class ChaserKit
     public static bool Install(Harmony harmony)
     {
         const string m = "ChaserKit";
+        RoundManager.FreshStart += () =>
+        {
+            ResetCooldowns();
+            s_GemLeg = -1;
+            s_BoostedLeg = -1;
+            s_Captures = 0;
+            s_CapturesLeg = -1;
+            s_SnowballHits.Clear();
+        };
         bool ok = true;
         System.Type t = typeof(ChaserKit);
 

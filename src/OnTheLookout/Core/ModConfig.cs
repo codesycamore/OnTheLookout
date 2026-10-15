@@ -154,6 +154,9 @@ internal sealed class ModConfig
     public ConfigEntry<bool> ClownLuggageChasersOnly { get; }
     public ConfigEntry<string> LuggageExtraItems { get; }
     public ConfigEntry<float> LuggageExtraChance { get; }
+    public ConfigEntry<string> LuggageRareExtraItems { get; }
+    public ConfigEntry<float> LuggageRareExtraWeight { get; }
+    public ConfigEntry<string> LuggageExcludedItems { get; }
     public ConfigEntry<bool> ChasersOnlyOpenClownLuggage { get; }
     public ConfigEntry<bool> BanAmulets { get; }
     public ConfigEntry<bool> BanGems { get; }
@@ -213,7 +216,7 @@ internal sealed class ModConfig
         const string round = "2. Round";
         RunnersPerChaser = Synced(round, "RunnersPerChaser", 4f, "At most one chaser for every this many runners (4 = 1 chaser in 5 players, 2 in 10). Chasers are drawn at random from the players who chose CHASER in the role menu; if nobody did, one random player becomes the chaser. Always leaves at least one runner.");
         RoleRevealSeconds = Synced(round, "RoleRevealSeconds", 4f, "Seconds the role (CHASER / RUNNER) is shown at the start of each leg. Chasers stay frozen and blind during it.");
-        HeadStartSeconds = Synced(round, "HeadStartSeconds", 20f, "Runner head start after the role reveal. Chasers stay frozen and blind until it ends.");
+        HeadStartSeconds = Synced(round, "HeadStartSeconds", 23f, "Runner head start after the role reveal. Chasers stay frozen and blind until it ends.");
         AutoStartRound = Synced(round, "AutoStartRound", true, "Start a round automatically once everyone has woken up on the beach (host).");
         ChaserPreferenceEnabled = Synced(round, "ChaserPreferenceEnabled", true, "Players choose RUNNER (default) or CHASER in the role menu (KeyChaserOdds) in the airport and in the role window after each leg. Chasers are drawn at random from the CHASER volunteers. Choices are private to the host. Off = chasers are drawn from everyone.");
         RoleWindowSeconds = Synced(round, "RoleWindowSeconds", 10f, "After a leg ends, everyone is brought to the campfire and frozen for this many seconds to update their role choice; then the campfire lights itself and the next leg starts with a new role draw.");
@@ -304,7 +307,7 @@ internal sealed class ModConfig
 
         const string tag = "4. Tag";
         CaptureHoldSeconds = Synced(tag, "CaptureHoldSeconds", 0.45f, "How long a chaser holds interact on a runner to capture them. The runner sees the progress too.");
-        CaptureRange = Synced(tag, "CaptureRange", 1.4f, "A chaser can only start (and keep) a capture this close to the runner (m, body centre to body centre), practically touching. Up close the capture beats anything else in view (backpacks, stuck thorns or arrows) and works whichever way the runner faces.");
+        CaptureRange = Synced(tag, "CaptureRange", 1.75f, "A chaser can only start (and keep) a capture this close to the runner (m, body centre to body centre), with the cursor (the centre dot) on the runner. The capture then beats anything else in view (backpacks, stuck thorns or arrows) and works whichever way the runner faces.");
         TagMaxDistance = Synced(tag, "TagMaxDistance", 5f, "Host rejects a capture if the two players are further apart than this (lag tolerance).");
         TagPassedOutRunners = Synced(tag, "TagPassedOutRunners", true, "Chasers can capture runners who are passed out.");
         MilkProtectsFromCapture = Synced(tag, "MilkProtectsFromCapture", true, "Runners under the effect of fortified milk can't be captured.");
@@ -323,6 +326,9 @@ internal sealed class ModConfig
         ClownLuggageChasersOnly = Synced(items, "ClownLuggageChasersOnly", true, "During a round only chasers can open clown luggage, and it contains food and healing items.");
         LuggageExtraItems = Synced(items, "LuggageExtraItems", "Fortified Milk, Snowball, Brown Berrynana, Energy Drink", "Items that can also come out of regular (non-clown) luggage during a round, every leg (comma separated). Empty = off.");
         LuggageExtraChance = Synced(items, "LuggageExtraChance", 0.383f, "Chance (0-1) for each item a regular luggage spawns to be replaced by a random LuggageExtraItems item (split evenly between them: 0.383 with 4 items = about 9.6% each).");
+        LuggageRareExtraItems = Synced(items, "LuggageRareExtraItems", "Lantern_Faerie, RopeShooterAnti, Anti-Rope Spool", "Items that can also come out of regular (runner) luggage during a round, a little less often than the LuggageExtraItems (see LuggageRareExtraWeight). Comma separated. Empty = off.");
+        LuggageRareExtraWeight = Synced(items, "LuggageRareExtraWeight", 0.75f, "Chance of each LuggageRareExtraItems item compared to one LuggageExtraItems item (0.75 = three quarters as likely as a snowball).");
+        LuggageExcludedItems = Synced(items, "LuggageExcludedItems", "Flare, Compass, Pirate Compass, Warp Compass", "Items that never come out of any luggage during a round: each one is rerolled from the luggage's own loot pool (comma separated).");
         ChasersOnlyOpenClownLuggage = Synced(items, "ChasersOnlyOpenClownLuggage", true, "During a round chasers can open clown luggage only.");
         BanAmulets = Synced(items, "BanAmulets", true, "Remove amulets from the game.");
         BanGems = Synced(items, "BanGems", true, "Remove gems (scout gems, strange gem, healing gem) from the game.");

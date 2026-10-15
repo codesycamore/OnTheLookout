@@ -159,6 +159,7 @@ internal sealed class HostMenu : MonoBehaviour
     {
         IsOpen = false;
         ClearPending();
+        if (_panel != null) ShowPage(settings: false); // opens on the main page next time
         if (_canvas != null) _canvas.gameObject.SetActive(false);
     }
 
@@ -176,17 +177,27 @@ internal sealed class HostMenu : MonoBehaviour
         }
 
         _canvas = PeakMenuKit.CreateCanvas("OTL_HostMenu", transform, gui, 50);
-        _panel = PeakMenuKit.CreatePanel(_canvas, template, new Vector2(720f, 640f));
+        _panel = PeakMenuKit.CreatePanel(_canvas, template, new Vector2(760f, 640f));
+        // The panel grows and shrinks with the page shown (main page / settings page).
+        _panel.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
         TextMeshProUGUI titleFont = gui.heroText != null ? gui.heroText : gui.interactNameText;
         PeakMenuKit.AddText(_panel, "HOST MENU", titleFont, 64f, Color.white, 80f);
         PeakMenuKit.AddText(_panel, "ON THE LOOKOUT", gui.interactNameText, 26f, new Color(1f, 0.84f, 0.2f), 36f);
 
+        int first = _panel.childCount;
         AddButton(template, "RESTART AT THE AIRPORT", confirm: true, AdminRestart.HostReturnToAirport);
         AddButton(template, "RESTART AT PREVIOUS CAMPFIRE", confirm: true, AdminRestart.HostRestartFromCampfire);
         AddButton(template, "TELEPORT EVERYONE TO NEXT CAMPFIRE", confirm: false, AdminRestart.HostTeleportToNextCampfire);
+        AddButton(template, "SETTINGS", confirm: false, () => ShowPage(settings: true), closeAfter: false);
         _debugLabel = AddButton(template, "", confirm: false, ToggleDebugKeys, closeAfter: false);
         AddButton(template, "CLOSE", confirm: false, () => { });
+        CollectPage(_mainPage, first);
+
+        first = _panel.childCount;
+        BuildSettingsPage(gui, template);
+        CollectPage(_settingsPage, first);
+        ShowPage(settings: false);
 
         _canvas.gameObject.SetActive(false);
         Plugin.Log.LogInfo("[OTL][HostMenu] built.");
@@ -233,6 +244,119 @@ internal sealed class HostMenu : MonoBehaviour
         _pendingLabel = null;
         _pendingAction = null;
     }
+
+    // ---------- Pages ----------
+
+    private readonly List<GameObject> _mainPage = new();
+    private readonly List<GameObject> _settingsPage = new();
+
+    /// <summary>Everything added to the panel from child <paramref name="first"/> on belongs to <paramref name="page"/>.</summary>
+    private void CollectPage(List<GameObject> page, int first)
+    {
+        for (int i = first; i < _panel!.childCount; i++) page.Add(_panel.GetChild(i).gameObject);
+    }
+
+    private void ShowPage(bool settings)
+    {
+        ClearPending();
+        foreach (GameObject go in _mainPage) go.SetActive(!settings);
+        foreach (GameObject go in _settingsPage) go.SetActive(settings);
+        if (settings) RefreshSettings();
+    }
+
+    // ---------- Settings page ----------
+
+    /// <summary>
+    /// One editable setting: the settings players may change (ModConfig.Configurable), with a step and limits for the
+    /// - / + buttons. Changing one writes the config file and the host's values are synced to everyone at once
+    /// (ModConfig: config.SettingChanged -> ConfigSync.Publish).
+    /// </summary>
+    private sealed class SettingRow
+    {
+        public string Label = "";
+        public Func<BepInEx.Configuration.ConfigEntry<float>> Entry = null!;
+        public float Step, Min, Max;
+        public bool Seconds = true;
+        public TextMeshProUGUI? Text;
+    }
+
+    private readonly List<SettingRow> _settings = new();
+
+    private void BuildSettingsPage(GUIManager gui, Button template)
+    {
+        var cfg = Plugin.ModConfig;
+        _settings.Clear();
+        _settings.Add(new SettingRow { Label = "HEAD START", Entry = () => cfg.HeadStartSeconds, Step = 5f, Min = 0f, Max = 120f });
+        _settings.Add(new SettingRow { Label = "HEAD-START SPEED BOOST", Entry = () => cfg.HeadStartBoostSeconds, Step = 1f, Min = 0f, Max = 20f });
+        _settings.Add(new SettingRow { Label = "RUNNERS PER CHASER", Entry = () => cfg.RunnersPerChaser, Step = 1f, Min = 1f, Max = 10f, Seconds = false });
+        _settings.Add(new SettingRow { Label = "ZOMBIES START AFTER", Entry = () => cfg.ZombieStartDelaySeconds, Step = 30f, Min = 0f, Max = 1200f });
+        _settings.Add(new SettingRow { Label = "ZOMBIE WAVE COOLDOWN", Entry = () => cfg.ZombieWaveDelaySeconds, Step = 15f, Min = 0f, Max = 600f });
+        _settings.Add(new SettingRow { Label = "ZOMBIE LIFETIME", Entry = () => cfg.ZombieLifetimeSeconds, Step = 15f, Min = 15f, Max = 600f });
+
+        PeakMenuKit.AddText(_panel!, "SETTINGS  (FROM THE NEXT LEG ON)", gui.interactNameText, 22f, new Color(1f, 1f, 1f, 0.7f), 30f);
+        foreach (SettingRow row in _settings) AddSettingRow(gui, template, row);
+        AddButton(template, "RESET TO DEFAULTS", confirm: true, ResetSettings, closeAfter: false);
+        AddButton(template, "BACK", confirm: false, () => ShowPage(settings: false), closeAfter: false);
+    }
+
+    /// <summary>[ - ]  LABEL: value  [ + ]</summary>
+    private void AddSettingRow(GUIManager gui, Button template, SettingRow row)
+    {
+        RectTransform rect = PeakMenuKit.NewRect("OTL_SettingRow", _panel!);
+        rect.sizeDelta = new Vector2(0f, 64f);
+        var layout = rect.gameObject.AddComponent<HorizontalLayoutGroup>();
+        layout.spacing = 12f;
+        layout.childAlignment = TextAnchor.MiddleCenter;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = true;
+
+        (Button minus, _) = PeakMenuKit.CloneButton(rect, template, "-");
+        minus.gameObject.AddComponent<LayoutElement>().preferredWidth = 90f;
+        row.Text = PeakMenuKit.AddText(rect, "", gui.interactNameText, 26f, Color.white, 64f);
+        row.Text.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        (Button plus, _) = PeakMenuKit.CloneButton(rect, template, "+");
+        plus.gameObject.AddComponent<LayoutElement>().preferredWidth = 90f;
+
+        minus.onClick.AddListener(() => ChangeSetting(row, -row.Step));
+        plus.onClick.AddListener(() => ChangeSetting(row, row.Step));
+    }
+
+    private void ChangeSetting(SettingRow row, float delta)
+    {
+        BepInEx.Configuration.ConfigEntry<float> entry = row.Entry();
+        float value = Mathf.Clamp(Mathf.Round((entry.Value + delta) / row.Step) * row.Step, row.Min, row.Max);
+        if (Mathf.Approximately(value, entry.Value)) return;
+        entry.Value = value; // saved to the config file and synced to everyone (ModConfig: SettingChanged)
+        Plugin.Log.LogInfo($"[OTL][HostMenu] {entry.Definition.Key} = {value:0.##}.");
+        RefreshSettings();
+    }
+
+    private void ResetSettings()
+    {
+        foreach (SettingRow row in _settings)
+        {
+            BepInEx.Configuration.ConfigEntry<float> entry = row.Entry();
+            entry.Value = (float)entry.DefaultValue;
+        }
+
+        Plugin.Log.LogInfo("[OTL][HostMenu] settings reset to the defaults.");
+        RefreshSettings();
+    }
+
+    private void RefreshSettings()
+    {
+        foreach (SettingRow row in _settings)
+        {
+            if (row.Text == null) continue;
+            float value = row.Entry().Value;
+            row.Text.text = $"{row.Label}: {(row.Seconds ? FormatSeconds(value) : value.ToString("0"))}";
+        }
+    }
+
+    private static string FormatSeconds(float seconds) =>
+        seconds >= 60f ? $"{Mathf.FloorToInt(seconds / 60f)}:{Mathf.RoundToInt(seconds % 60f):00} MIN" : $"{seconds:0} S";
 
     // ---------- Debug hotkeys toggle ----------
 

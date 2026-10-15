@@ -38,6 +38,11 @@ internal static class RunnerDash
 
     public static bool Install(Harmony harmony)
     {
+        RoundManager.FreshStart += () =>
+        {
+            ResetCooldown();
+            s_FallSafeFrom = s_FallSafeUntil = 0f;
+        };
         const string m = "Gems";
         bool ok = true;
 

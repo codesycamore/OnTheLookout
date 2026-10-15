@@ -24,6 +24,13 @@ internal static class MandrakeDrops
     public static bool Install(Harmony harmony)
     {
         ModNetwork.HostTicked += HostTick;
+        RoundManager.FreshStart += () =>
+        {
+            s_LegKey = -1;
+            s_LastWave = 0;
+            s_LastBoom = 0;
+            s_MandrakeContext = 0;
+        };
         ModNetwork.NoticeReceived += (notice, a, _) =>
         {
             if (notice == Notice.MandrakeBoom) PlayBoom(a);

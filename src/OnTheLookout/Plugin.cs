@@ -50,6 +50,9 @@ public partial class Plugin : BaseUnityPlugin
                 typeof(FreezeSuspendPatch), nameof(FreezeSuspendPatch.GravityPrefix), "Freeze.Suspend");
             FreezeSuspendPatch.HooksAvailable = gravity && SafePatch.Postfix(_harmony, typeof(CharacterMovement), "FixedUpdate",
                 typeof(FreezeSuspendPatch), nameof(FreezeSuspendPatch.FixedUpdatePostfix), "Freeze.Suspend");
+            // Character.CanRegenStamina() (prefix, private). Why: the suspension resets sinceGrounded every step (no fall
+            // damage), which would also let stamina regenerate in mid-air; a chaser frozen in the air regenerates none.
+            SafePatch.Prefix(_harmony, typeof(Character), "CanRegenStamina", typeof(FreezeSuspendPatch), nameof(FreezeSuspendPatch.RegenPrefix), "Freeze.Suspend");
         }
 
         // Campfire rules always apply during a round (otherwise runners can't light campfires while chasers are away).
@@ -78,6 +81,7 @@ public partial class Plugin : BaseUnityPlugin
         ui.AddComponent<HostMenu>();
         ui.AddComponent<ChaserOddsMenu>();
         ui.AddComponent<CaptureIndicator>();
+        ui.AddComponent<SafeZoneWall>();
         HostMenu.Install(_harmony);
         bool nameTags = NameTags.Install(_harmony);
         root.AddComponent<AdminRestart>();

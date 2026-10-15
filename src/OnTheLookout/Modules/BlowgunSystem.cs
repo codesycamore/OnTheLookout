@@ -23,6 +23,7 @@ internal static class BlowgunSystem
     public static bool Install(Harmony harmony)
     {
         const string m = "Blowgun";
+        RoundManager.FreshStart += ResetCooldown;
         bool ok = true;
 
         // Action_RaycastDart.RPC_DartImpact(int characterID, ...) (prefix, [PunRPC] on all clients).

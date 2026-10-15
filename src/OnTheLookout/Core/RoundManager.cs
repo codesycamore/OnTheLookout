@@ -41,6 +41,12 @@ internal static class RoundManager
     public static event Action? LegCompleted;
     public static event Action<RoundState>? RoundEnded;
 
+    /// <summary>
+    /// Raised on every client when the game goes back to the airport (the host menu, game over or the end of a run):
+    /// every module forgets its game state, so the next run starts exactly like the first one after launching.
+    /// </summary>
+    public static event Action? FreshStart;
+
     public static RoundState State => s_State;
 
     /// <summary>A round is in progress (roles apply).</summary>
@@ -449,6 +455,9 @@ internal static class RoundManager
         s_WindowPending = false;
         s_WindowFire = null;
         HostSetFlags(0);
+        s_Regathered = false;
+        AdminRestart.HostForget();
+        SafeZoneSystem.LastLitSegment = -1;
         FreezeState.HostReset();
         RewardSystem.HostReset();
         ZombieHunt.HostDespawnAll();
@@ -527,12 +536,39 @@ internal static class RoundManager
         }
         else if (s_State == RoundState.Idle && previous != RoundState.Idle)
         {
-            ChaserPreference.Clear(); // back in the airport: everyone's choice resets to RUNNER
+            ResetForFreshStart(); // back in the airport: everything starts over, everyone's choice back to RUNNER
         }
         else if (s_State is RoundState.RunnersWon or RoundState.ChasersWon && previous != s_State)
         {
             RoundEnded?.Invoke(s_State);
         }
+    }
+
+    /// <summary>
+    /// Every client, back in the airport: roles, freezes, rewards, role choices and every module's own state
+    /// (cooldowns, captures, loadouts, mandrake and zombie timers, ...) are cleared. Only the round counter keeps
+    /// counting, so old leg keys never match a new leg.
+    /// </summary>
+    private static void ResetForFreshStart()
+    {
+        ChaserPreference.Clear();
+        RoleManager.Clear();
+        FreezeState.Clear();
+        FreezeSuspendPatch.End();
+        RewardSystem.Clear();
+        ZombieHunt.Clear();
+        SafeZoneSystem.LastLitSegment = -1;
+        s_Flags = 0;
+        try
+        {
+            FreshStart?.Invoke();
+        }
+        catch (Exception e)
+        {
+            Plugin.Log.LogError($"[OTL][Round] fresh start: {e}");
+        }
+
+        Plugin.Log.LogInfo("[OTL][Round] back in the airport: everything reset for a fresh start.");
     }
 
     public static void Clear()

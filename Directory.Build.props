@@ -18,8 +18,7 @@
   <!-- Shared Thunderstore metadata -->
   <PropertyGroup>
     <ThunderstoreTeam>sycamore5</ThunderstoreTeam>
-    <!-- TODO: Add a link to your mod repository here (optional) -->
-    <RepositoryUrl></RepositoryUrl>
+    <RepositoryUrl>https://github.com/codesycamore/OnTheLookout</RepositoryUrl>
   </PropertyGroup>
 
   <!-- Shared primary configuration for the project -->

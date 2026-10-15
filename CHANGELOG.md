@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.8.4
+
+- **Captures need the cursor on the runner:** the chaser has to look at the runner with the centre dot on them (body, pack or anything stuck on them). The fallback that picked any capturable runner close by (up close in any direction) is gone. A capture already being held still follows the runner as before.
+- **Capture range 1.75 m** (was 1.4; `CaptureRange`).
+- **No stamina regeneration while frozen in mid-air:** the mid-air hold kept PEAK's "grounded" timer at zero (so the chaser takes no fall damage), which also let stamina refill; it no longer does.
+- **Safe zone wall:** a glowing yellow wall with a bright rim at the ground marks the edge of every campfire's safe zone (where the 15 m sphere meets the ground), seen by everyone for the whole round. Visual only; it blocks nothing.
+- **Host menu SETTINGS page:** the six editable settings (head start, head-start boost, runners per chaser, zombie start delay, wave cooldown, lifetime) can be changed with - and +, or reset to the defaults. Changes are saved to the config file and synced to everyone at once.
+- **Fresh start at the airport:** going back to the airport (host menu, game over or the end of a run) now clears every part of the mode on every player's game: roles, role choices, freezes, rewards, cooldowns, captures, loadout records, mandrake and zombie timers, the last campfire. The next run starts exactly like the first one after launching.
+- **Luggage:** flares, compasses, pirate's compasses and warp compasses never come out of any luggage during a round; each is rerolled from that luggage's own loot pool (`LuggageExcludedItems`). Regular (runner) luggage can now also hold a **faerie lantern, anti-rope cannon or anti-rope spool**, each at 0.75× the chance of a snowball (about 7.2% per item slot each, vs 9.6%; `LuggageRareExtraItems`, `LuggageRareExtraWeight`). These three are runner items: chasers can't pick them up or use them during a round.
+- **Head start 23 s** by default (was 20; `HeadStartSeconds`).
+- The Thunderstore page now links to the GitHub repository. Its description no longer mentions a tracking blowgun (darts make runners drowsy since 1.8.3).
+
 ## 1.8.3
 
 - **Mandrakes:** waves come **every 45 seconds** (was 20); each dropped mandrake is removed **10 s** after it appears if it is still lying on the ground (`MandrakeLifetimeSeconds`).

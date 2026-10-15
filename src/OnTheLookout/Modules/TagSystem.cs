@@ -23,6 +23,11 @@ internal static class TagSystem
     public static bool Install(Harmony harmony)
     {
         const string m = "Tag";
+        RoundManager.FreshStart += () =>
+        {
+            s_LastCapture.Clear();
+            s_HoldTarget = null;
+        };
         bool ok = true;
         System.Type t = typeof(TagSystem);
         System.Type ci = typeof(CharacterInteractible);
@@ -75,9 +80,10 @@ internal static class TagSystem
     /// Interaction.DoInteractableRaycasts postfix (local player). For a chaser during a round:
     /// - while holding a capture, the runner stays the target as long as they can be captured (in reach, no milk,
     ///   not in a safe zone), however they move or turn and wherever the chaser's cursor drifts;
-    /// - a capturable runner the cursor is on (any part of their body, their backpack or fanny pack, anything stuck
-    ///   on them), or anywhere near the middle of the view, is the target, whichever way the runner faces: it
-    ///   always wins over whatever the look ray found (their pack, thorns/arrows/cactus balls, items, ...);
+    /// - a capturable runner the cursor (the centre dot) is on (any part of their body, their backpack or fanny pack,
+    ///   anything stuck on them) is the target, whichever way the runner faces: it always wins over whatever the look
+    ///   ray found (their pack, thorns/arrows/cactus balls, items, ...). Without the cursor on them there is no
+    ///   capture, however close the chaser is;
     /// - otherwise nothing that belongs to a runner can be interacted with: no carrying them, no opening their
     ///   backpack or fanny pack, no pulling thorns, arrows or stuck items off them.
     /// </summary>
@@ -122,32 +128,10 @@ internal static class TagSystem
             firstDistance = hit.distance;
         }
 
+        // Only a runner under the cursor counts: no capture of a runner the chaser isn't looking at, however close.
         Character? looked = first != null ? first.GetComponentInParent<Character>() : null;
-        if (looked != null && RoleManager.IsRunner(looked) && looked.refs.interactible is { } lookedAt && CanCapture(lookedAt, local)) return lookedAt;
-
-        // Otherwise the capturable runner nearest the middle of the view (up close: in any direction).
-        CharacterInteractible? best = null;
-        float bestScore = float.MaxValue;
-        foreach (Character c in Character.AllCharacters)
-        {
-            if (c == null || c == local || !RoleManager.IsRunner(c)) continue;
-            CharacterInteractible? candidate = c.refs.interactible;
-            if (candidate == null || !CanCapture(candidate, local)) continue;
-            Vector3 to = c.Center - cam.position;
-            float angle = Vector3.Angle(cam.forward, to);
-            if (angle > CaptureConeDegrees && to.magnitude > 0.9f) continue; // up close, any direction counts
-            float score = angle + Vector3.Distance(local.Center, c.Center) * 30f;
-            if (score < bestScore)
-            {
-                bestScore = score;
-                best = candidate;
-            }
-        }
-
-        return best;
+        return looked != null && RoleManager.IsRunner(looked) && looked.refs.interactible is { } lookedAt && CanCapture(lookedAt, local) ? lookedAt : null;
     }
-
-    private const float CaptureConeDegrees = 80f;
 
     private static readonly RaycastHit[] s_RayHits = new RaycastHit[32];
 
