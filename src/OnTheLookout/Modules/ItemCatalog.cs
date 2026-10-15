@@ -200,6 +200,9 @@ internal static class ItemCatalog
 
     public static Dynamite? DynamitePrefab => AllItems().Select(i => i.GetComponentInChildren<Dynamite>(true)).FirstOrDefault(d => d != null);
 
+    /// <summary>The Scoutmaster's bugle's morale boost (the only item with Action_MoraleBoost).</summary>
+    public static Action_MoraleBoost? MoraleBugle => AllItems().Select(i => i.GetComponentInChildren<Action_MoraleBoost>(true)).FirstOrDefault(a => a != null);
+
     /// <summary>Items matching a comma-separated list of prefab/display names (spaces and case ignored).</summary>
     public static List<Item> FindByNames(string csv)
     {

@@ -75,8 +75,9 @@ internal sealed class ModConfig
     public ConfigEntry<string> RewardItems { get; }
     public ConfigEntry<float> ChaserSpeedMultiplier { get; }
     public ConfigEntry<float> ChaserClimbSpeedMultiplier { get; }
-    public ConfigEntry<float> CaptureBoostSeconds { get; }
+    public ConfigEntry<bool> CaptureMoraleBoost { get; }
     public ConfigEntry<float> GemCaptureBonus { get; }
+    public ConfigEntry<float> GemCaptureExtraSeconds { get; }
     public ConfigEntry<float> RunnerStaminaRegenMultiplier { get; }
     public ConfigEntry<string> RunnerLegItems { get; }
     public ConfigEntry<string> RunnerBiomeItems { get; }
@@ -243,8 +244,9 @@ internal sealed class ModConfig
         EnergyDrinkDrowsyMultiplier = Synced(round, "EnergyDrinkDrowsyMultiplier", 1.5f, "Multiplier for the drowsiness an energy drink causes when it wears off.");
         ChaserSpeedMultiplier = Synced(round, "ChaserSpeedMultiplier", 1.15f, "Chaser movement speed multiplier (they can't use most items).");
         ChaserClimbSpeedMultiplier = Synced(round, "ChaserClimbSpeedMultiplier", 1.06f, "Chaser climbing speed on walls, ropes and vines (1.06 = 6% faster).");
-        CaptureBoostSeconds = Synced(round, "CaptureBoostSeconds", 4f, "A chaser who captures a runner gets an energy drink + lollipop boost (speed and unlimited stamina, no drowsiness afterwards) for this long (s). 0 = off.");
-        GemCaptureBonus = Synced(round, "GemCaptureBonus", 0.017f, "Each capture makes that chaser's gem speed boost this much stronger for the rest of the leg (0.017 = +1.7% per capture; the length stays the same). Reset every leg.");
+        CaptureMoraleBoost = Synced(round, "CaptureMoraleBoost", true, "A chaser who captures a runner gets the morale boost of the Scoutmaster's bugle (the MORALE BOOST text and the bugle's extra stamina), for that chaser only.");
+        GemCaptureBonus = Synced(round, "GemCaptureBonus", 0.017f, "Each capture makes that chaser's gem speed boost this much stronger for the rest of the leg (0.017 = +1.7% per capture), on top of GemCaptureExtraSeconds. Reset every leg.");
+        GemCaptureExtraSeconds = Synced(round, "GemCaptureExtraSeconds", 0.25f, "Each capture makes that chaser's gem effects last this much longer (s) for the rest of the leg (2.25 -> 2.5 -> 2.75 ...). Reset every leg.");
         RunnerStaminaRegenMultiplier = Synced(round, "RunnerStaminaRegenMultiplier", 1.185f, "Runner stamina regeneration multiplier (1.185 = 18.5% faster).");
         RunnerLegItems = Synced(round, "RunnerLegItems", "Snowball, Brown Berrynana, Fortified Milk", "At the start of each leg every runner gets ONE random item from this list (prefab or display names, comma separated). Empty = off.");
         RunnerBiomeItems = Synced(round, "RunnerBiomeItems", "Alpine:Heat Pack, Volcano:Sports Drink, Swamp:EarlyWorm, Mesa:Aloe Vera", "Extra item every runner gets at the start of a leg in that biome, as \"Biome:Item\" pairs. Biomes use PEAK's names (Caldera = Volcano; The Gloom is assumed to be Swamp).");

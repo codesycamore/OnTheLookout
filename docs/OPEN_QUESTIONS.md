@@ -432,3 +432,12 @@ Debug keys (host, bottom-left hint): **F7** start or restart a round, **F6** swa
 - Feedback: the wall only showed at the end and start of legs (by design: role window only). Now shown for the whole round (`RoundManager.IsActive`: from the first reveal until back in the airport), around **every** loaded campfire that is a safe zone (all of them; only lit ones if `SafeZoneRequiresLit`). Rechecked once a second; walls follow the radius setting and disappear with their campfire (unloaded segment).
 - Far-away terrain may not have its colliders yet when a wall is first built: any direction that finds no ground marks the wall incomplete, and it's rebuilt every 5 s, at most 3 times (a real drop never finds ground, and then the wall stays at the campfire's height there).
 - [ ] During a chase, the next campfire's wall is visible from a distance (and the one behind); the log lists each wall once ("wall around the campfire at …").
+
+### 1.8.5 (2026-10-15)
+
+- **Capture rush -> morale boost:** `ChaserKit.CaptureBoost` now calls PEAK's `Character.MoraleBoost(staminaAdd, scoutCount)` (Character.cs: `GUIManager.instance.bar.PlayMoraleBoost` + `AddExtraStamina`, which is clamped to `1 - petrify%`) on the capturing chaser's own client, with `scoutCount` 1 and the stamina of the Scoutmaster's bugle: `ItemCatalog.MoraleBugle` = the first item prefab with an `Action_MoraleBoost` (its `baselineStaminaBoost`; `staminaBoostPerAdditionalScout` is never used by `MoraleBoost.SpawnMoraleBoost`, so one scout gets the baseline). Only the chaser gets it (the bugle itself boosts everyone in `boostRadius`). **Unverified:** that the Scoutmaster's bugle is the only item with `Action_MoraleBoost` (prefab data); the log names the item it used.
+- **Gem duration per capture:** "extend the gem's ability by .25 s per capture" stacks with the 1.7% speed bonus per capture (user's call). `GemSeconds` = `GemBoostSeconds` + `GemCaptureExtraSeconds` × captures this leg, keyed to `LegKey`, so it is back to 2.25 s each leg. The cooldown still starts when the (longer) effects end.
+
+**Test checklist (1.8.5)**
+- [ ] Capture a runner: MORALE BOOST text, extra (yellow) stamina added as with a bugle toot, no speed boost or rainbow bar; log names the bugle item.
+- [ ] Gem after 1 capture: log "boost x1.017 … for 2.5s (1 captures this leg)"; after 2: x1.034 for 2.75 s. Next leg: x1 for 2.25 s.

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.8.5
+
+- **No more capture rush:** a capture no longer gives the chaser an energy drink + lollipop boost. Instead they get the **Scoutmaster's bugle morale boost**: the MORALE BOOST text and the bugle's extra stamina, for the capturing chaser only (`CaptureMoraleBoost`; replaces `CaptureBoostSeconds`).
+- **Captures make the gem last longer:** each capture adds **0.25 s** to that chaser's gem effects for the rest of the leg (2.25 s → 2.5 s → 2.75 s …), reset every leg (`GemCaptureExtraSeconds`). This stacks with the +1.7% stronger speed boost per capture (`GemCaptureBonus`).
+
 ## 1.8.4
 
 - **Captures need the cursor on the runner:** the chaser has to look at the runner with the centre dot on them (body, pack or anything stuck on them). The fallback that picked any capturable runner close by (up close in any direction) is gone. A capture already being held still follows the runner as before.

@@ -15,9 +15,8 @@ namespace OnTheLookout.Modules;
 ///   vanilla power; instead it gives a short energy-drink speed boost and unlimited stamina (no drowsiness),
 ///   starting GemDelaySeconds after use, with a GemCooldownSeconds cooldown once the effects wear off, at the
 ///   cost of GemPetrify petrification. Each capture takes CapturePetrifyRelief of it away again;
-/// - each capture gives the chaser an energy drink + lollipop boost (CaptureBoostSeconds; a further capture while it
-///   runs restarts it, it doesn't add up), and makes their gem's speed boost GemCaptureBonus stronger for the rest of
-///   the leg (not longer);
+/// - each capture gives the chaser the Scoutmaster's bugle's morale boost (CaptureMoraleBoost), and makes their gem's
+///   speed boost GemCaptureBonus stronger and its effects GemCaptureExtraSeconds longer for the rest of the leg;
 /// - everyone's petrification is cleared when a leg ends (ClearPetrifyEachLeg);
 /// - a chaser can't drop or throw their blowgun (role swaps drop the kit: <see cref="RoleSwap"/>);
 /// - runners get the same short boost for the last HeadStartBoostSeconds of their head start;
@@ -196,18 +195,25 @@ internal static class ChaserKit
     // ---------- Capture boost ----------
 
     /// <summary>
-    /// The local chaser captured a runner (host's capture notice): energy drink + lollipop for CaptureBoostSeconds.
-    /// A capture while that boost is still running makes it last CaptureBoostSeconds from now (no extra time on top).
+    /// The local chaser captured a runner (host's capture notice): PEAK's campfire morale boost
+    /// (Character.MoraleBoost: the MORALE BOOST text + extra stamina), with the Scoutmaster's bugle's own amount
+    /// (Action_MoraleBoost.baselineStaminaBoost), for this chaser only.
     /// </summary>
     private static void CaptureBoost(Character chaser)
     {
-        float seconds = Plugin.ModConfig.CaptureBoostSeconds.Synced();
-        if (seconds <= 0f) return;
-        ApplySugarRush(chaser, seconds);
-        Plugin.Log.LogInfo($"[OTL][Kit] capture boost: {seconds:0.#}s.");
+        if (!Plugin.ModConfig.CaptureMoraleBoost.Synced()) return;
+        if (ItemCatalog.MoraleBugle is not { } bugle)
+        {
+            Plugin.Log.LogWarning("[OTL][Kit] capture morale boost: no item with a morale boost (Scoutmaster's bugle) found.");
+            return;
+        }
+
+        float stamina = bugle.baselineStaminaBoost;
+        chaser.MoraleBoost(stamina, 1);
+        Plugin.Log.LogInfo($"[OTL][Kit] capture morale boost ({bugle.name}): +{stamina:0.##} extra stamina.");
     }
 
-    // ---------- Captures make the gem stronger ----------
+    // ---------- Captures make the gem last longer ----------
 
     private static int s_Captures, s_CapturesLeg = -1;
 
@@ -223,11 +229,16 @@ internal static class ChaserKit
         }
 
         s_Captures++;
-        Plugin.Log.LogInfo($"[OTL][Kit] capture {s_Captures} this leg: gem boost x{GemStrength:0.###}.");
+        Plugin.Log.LogInfo($"[OTL][Kit] capture {s_Captures} this leg: gem boost x{GemStrength:0.###} for {GemSeconds:0.##}s.");
     }
 
-    /// <summary>The gem's speed boost strength: +GemCaptureBonus per capture this leg (its length stays the same).</summary>
+    /// <summary>The gem's speed boost strength: +GemCaptureBonus per capture this leg.</summary>
     private static float GemStrength => 1f + Mathf.Max(0f, Plugin.ModConfig.GemCaptureBonus.Synced()) * CapturesThisLeg;
+
+    /// <summary>Length of the gem's effects: GemBoostSeconds + GemCaptureExtraSeconds per capture this leg.</summary>
+    private static float GemSeconds =>
+        Mathf.Max(0f, Plugin.ModConfig.GemBoostSeconds.Synced())
+        + Mathf.Max(0f, Plugin.ModConfig.GemCaptureExtraSeconds.Synced()) * CapturesThisLeg;
 
     /// <summary>Every client, each frame (from Hud): runners' boost at the tail end of their head start.</summary>
     public static void LocalTick()
@@ -288,14 +299,14 @@ internal static class ChaserKit
     /// <summary>
     /// After GemDelaySeconds: the energy-drink speed boost and, with GemInfiniteStamina, PEAK's
     /// unlimited stamina (Affliction_InfiniteStamina, the rainbow "sugar rush" bar, without its drowsiness),
-    /// both for GemBoostSeconds.
+    /// both for GemBoostSeconds (+ GemCaptureExtraSeconds per capture this leg).
     /// </summary>
     private static IEnumerator GemBoostLater(Character chaser)
     {
         var cfg = Plugin.ModConfig;
         float delay = Mathf.Max(0f, cfg.GemDelaySeconds.Synced());
         if (delay > 0f) yield return new WaitForSeconds(delay);
-        float seconds = Mathf.Max(0f, cfg.GemBoostSeconds.Synced());
+        float seconds = GemSeconds;
         if (chaser == null || chaser.data.dead || !RoleManager.IsChaser(chaser) || !RoundManager.IsChasing)
         {
             StartGemCooldown(); // used but cancelled: the cooldown still applies
@@ -306,7 +317,7 @@ internal static class ChaserKit
         if (cfg.GemInfiniteStamina.Synced()) ApplySugarRush(chaser, seconds, strength);
         else ApplyBoost(chaser, seconds, strength);
 
-        Plugin.Log.LogInfo($"[OTL][Kit] chaser gem: boost x{strength:0.###}{(cfg.GemInfiniteStamina.Synced() ? " + unlimited stamina" : "")} for {seconds:0.##}s.");
+        Plugin.Log.LogInfo($"[OTL][Kit] chaser gem: boost x{strength:0.###}{(cfg.GemInfiniteStamina.Synced() ? " + unlimited stamina" : "")} for {seconds:0.##}s ({CapturesThisLeg} captures this leg).");
 
         if (seconds > 0f) yield return new WaitForSeconds(seconds);
         StartGemCooldown();
