@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.9.0
+
+- **Recommended difficulty:** the description now says the mode is meant for PEAK's base difficulty but works on any ascent (the runners just have it harder).
+- **Blowgun:** each shot adds **3% petrification** to the chaser (`BlowgunPetrify`).
+- **Chaser gem cooldown 23 s** (was 20; `GemCooldownSeconds`).
+- **Dash heals:** every dash reduces each negative status the runner has by **12%** of the bar (injury, hunger, cold, poison, drowsiness, ...; not petrification or weight; `DashHeal`).
+- **Runner stamina regeneration +20%** (was +18.5%; `RunnerStaminaRegenMultiplier`).
+- **Backpacks every leg:** at the start of every leg (after the dead are brought back, who drop everything), every runner without a backpack gets one, worn (`RunnerBackpacks`). Before, only at the start of the game and on a role swap.
+- **Cold ascents:** on ascents with cold nights (Ascent 5+), every runner gets a **faerie lantern** at the start of the game (`ColdAscentLantern`). Faerie lanterns weigh **half** their vanilla weight during a round (`FaerieLanternWeightMultiplier`).
+- **Stones in runner luggage:** regular luggage can also hold a **stone**, as often as a snowball (fortified milk, snowball, brown berrynana, energy drink and stone are each about 9.6% per item slot; `LuggageExtraChance` 0.479). A stone thrown by a runner does **10% injury** to the chaser it hits, exactly (the chasers' half damage doesn't apply; `StoneChaserDamage`). Chasers still can't use stones.
+- **Runners can't hit runners:** a snowball or stone thrown by a runner passes straight through every other runner for 4 s after the throw (no push, no blindness, no damage).
+- **The peak is a safe zone:** everything past PEAK's last progress point (where it counts you as at the peak) has the campfire safe zones' rules: no captures, runners inside can't freeze chasers, no mandrakes or zombies sent at runners there, no hunger for runners. A **glowing yellow wall** marks where it begins (`PeakSafeZone`).
+- **Every chaser dead ends the leg:** the runners win it, and everyone (the dead revived) is brought to the next campfire for the role window and the next leg's draw, as when the runners reach the campfire (no first-runner reward). On the last stretch it wins the game for the runners.
+- **Zombie waves only in solo play** (one player in the lobby, who is always a runner). With others, all chasers dead ends the leg instead.
+- **Game won:** the losing side is **petrified** (turned to stone, PEAK's statue death): chasers when every runner reaches the peak (still brought up there first), runners when they're all caught on the last stretch. Then everyone sees **GAME OVER!** in rainbow PEAK title letters with who won (4 s, `GameOverSeconds`), then **RETURNING BACK TO AIRPORT IN...** with a countdown from **15** (`GameOverAirportSeconds`), and the host's game sends everyone back to the airport for a fresh start.
+
 ## 1.8.5
 
 - **No more capture rush:** a capture no longer gives the chaser an energy drink + lollipop boost. Instead they get the **Scoutmaster's bugle morale boost**: the MORALE BOOST text and the bugle's extra stamina, for the capturing chaser only (`CaptureMoraleBoost`; replaces `CaptureBoostSeconds`).

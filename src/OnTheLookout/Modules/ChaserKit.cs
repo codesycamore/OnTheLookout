@@ -390,6 +390,7 @@ internal static class ChaserKit
         // PEAK's own body-part collider registry first (CharacterRagdoll.RegisterBodypartColliders).
         if (!CharacterRagdoll.TryGetCharacterFromCollider(other.collider, out Character hit)) hit = other.collider.GetComponentInParent<Character>();
         if (hit == null || hit == item.lastThrownCharacter || hit.data.dead || hit.isBot) return;
+        if (RoleManager.IsRunner(item.lastThrownCharacter) && RoleManager.IsRunner(hit)) return; // runners can't affect each other
         int id = item.view.ViewID;
         if (s_SnowballHits.TryGetValue(id, out float last) && Time.time - last < 1f) return;
         s_SnowballHits[id] = Time.time;

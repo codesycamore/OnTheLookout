@@ -69,6 +69,10 @@ internal sealed class ModConfig
     public ConfigEntry<float> HeadStartBoostSeconds { get; }
     public ConfigEntry<bool> DisableScoutStatues { get; }
     public ConfigEntry<bool> PeakChasersDie { get; }
+    public ConfigEntry<float> GameOverSeconds { get; }
+    public ConfigEntry<float> GameOverAirportSeconds { get; }
+    public ConfigEntry<float> StoneChaserDamage { get; }
+    public ConfigEntry<bool> PeakSafeZone { get; }
 
     public ConfigEntry<float> EnergyDrinkDrowsyMultiplier { get; }
     public ConfigEntry<float> BlowdartDrowsy { get; }
@@ -112,6 +116,10 @@ internal sealed class ModConfig
     public ConfigEntry<float> DashFallProtectSeconds { get; }
     public ConfigEntry<float> DashCooldownSeconds { get; }
     public ConfigEntry<float> DashPetrify { get; }
+    public ConfigEntry<float> DashHeal { get; }
+    public ConfigEntry<float> BlowgunPetrify { get; }
+    public ConfigEntry<bool> ColdAscentLantern { get; }
+    public ConfigEntry<float> FaerieLanternWeightMultiplier { get; }
     public ConfigEntry<bool> ClearPetrifyEachLeg { get; }
     public ConfigEntry<float> DashLiftFactor { get; }
     public ConfigEntry<float> DashFallMomentumCancel { get; }
@@ -224,7 +232,7 @@ internal sealed class ModConfig
         ChaserStatusMultiplier = Synced(round, "ChaserStatusMultiplier", 0.5f, "Chasers take this fraction of every negative status (injury, cold, poison, drowsy, ...) they would get in vanilla at the current ascent. Hunger is not reduced.");
         ChaserFallDamageMultiplier = Synced(round, "ChaserFallDamageMultiplier", 0.333f, "Fraction of vanilla fall damage chasers take (0.333 = 1/3). Still scales with the ascent like vanilla, and a big fall still knocks them down. 0 = no fall damage.");
         ZombiesIgnoreChasers = Synced(round, "ZombiesIgnoreChasers", true, "Mushroom zombies don't target or bite chasers.");
-        ZombiesWhenChasersDead = Synced(round, "ZombiesWhenChasersDead", true, "When no chaser is alive during a chase (all dead, or none - e.g. a host playing solo), mushroom zombies hunt random runners outside the safe zones (ZombiesByPlayerCount per wave), wave after wave, until the runners reach the campfire or a chaser is back.");
+        ZombiesWhenChasersDead = Synced(round, "ZombiesWhenChasersDead", true, "Solo play only (you alone in the lobby, so there is no chaser): mushroom zombies hunt random runners outside the safe zones (ZombiesByPlayerCount per wave), wave after wave, until the runners reach the campfire or a chaser is back.");
         ZombieLifetimeSeconds = Synced(round, "ZombieLifetimeSeconds", 120f, "How long each of those zombies lasts.");
         ZombieSpawnDistance = Synced(round, "ZombieSpawnDistance", 15f, "How far from its runner a zombie appears (m).");
         ZombiesByPlayerCount = Synced(round, "ZombiesByPlayerCount", "1:1, 6:2, 10:3", "Zombies per wave for a given lobby size, as \"minPlayers:zombies\" pairs. Each zombie hunts one random runner outside the safe zones.");
@@ -239,7 +247,9 @@ internal sealed class ModConfig
         MandrakeChaserSleepMultiplier = Synced(round, "MandrakeChaserSleepMultiplier", 0.9f, "Drowsiness a screaming mandrake gives a chaser, relative to vanilla (0.9 = 90%).");
         HeadStartBoostSeconds = Synced(round, "HeadStartBoostSeconds", 4f, "Runners get an energy-drink speed boost (no drowsiness afterwards) for the last this-many seconds of their head start. 0 = off.");
         DisableScoutStatues = Synced(round, "DisableScoutStatues", true, "Scout statues do nothing during a round (no revives, no items). Everyone is brought back at the campfire after each leg instead.");
-        PeakChasersDie = Synced(round, "PeakChasersDie", true, "When every living runner has reached the peak, the runners win and every living chaser is brought to the peak and dies.");
+        PeakChasersDie = Synced(round, "PeakChasersDie", true, "When every living runner has reached the peak, the runners win and every living chaser is brought to the peak and petrified (turned to stone).");
+        GameOverSeconds = Synced(round, "GameOverSeconds", 4f, "Once a side has won the game (last leg: every runner or every chaser dead, or every runner at the peak), the losing side is petrified and everyone sees a rainbow GAME OVER! for this long (s) ...");
+        GameOverAirportSeconds = Synced(round, "GameOverAirportSeconds", 15f, "... then RETURNING BACK TO AIRPORT IN... counting down this many seconds; then everyone goes back to the airport for a fresh start.");
 
         EnergyDrinkDrowsyMultiplier = Synced(round, "EnergyDrinkDrowsyMultiplier", 1.5f, "Multiplier for the drowsiness an energy drink causes when it wears off.");
         ChaserSpeedMultiplier = Synced(round, "ChaserSpeedMultiplier", 1.15f, "Chaser movement speed multiplier (they can't use most items).");
@@ -247,13 +257,15 @@ internal sealed class ModConfig
         CaptureMoraleBoost = Synced(round, "CaptureMoraleBoost", true, "A chaser who captures a runner gets the morale boost of the Scoutmaster's bugle (the MORALE BOOST text and the bugle's extra stamina), for that chaser only.");
         GemCaptureBonus = Synced(round, "GemCaptureBonus", 0.017f, "Each capture makes that chaser's gem speed boost this much stronger for the rest of the leg (0.017 = +1.7% per capture), on top of GemCaptureExtraSeconds. Reset every leg.");
         GemCaptureExtraSeconds = Synced(round, "GemCaptureExtraSeconds", 0.25f, "Each capture makes that chaser's gem effects last this much longer (s) for the rest of the leg (2.25 -> 2.5 -> 2.75 ...). Reset every leg.");
-        RunnerStaminaRegenMultiplier = Synced(round, "RunnerStaminaRegenMultiplier", 1.185f, "Runner stamina regeneration multiplier (1.185 = 18.5% faster).");
+        RunnerStaminaRegenMultiplier = Synced(round, "RunnerStaminaRegenMultiplier", 1.2f, "Runner stamina regeneration multiplier (1.2 = 20% faster).");
         RunnerLegItems = Synced(round, "RunnerLegItems", "Snowball, Brown Berrynana, Fortified Milk", "At the start of each leg every runner gets ONE random item from this list (prefab or display names, comma separated). Empty = off.");
         RunnerBiomeItems = Synced(round, "RunnerBiomeItems", "Alpine:Heat Pack, Volcano:Sports Drink, Swamp:EarlyWorm, Mesa:Aloe Vera", "Extra item every runner gets at the start of a leg in that biome, as \"Biome:Item\" pairs. Biomes use PEAK's names (Caldera = Volcano; The Gloom is assumed to be Swamp).");
         FortifiedMilkWeightMultiplier = Synced(round, "FortifiedMilkWeightMultiplier", 2f, "Fortified milk weighs this many times its vanilla weight.");
         FortifiedMilkInvincibilityMultiplier = Synced(round, "FortifiedMilkInvincibilityMultiplier", 0.35f, "Fortified milk's invincibility lasts this fraction of its vanilla time (0.35 = 65% shorter). Also shortens its capture protection.");
         HungerRateMultiplier = Synced(round, "HungerRateMultiplier", 0.7f, "During a round hunger grows at this fraction of the vanilla rate (still scaled by the ascent like vanilla). Runners in a safe zone get no hungrier at all.");
-        RunnerBackpacks = Synced(round, "RunnerBackpacks", true, "After roles are assigned at the start of a round, every runner without a backpack gets one.");
+        RunnerBackpacks = Synced(round, "RunnerBackpacks", true, "At the start of every leg (after roles are drawn, and after the dead are brought back), every runner without a backpack gets one, worn.");
+        ColdAscentLantern = Synced(round, "ColdAscentLantern", true, "On ascents with cold nights (Ascent 5+), every runner gets a faerie lantern at the start of the game.");
+        FaerieLanternWeightMultiplier = Synced(round, "FaerieLanternWeightMultiplier", 0.5f, "Faerie lanterns weigh this much of their vanilla weight during a round (0.5 = half).");
         CampfireFoodItems = Synced(round, "CampfireFoodItems", "Marshmallow, Glizzy", "When the chase of a leg ends at a campfire, the host makes sure there is one of these per living player near the fire (random pick each; spawns only what is missing). Glizzy = the hot dog. Empty = off.");
         ClearStatusesAtCampfire = Synced(round, "ClearStatusesAtCampfire", true, "When a campfire is lit, every player near it is cleared of negative statuses (incl. curse).");
         NoReviveCurse = Synced(round, "NoReviveCurse", true, "Revived players don't get the revival curse / hunger.");
@@ -270,7 +282,7 @@ internal sealed class ModConfig
         GemBoostSeconds = Synced(blowgun, "GemBoostSeconds", 2.25f, "Length of the chaser gem's effects (speed boost and unlimited stamina) (s).");
         GemDelaySeconds = Synced(blowgun, "GemDelaySeconds", 1f, "The chaser gem's effects start this long after it is used (s).");
         GemInfiniteStamina = Synced(blowgun, "GemInfiniteStamina", true, "The chaser gem also gives unlimited stamina (the rainbow stamina bar) for its duration, without drowsiness afterwards.");
-        GemCooldownSeconds = Synced(blowgun, "GemCooldownSeconds", 20f, "Cooldown of the chaser gem (s). It starts when the gem's effects wear off.");
+        GemCooldownSeconds = Synced(blowgun, "GemCooldownSeconds", 23f, "Cooldown of the chaser gem (s). It starts when the gem's effects wear off.");
         GemPetrify = Synced(blowgun, "GemPetrify", 0.05f, "Petrification each gem use adds to the chaser (0.05 = 5%).");
         SnowballKnockbackBonus = Synced(blowgun, "SnowballKnockbackBonus", 0.1f, "Extra push a thrown snowball gives the scout it hits, as a fraction of its own impact (0.1 = 10% stronger).");
         RunnerGem = Synced(blowgun, "RunnerGem", true, "Runners carry a scout gem (Scout's Ambition) in their hotbar: using it dashes them DashDistance forward (where they look, horizontally), with a cooldown and some petrification as the cost. Its vanilla power is never used; chasers can't use it.");
@@ -281,6 +293,8 @@ internal sealed class ModConfig
         DashFallProtectSeconds = Synced(blowgun, "DashFallProtectSeconds", 1f, "How long a dash protects the runner from fall damage (s), starting DashFallProtectDelay after the dash. 0 = off.");
         DashCooldownSeconds = Synced(blowgun, "DashCooldownSeconds", 32f, "Cooldown of the runner dash (s), shown above the gem's slot.");
         DashPetrify = Synced(blowgun, "DashPetrify", 0.03f, "Petrification each dash adds to the runner (0.03 = 3%).");
+        DashHeal = Synced(blowgun, "DashHeal", 0.12f, "Each dash heals every negative status the runner has (injury, hunger, cold, poison, drowsiness, ...) by this much (0.12 = 12% of the bar each). Not petrification or weight.");
+        BlowgunPetrify = Synced(blowgun, "BlowgunPetrify", 0.03f, "Petrification each blowgun shot adds to the chaser (0.03 = 3%).");
         ClearPetrifyEachLeg = Synced(blowgun, "ClearPetrifyEachLeg", true, "When a leg ends (and when the next one starts), every player's petrification is cleared.");
         DashLiftFactor = Synced(blowgun, "DashLiftFactor", 0.5f, "The dash also lifts the runner up, like Scout's Initiative's double jump but reaching this fraction of its height (0.5 = half). 0 = off.");
         DashFallMomentumCancel = Synced(blowgun, "DashFallMomentumCancel", 0.8f, "Dashing while falling fast takes this fraction of the falling speed (and fall time) away (0.8 = 80%).");
@@ -316,6 +330,7 @@ internal sealed class ModConfig
 
         const string safe = "5. SafeZones";
         CampfireSafeRadius = Synced(safe, "CampfireSafeRadius", 15f, "Radius (m) around a campfire that is a safe zone: no captures, and runners inside can't freeze chasers. A leg ends when every living runner is inside the next campfire's safe zone.");
+        PeakSafeZone = Synced(safe, "PeakSafeZone", true, "The peak (past PEAK's last progress point) is a safe zone too, with the same rules as a campfire's, and a glowing yellow wall at its edge.");
         SafeZoneRequiresLit = Synced(safe, "SafeZoneRequiresLit", false, "Only lit campfires are safe zones.");
 
 
@@ -326,8 +341,9 @@ internal sealed class ModConfig
         ChaserAutoAllowHealing = Synced(items, "ChaserAutoAllowHealing", true, "Chasers may pick up and use items that heal injury.");
         ChaserAutoAllowFood = Synced(items, "ChaserAutoAllowFood", true, "Chasers may pick up and eat food.");
         ClownLuggageChasersOnly = Synced(items, "ClownLuggageChasersOnly", true, "During a round only chasers can open clown luggage, and it contains food and healing items.");
-        LuggageExtraItems = Synced(items, "LuggageExtraItems", "Fortified Milk, Snowball, Brown Berrynana, Energy Drink", "Items that can also come out of regular (non-clown) luggage during a round, every leg (comma separated). Empty = off.");
-        LuggageExtraChance = Synced(items, "LuggageExtraChance", 0.383f, "Chance (0-1) for each item a regular luggage spawns to be replaced by a random LuggageExtraItems item (split evenly between them: 0.383 with 4 items = about 9.6% each).");
+        LuggageExtraItems = Synced(items, "LuggageExtraItems", "Fortified Milk, Snowball, Brown Berrynana, Energy Drink, Stone", "Items that can also come out of regular (non-clown) luggage during a round, every leg (comma separated). Empty = off.");
+        LuggageExtraChance = Synced(items, "LuggageExtraChance", 0.479f, "Chance (0-1) for each item a regular luggage spawns to be replaced by a random LuggageExtraItems item (split evenly between them: 0.479 with 5 items = about 9.6% each).");
+        StoneChaserDamage = Synced(items, "StoneChaserDamage", 0.1f, "Injury a stone thrown by a runner does to the chaser it hits (0.1 = 10%; the chasers' half damage doesn't apply). Runners' snowballs and stones go through other runners.");
         LuggageRareExtraItems = Synced(items, "LuggageRareExtraItems", "Lantern_Faerie, RopeShooterAnti, Anti-Rope Spool", "Items that can also come out of regular (runner) luggage during a round, a little less often than the LuggageExtraItems (see LuggageRareExtraWeight). Comma separated. Empty = off.");
         LuggageRareExtraWeight = Synced(items, "LuggageRareExtraWeight", 0.75f, "Chance of each LuggageRareExtraItems item compared to one LuggageExtraItems item (0.75 = three quarters as likely as a snowball).");
         LuggageExcludedItems = Synced(items, "LuggageExcludedItems", "Flare, Compass, Pirate Compass, Warp Compass", "Items that never come out of any luggage during a round: each one is rerolled from the luggage's own loot pool (comma separated).");

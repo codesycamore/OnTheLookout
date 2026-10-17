@@ -41,8 +41,20 @@ internal static class MilkRules
 
     public static void CarryWeightPostfix(Item __instance, ref int __result)
     {
-        if (__result <= 0 || !IsMilk(__instance)) return;
-        __result = Mathf.RoundToInt(__result * Mathf.Max(0f, Plugin.ModConfig.FortifiedMilkWeightMultiplier.Synced()));
+        if (__result <= 0) return;
+        if (IsMilk(__instance)) __result = Mathf.RoundToInt(__result * Mathf.Max(0f, Plugin.ModConfig.FortifiedMilkWeightMultiplier.Synced()));
+        else if (RoundManager.IsActive && IsFaerieLantern(__instance))
+        {
+            __result = Mathf.RoundToInt(__result * Mathf.Max(0f, Plugin.ModConfig.FaerieLanternWeightMultiplier.Synced()));
+        }
+    }
+
+    private static readonly Dictionary<ushort, bool> s_IsLantern = new();
+
+    private static bool IsFaerieLantern(Item item)
+    {
+        if (s_IsLantern.TryGetValue(item.itemID, out bool cached)) return cached;
+        return s_IsLantern[item.itemID] = ItemCatalog.MatchesNames(ItemCatalog.Effective(item), "Lantern_Faerie");
     }
 
     public static void AddAfflictionPostfix(CharacterAfflictions __instance, Affliction affliction)

@@ -2,7 +2,9 @@
 
 **Chasers vs Runners for PEAK.** Every leg, a few scouts become **chasers** and hunt everyone else up the mountain. **Runners** have to make it from campfire to campfire, and finally to the peak, without getting caught. A runner's best defence is to turn around and **look at a chaser** to freeze them in place.
 
-> **New in 1.8.5:** a capture gives the chaser the **Scoutmaster's bugle morale boost** (extra stamina) instead of the energy drink + lollipop rush, and makes their gem's effects last **0.25 s longer** (on top of the 1.7% stronger speed boost) for the rest of the leg (2.25 s, 2.5 s, 2.75 s, …; back to 2.25 s every leg). See the changelog for earlier versions.
+> **New in 1.9.0:** each blowgun shot costs the chaser **3% petrification**; the chaser gem's cooldown is **23 s**; every dash **heals each negative status by 12%**; runners regain stamina **20% faster**; every runner is given a **backpack at the start of every leg**; and on ascents with **cold nights** (Ascent 5+) every runner starts with a **half-weight faerie lantern**. Runner luggage can hold **stones**: a runner's stone does **10% damage** to the chaser it hits, and runners' snowballs and stones **go straight through other runners**. **The peak is a safe zone** with the same rules as a campfire's, behind its own glowing yellow wall. **Every chaser dead** ends the leg (the runners win it; on the last stretch, the game). When a side wins the game, the losing side is **turned to stone** and everyone sees a rainbow **GAME OVER!**, then **RETURNING BACK TO AIRPORT IN...** counting down from **15**, then the game goes back to the airport for a fresh start. Mushroom zombie waves now only come in **solo play**. See the changelog for earlier versions.
+
+> **Recommended difficulty: PEAK.** The mode is balanced for PEAK's base difficulty, but it isn't limited to it: on harder ascents everything still works, the runners just have a tougher climb.
 
 > **Everyone in the lobby needs this mod** (same version). The host runs the game: roles, freezes, captures and rewards are all decided by the host and synced to everyone.
 
@@ -19,16 +21,20 @@
    - A runner **freezes** a chaser by **looking at them** within 26 m, from **outside** a safe zone. The chaser can't move, act or fall and is **blinded** for 8 seconds, then is immune to freezing for 8 seconds.
    - The **fog**, the rising **lava** in the Caldera and the rising **gloom** work as in vanilla (PEAK's own start timing and speed). The fog never hurts chasers.
    - From **1 minute** after the head start, a **mandrake** is dropped at every runner outside a safe zone **every 45 seconds**, in the **first two biomes** only. Mandrakes disappear **10 s** after they appear, never make runners drowsy, and make chasers only **90%** as drowsy as in vanilla.
-   - If **no chaser is alive** (all dead, or none at all, e.g. a host playing solo), **mushroom zombies** hunt the runners from 5 minutes after the head start (one wave at a time, 2 minutes each, 2-minute cooldown between waves).
+   - **Solo play only:** playing alone you're always a runner, so with no chaser **mushroom zombies** hunt you instead, from 5 minutes after the head start (one wave at a time, 2 minutes each, 2-minute cooldown between waves). With other players there are no zombie waves.
 5. **The leg is won.**
    - **Runners win the leg** when **every living runner** is in the next campfire's **safe zone** (15 m around it: no captures there, and runners inside can't freeze chasers).
    - A **glowing yellow wall** marks the edge of every campfire's safe zone, the whole run long.
+   - **The peak** is a safe zone too, with the same rules, and has its own yellow wall where it begins.
    - **Chasers win the leg** when **every runner is dead** (passing out doesn't count).
+   - **Runners also win the leg** when **every chaser is dead**: everyone is brought to the next campfire, the dead revived, for the next leg's role draw (no first-runner reward).
 6. **Role window.** Everyone, the dead included, is brought next to the campfire (within 5 m; anyone who didn't make it is brought there once more before roles are drawn) and frozen for **10 seconds**. Press **-** to choose **RUNNER** (the default) or **CHASER** for the next leg. Food is laid out so everyone gets something to eat.
 7. **Next leg.** The campfire lights itself, clearing everyone's negative statuses, and new roles are drawn: chasers are picked at random from the players who chose CHASER, **one chaser for every 4 runners** at most. If nobody volunteered, one random player is the chaser. Then the reveal and head start start again.
 8. **Win the game.**
-   - **Runners win** when **every living runner** reaches **the peak**. The chasers are brought up there and **die**.
+   - **Runners win** when **every living runner** reaches **the peak**. The chasers are brought up there and **turned to stone**.
+   - **Runners also win** when **every chaser is dead** on the last stretch.
    - **Chasers win** when every runner is dead on the last stretch, with no campfire left to go to.
+   - The losing side is **turned to stone**, everyone sees a rainbow **GAME OVER!** with who won (4 s), then **RETURNING BACK TO AIRPORT IN...** counting down from **15**, and the game goes back to the airport, where everything starts over for the next run.
 
 ### Roles and choices
 - Your choice in the **-** menu is private: only the host's game receives it. It stays until you change it, and resets to RUNNER when a run ends and everyone is back in the airport. There are no odds: the chasers are a random pick from the volunteers.
@@ -44,8 +50,8 @@
 
 **Perks**
 - **15% faster** than runners, and **6% faster climbing** (walls, ropes, vines).
-- **Blowgun** with **unlimited** darts (**72 s** cooldown, counted down above its hotbar slot). It can't be dropped or thrown, and takes **1.65×** as long to fire as in vanilla. A dart doesn't knock the runner out: it adds **20% drowsiness**. Darts don't affect other chasers.
-- **Scout gem boost:** chasers carry **Scout's Initiative** (a scout gem) whose own power is never used. Using it gives, **1 second later**, a **2.25-second energy-drink speed boost plus unlimited stamina** (the rainbow stamina bar; no drowsiness), and the gem goes back to its slot so your hands are free. It then has a **20-second cooldown**, starting when the effects wear off (counted down above its hotbar slot). Each use adds **5% petrification**; each capture takes **5%** away again, and makes the gem's speed boost **1.7% stronger** and its effects last **0.25 s longer** for the rest of the leg (2.25 s → 2.5 s → 2.75 s …; back to 2.25 s each leg, since roles are redrawn). Using it makes **every runner give off flare smoke** in their own colour for **3 s**.
+- **Blowgun** with **unlimited** darts (**72 s** cooldown, counted down above its hotbar slot). It can't be dropped or thrown, and takes **1.65×** as long to fire as in vanilla. A dart doesn't knock the runner out: it adds **20% drowsiness**. Darts don't affect other chasers. Each shot costs the chaser **3% petrification**.
+- **Scout gem boost:** chasers carry **Scout's Initiative** (a scout gem) whose own power is never used. Using it gives, **1 second later**, a **2.25-second energy-drink speed boost plus unlimited stamina** (the rainbow stamina bar; no drowsiness), and the gem goes back to its slot so your hands are free. It then has a **23-second cooldown**, starting when the effects wear off (counted down above its hotbar slot). Each use adds **5% petrification**; each capture takes **5%** away again, and makes the gem's speed boost **1.7% stronger** and its effects last **0.25 s longer** for the rest of the leg (2.25 s → 2.5 s → 2.75 s …; back to 2.25 s each leg, since roles are redrawn). Using it makes **every runner give off flare smoke** in their own colour for **3 s**.
 - **Morale boost:** each capture gives the chaser the **Scoutmaster's bugle morale boost** (the MORALE BOOST text and the bugle's **extra stamina**), for that chaser only.
 - **Tough:** only **half** of every negative status (injury, cold, poison, drowsiness, …), only **1/3 fall damage** (still scaled by the ascent; a big fall still knocks them down), **immune to fog**, ignored by **mushroom zombies**. *Hunger works the same as for everyone.*
 - **Clown luggage** is theirs: only chasers can open it, and it's full of food and healing items.
@@ -67,12 +73,12 @@
 - **Freeze chasers** by looking at them (26 m, 8 s; no stacking, 8 s immunity afterwards), but not from inside a safe zone.
 - **Head start** at every leg, with a **4-second speed boost** at its end.
 - **Safe zones** (15 m) around every campfire.
-- **18.5% faster stamina regeneration.**
-- A **backpack** at the start of the round, **one random item** at the start of every leg (a snowball, a brown berrynana or a fortified milk), plus a **biome item**: a heat pack in the Alpine, a sports drink in the Caldera, an early worm in the Gloom, aloe vera in the Mesa.
-- **Dash gem:** runners carry **Scout's Ambition** (a scout gem) in their hotbar, whose own power is never used. Using it **dashes you 7 m** horizontally where you look (walls stop it; not while climbing) and **lifts you up** a little (half the height of Scout's Initiative's jump), and the gem goes back to its slot so your hands are free; dashing in mid-air also lets you **float for 0.65 s**. **32-second cooldown**, counted down above its slot, and **3% petrification** per dash. Dashing while falling fast **cancels 80% of the fall**, and from **0.5 s** after a dash you take **no fall damage for 1 s**. Each dash makes **every chaser give off flare smoke** in their own colour for **5 s**, so you can see where they are.
-- **Snowballs blind chasers** they hit, and every thrown snowball pushes **10% harder**.
+- **20% faster stamina regeneration.**
+- A **backpack** (worn) at the start of **every leg** if you don't have one, **one random item** at the start of every leg (a snowball, a brown berrynana or a fortified milk), plus a **biome item**: a heat pack in the Alpine, a sports drink in the Caldera, an early worm in the Gloom, aloe vera in the Mesa. On ascents with **cold nights** (Ascent 5+) every runner also gets a **faerie lantern** at the start of the game; faerie lanterns weigh **half** as much during a round.
+- **Dash gem:** runners carry **Scout's Ambition** (a scout gem) in their hotbar, whose own power is never used. Using it **dashes you 7 m** horizontally where you look (walls stop it; not while climbing) and **lifts you up** a little (half the height of Scout's Initiative's jump), and the gem goes back to its slot so your hands are free; dashing in mid-air also lets you **float for 0.65 s**. **32-second cooldown**, counted down above its slot, and **3% petrification** per dash. Each dash also **heals every negative status you have by 12%** (injury, hunger, cold, poison, drowsiness, …). Dashing while falling fast **cancels 80% of the fall**, and from **0.5 s** after a dash you take **no fall damage for 1 s**. Each dash makes **every chaser give off flare smoke** in their own colour for **5 s**, so you can see where they are.
+- **Snowballs blind chasers** they hit, and every thrown snowball pushes **10% harder**. A **stone** a runner throws does **10% damage** to the chaser it hits (their half damage doesn't apply). Snowballs and stones thrown by a runner **go straight through other runners**.
 - Runners **can't use the blowgun or the chasers' scout gem** (chaser items), and chasers can't use the runners' dash gem.
-- **Regular luggage** can also hold **fortified milk, snowballs, brown berrynanas and energy drinks**, and a little less often a **faerie lantern, anti-rope cannon or anti-rope spool**, every leg; only runners can pick these up or use them. **Flares, compasses, pirate's compasses and warp compasses** never come out of any luggage.
+- **Regular luggage** can also hold **fortified milk, snowballs, brown berrynanas, energy drinks and stones**, and a little less often a **faerie lantern, anti-rope cannon or anti-rope spool**, every leg; only runners can pick these up or use them. **Flares, compasses, pirate's compasses and warp compasses** never come out of any luggage.
 - **Fortified milk** protects you from being captured while it's active (milk is twice as heavy and its invincibility is 65% shorter than vanilla).
 - First runner into each campfire's safe zone gets a **fortified milk** (not when the chasers won the leg).
 - Leg and biome items are dropped at your feet and picked up for you, straight into your hands; if your slots are full they stay on the ground.
@@ -142,7 +148,7 @@ The host changes these in the **host menu's SETTINGS page** (during the game), o
 | `HeadStartSeconds` | 23 | Runner head start each leg (chasers frozen and blind). |
 | `HeadStartBoostSeconds` | 4 | Runners' speed boost (no drowsiness) at the end of the head start. 0 = off. |
 | `RunnersPerChaser` | 4 | At most one chaser per this many runners (1 in 5 players, 2 in 10). Drawn from the CHASER volunteers; nobody volunteered = one random player. Always leaves a runner. |
-| `ZombieStartDelaySeconds` | 300 | With no chaser alive, zombies start coming this long after the head start ends (each leg). |
+| `ZombieStartDelaySeconds` | 300 | Solo play: zombies start coming this long after the head start ends (each leg). |
 | `ZombieWaveDelaySeconds` | 120 | Cooldown after a zombie wave is gone (killed or expired) before the next one can come. |
 | `ZombieLifetimeSeconds` | 120 | How long each zombie lasts. |
 

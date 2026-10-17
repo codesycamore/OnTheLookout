@@ -202,6 +202,58 @@ internal static class RoundManager
         Publish(state, s_LegStart, s_RevealMs, s_HeadStartMs, s_RoundId, s_LegId);
     }
 
+    // ---------- Game won -> petrify the losers -> back to the airport ----------
+
+    /// <summary>Room property: server timestamp (ms) at which everyone is sent back to the airport after the game was won.</summary>
+    public const string AirportKey = "otl.apt";
+
+    private static bool s_AirportSent;
+
+    /// <summary>The game was won: the losers are petrified and the airport countdown runs.</summary>
+    public static bool IsGameOver => Net.InRoom && (s_State is RoundState.RunnersWon or RoundState.ChasersWon)
+        && !(Character.localCharacter != null && Character.localCharacter.inAirport);
+
+    /// <summary>Seconds left on the airport countdown; 0 when the game isn't over.</summary>
+    public static float AirportSecondsLeft => IsGameOver && Net.GetRoom(AirportKey) is int at ? Net.SecondsUntil(at) : 0f;
+
+    /// <summary>
+    /// Host: one side won the game (the last leg, to the peak). Every living scout of the losing side is petrified
+    /// (<see cref="Notice.Petrify"/>: turned to stone, PEAK's statue death); with a runners' win and PeakChasersDie
+    /// the chasers are brought up to the peak first. Every client shows a rainbow GAME OVER! for GameOverSeconds,
+    /// then counts down GameOverAirportSeconds ("RETURNING BACK TO AIRPORT IN..."); then the host sends everyone back to the airport
+    /// (<see cref="AdminRestart.HostReturnToAirport"/>), where everything resets for a fresh start.
+    /// </summary>
+    private static void HostGameOver(RoundState winner, Vector3? peak)
+    {
+        if (!Net.IsHost || IsGameOver) return;
+        float seconds = Mathf.Max(0f, Plugin.ModConfig.GameOverSeconds.Synced()) + Mathf.Max(1f, Plugin.ModConfig.GameOverAirportSeconds.Synced());
+        s_AirportSent = false;
+        Net.SetRoom(AirportKey, unchecked(Net.Now + (int)(seconds * 1000f))); // before the state, so clients have it at once
+        HostSetFlags(0);
+        HostSetState(winner);
+        ZombieHunt.HostDespawnAll();
+        Role losers = winner == RoundState.RunnersWon ? Role.Chaser : Role.Runner;
+        if (winner == RoundState.RunnersWon && peak != null && Plugin.ModConfig.PeakChasersDie.Synced())
+        {
+            ModNetwork.Instance?.StartCoroutine(HostChasersToPeak(peak.Value));
+        }
+        else
+        {
+            ModNetwork.Broadcast(Notice.Petrify, (int)losers, 0);
+        }
+
+        Plugin.Log.LogInfo($"[OTL][Round] HOST: game won ({winner}); {losers}s petrified, back to the airport in {seconds:0.#}s.");
+    }
+
+    /// <summary>Every client: the local scout is turned to stone if they're on the losing side (<paramref name="losers"/>).</summary>
+    public static void OnPetrifyNotice(Role losers)
+    {
+        Character local = Character.localCharacter;
+        if (local == null || local.data.dead || local.isBot || RoleManager.RoleOf(Net.Actor(local)) != losers) return;
+        local.data.SetPetrify(100); // full petrification: PEAK turns them into a statue (Character.HandleLife)
+        Plugin.Log.LogInfo("[OTL][Round] the other side won: petrified.");
+    }
+
     // ---------- Campfire lit -> next leg (host) ----------
 
     /// <summary>Room property: bit flags shared with every client (see <see cref="FlagChasersWonLeg"/>, <see cref="FlagRoleWindow"/>).</summary>
@@ -294,6 +346,18 @@ internal static class RoundManager
             return;
         }
 
+        if (IsGameOver)
+        {
+            // The airport countdown is running; when it's over everyone goes back to the airport.
+            if (!s_AirportSent && Net.GetRoom(AirportKey) is int && AirportSecondsLeft <= 0f)
+            {
+                s_AirportSent = true;
+                AdminRestart.HostReturnToAirport();
+            }
+
+            return;
+        }
+
         if (!IsActive) return;
 
         if (InRoleWindow)
@@ -325,8 +389,7 @@ internal static class RoundManager
             Campfire? next = NextCampfire();
             if (next == null)
             {
-                HostSetState(RoundState.ChasersWon);
-                ZombieHunt.HostDespawnAll();
+                HostGameOver(RoundState.ChasersWon, null);
                 return;
             }
 
@@ -335,14 +398,35 @@ internal static class RoundManager
         }
 
         var alive = runners.Where(c => !c.data.dead).ToList();
+
+        // Every chaser dead (during the chase): the runners win the leg, and everyone goes to the next campfire
+        // (the dead brought back) for the next leg's role draw. On the last stretch the runners win the game.
+        var chasers = PhotonNetwork.PlayerList
+            .Where(p => RoleManager.RoleOf(p.ActorNumber) == Role.Chaser)
+            .Select(p => Net.CharacterOf(p.ActorNumber))
+            .Where(c => c != null)
+            .Select(c => c!)
+            .ToList();
+        if (IsChasing && chasers.Count > 0 && chasers.All(c => c.data.dead))
+        {
+            Campfire? next = NextCampfire();
+            if (next == null)
+            {
+                HostGameOver(RoundState.RunnersWon, null);
+                return;
+            }
+
+            RewardSystem.HostMarkRewarded(next); // nobody reached the campfire: no first-runner reward
+            HostEndLeg(next, chasersWon: false);
+            return;
+        }
+
         MountainProgressHandler? progress = Singleton<MountainProgressHandler>.Instance;
-        // Every living runner made it to the peak: the runners win, and the chasers are brought up there
-        // and die (when PeakChasersDie).
+        // Every living runner made it to the peak: the runners win, and the chasers are petrified (brought up
+        // there first when PeakChasersDie).
         if (progress != null && alive.Count > 0 && alive.All(c => progress.IsAtPeak(c.Center)))
         {
-            HostSetState(RoundState.RunnersWon);
-            ZombieHunt.HostDespawnAll();
-            if (Plugin.ModConfig.PeakChasersDie.Synced()) ModNetwork.Instance?.StartCoroutine(HostChasersToPeak(alive[0].Center));
+            HostGameOver(RoundState.RunnersWon, alive[0].Center);
             return;
         }
 
@@ -456,6 +540,7 @@ internal static class RoundManager
         s_WindowFire = null;
         HostSetFlags(0);
         s_Regathered = false;
+        s_AirportSent = false;
         AdminRestart.HostForget();
         SafeZoneSystem.LastLitSegment = -1;
         FreezeState.HostReset();
@@ -484,7 +569,7 @@ internal static class RoundManager
         int i = 0;
         foreach (Character c in Character.AllCharacters.ToArray())
         {
-            if (!RoleManager.IsChaser(c) || c.data.dead) continue;
+            if (c == null || c.isBot || RoleManager.RoleOf(Net.Actor(c)) != Role.Chaser || c.data.dead) continue; // also once the game is won
             float angle = (i++ * 67f + 30f) * Mathf.Deg2Rad;
             Vector3 spot = position + new Vector3(Mathf.Cos(angle) * 5f, 2f, Mathf.Sin(angle) * 5f);
             c.view.RPC("WarpPlayerRPC", RpcTarget.All, spot, true);
@@ -493,18 +578,13 @@ internal static class RoundManager
         Plugin.Log.LogInfo($"[OTL][Round] HOST: {i} chaser(s) brought over.");
     }
 
-    /// <summary>Host: every living runner reached the peak. Living chasers are warped next to them, then die.</summary>
+    /// <summary>Host: every living runner reached the peak. Living chasers are warped next to them, then petrified.</summary>
     private static IEnumerator HostChasersToPeak(Vector3 peak)
     {
-        var chasers = Character.AllCharacters.Where(c => c != null && RoleManager.IsChaser(c) && !c.data.dead).ToList();
         HostBringChasers(peak);
-        yield return new WaitForSeconds(2f); // let the warp land so they die up there
-        foreach (Character c in chasers)
-        {
-            if (c != null && !c.data.dead) c.view.RPC("RPCA_Die", RpcTarget.All);
-        }
-
-        Plugin.Log.LogInfo($"[OTL][Round] HOST: runners reached the peak; {chasers.Count} chaser(s) brought up and killed.");
+        yield return new WaitForSeconds(2f); // let the warp land so they turn to stone up there
+        ModNetwork.Broadcast(Notice.Petrify, (int)Role.Chaser, 0);
+        Plugin.Log.LogInfo("[OTL][Round] HOST: runners reached the peak; chasers brought up and petrified.");
     }
 
     private static void Publish(RoundState state, int legStart, int revealMs, int headStartMs, int roundId, int legId) =>

@@ -75,6 +75,23 @@ internal static class RunnerDash
     /// Local runner using the runner gem (Item.StartUse*/ContinueUse*, via ItemRules.UsePrefix): dash when ready.
     /// Returns true when the vanilla use must be skipped (always, for the runner gem).
     /// </summary>
+    /// <summary>Every negative status the runner has goes down by <paramref name="amount"/> (petrification and weight excluded).</summary>
+    private static void Heal(Character c, float amount)
+    {
+        if (amount <= 0f) return;
+        int healed = 0;
+        foreach (CharacterAfflictions.STATUSTYPE type in System.Enum.GetValues(typeof(CharacterAfflictions.STATUSTYPE)))
+        {
+            if (type is CharacterAfflictions.STATUSTYPE.Weight or CharacterAfflictions.STATUSTYPE.Petrify) continue;
+            float current = c.refs.afflictions.GetCurrentStatus(type);
+            if (current <= 0f) continue;
+            c.refs.afflictions.SubtractStatus(type, Mathf.Min(amount, current));
+            healed++;
+        }
+
+        if (healed > 0) Plugin.Log.LogInfo($"[OTL][Dash] healed {healed} status(es) by {amount:0.##}.");
+    }
+
     public static bool HandleUse(Item item)
     {
         Character holder = item.holderCharacter;
@@ -91,6 +108,7 @@ internal static class RunnerDash
         s_ReadyAt = Time.time + Mathf.Max(1f, cfg.DashCooldownSeconds.Synced());
         int petrify = Mathf.RoundToInt(cfg.DashPetrify.Synced() * 100f);
         if (petrify > 0) holder.refs.afflictions.AddPetrify(petrify);
+        Heal(holder, Mathf.Clamp01(cfg.DashHeal.Synced()));
         float protectFrom = Time.time + Mathf.Max(0f, cfg.DashFallProtectDelay.Synced());
         s_FallSafeFrom = protectFrom;
         s_FallSafeUntil = protectFrom + Mathf.Max(0f, cfg.DashFallProtectSeconds.Synced());

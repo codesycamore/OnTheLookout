@@ -25,7 +25,8 @@ internal static class LegLoadout
         RoundManager.LegStarted += newRound =>
         {
             Schedule(GiveLegItems());
-            if (newRound) Schedule(GiveRunnerBackpacks());
+            Schedule(GiveRunnerBackpacks()); // every leg: the dead were brought back without their items
+            if (newRound) Schedule(GiveColdLanterns());
         };
         RoundManager.LegCompleted += () => Schedule(StockCampfireFood());
         RoundManager.FreshStart += () =>
@@ -72,7 +73,37 @@ internal static class LegLoadout
     /// <summary>Host: hold off this chaser's kit hand-out for a moment (e.g. while they drop their old items).</summary>
     public static void HostDelayChaserKit(int actor, float seconds) => s_KitBusyUntil[actor] = Time.time + seconds;
 
-    /// <summary>Host, after roles are assigned at round start: every runner without a backpack gets one.</summary>
+    /// <summary>
+    /// Host, at the start of the game on an ascent with cold nights (Ascents.isNightCold, Ascent 5+): every runner
+    /// gets a faerie lantern (LuggageRareExtraItems' runner item; half weight, FaerieLanternWeightMultiplier).
+    /// </summary>
+    private static IEnumerator GiveColdLanterns()
+    {
+        yield return new WaitForSeconds(3f); // after the backpack, so it can go into a free slot
+        if (!Net.IsHost || !RoundManager.IsActive || !Plugin.ModConfig.ColdAscentLantern.Synced()) yield break;
+        if (!Ascents.isNightCold)
+        {
+            Plugin.Log.LogInfo($"[OTL][Loadout] ascent {Ascents.currentAscent}: no cold nights, no faerie lanterns.");
+            yield break;
+        }
+
+        Item? lantern = ItemCatalog.FindByNames("Lantern_Faerie").FirstOrDefault();
+        if (lantern == null)
+        {
+            Plugin.Log.LogWarning("[OTL][Loadout] no faerie lantern item found.");
+            yield break;
+        }
+
+        foreach (Character c in Character.AllCharacters.ToArray())
+        {
+            if (!RoleManager.IsRunner(c) || c.data.dead || c.player == null) continue;
+            Give(c, lantern);
+        }
+
+        Plugin.Log.LogInfo($"[OTL][Loadout] HOST: ascent {Ascents.currentAscent} has cold nights; faerie lanterns handed out.");
+    }
+
+    /// <summary>Host, at every leg start: every runner without a backpack gets one, worn.</summary>
     private static IEnumerator GiveRunnerBackpacks()
     {
         yield return new WaitForSeconds(1.5f);

@@ -58,8 +58,19 @@ internal static class ChaserResilience
 
     public static void FallPostfix() => s_FallFrame = -1;
 
+    private static bool s_Exact;
+
+    /// <summary>Adds a status at exactly <paramref name="amount"/>, without the chasers' toughness (e.g. a runner's stone).</summary>
+    public static void AddExact(Character c, CharacterAfflictions.STATUSTYPE statusType, float amount)
+    {
+        s_Exact = true;
+        try { c.refs.afflictions.AddStatus(statusType, amount); }
+        finally { s_Exact = false; }
+    }
+
     public static void AddStatusPrefix(CharacterAfflictions __instance, CharacterAfflictions.STATUSTYPE statusType, ref float amount, bool fromRPC)
     {
+        if (s_Exact) return;
         // Weight is inventory-driven, and hunger stays the same for everyone.
         if (fromRPC || amount <= 0f || statusType is CharacterAfflictions.STATUSTYPE.Weight or CharacterAfflictions.STATUSTYPE.Hunger) return;
         Character c = __instance.character;

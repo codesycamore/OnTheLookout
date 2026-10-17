@@ -8,8 +8,7 @@ using UnityEngine;
 namespace OnTheLookout.Modules;
 
 /// <summary>
-/// When no chaser is alive during a chase (all dead, or none at all - e.g. a host playing solo is a
-/// runner), the mountain keeps hunting: the host sends mushroom
+/// Solo play only (one player in the room, so there is no chaser): the mountain does the hunting. the host sends mushroom
 /// zombies, each after one random runner who is outside the safe zones (more zombies in bigger lobbies,
 /// ZombiesByPlayerCount). Each zombie lasts ZombieLifetimeSeconds. When none are left
 /// and there is still no living chaser, a new wave is sent, until the runners reach the campfire's safe
@@ -51,7 +50,8 @@ internal static class ZombieHunt
         var cfg = Plugin.ModConfig;
         UpdateTracked();
 
-        if (!RoundManager.IsChasing || !cfg.ZombiesWhenChasersDead.Synced())
+        bool solo = PhotonNetwork.PlayerList.Length == 1; // with others, all chasers dead ends the leg instead (RoundManager)
+        if (!RoundManager.IsChasing || !cfg.ZombiesWhenChasersDead.Synced() || !solo)
         {
             if (s_Zombies.Count > 0 && !RoundManager.IsChasing) DespawnAll(); // leg over: clear them out
             return;

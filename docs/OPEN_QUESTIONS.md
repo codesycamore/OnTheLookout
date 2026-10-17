@@ -441,3 +441,48 @@ Debug keys (host, bottom-left hint): **F7** start or restart a round, **F6** swa
 **Test checklist (1.8.5)**
 - [ ] Capture a runner: MORALE BOOST text, extra (yellow) stamina added as with a bugle toot, no speed boost or rainbow bar; log names the bugle item.
 - [ ] Gem after 1 capture: log "boost x1.017 … for 2.5s (1 captures this leg)"; after 2: x1.034 for 2.75 s. Next leg: x1 for 2.25 s.
+
+### 1.9.0 (2026-10-17)
+
+- **Stone:** PEAK's `Stone` item (class `Stone : Item`, with heat fields; prefab "Stone" in the item list). Added to `LuggageExtraItems`; `LuggageExtraChance` 0.383 -> 0.479 so each of the 5 extras keeps ~9.6% (the 3 rare items stay at 0.75× that, ~7.2%: about 69% of regular luggage slots are now runner extras). Not chaser-allowed (not food/healing), so it's a runner item already.
+- **Stone damage:** `ThrowRules` postfix on `Item.RPC_SetThrownData` (every client, `RpcTarget.All` from `CharacterItems`): a runner's stone gets a `StoneHit` component; its owner's client checks `OnCollisionEnter` (within 4 s, ≥ 3 m/s, a living chaser) and sends `Msg.StoneHit` to the chaser, whose client adds `Injury` 0.1 through `ChaserResilience.AddExact` (skips the ×0.5 toughness). One hit per throw. Vanilla has no stone damage (stones may have `Bonkable` on the prefab, which would also ragdoll; unverified).
+- **Runner pass-through:** same postfix, for a runner's snowball or stone: `Physics.IgnoreCollision` between the item's colliders and every other runner's ragdoll colliders (`CharacterRagdoll.colliderList`) for 4 s, on every client. The 1.8.1 snowball bonus push also skips runner→runner. Runner throws still hit chasers normally.
+- **Peak safe zone:** `SafeZoneSystem.IsSafe` (used by captures, freezes, mandrakes, zombies, hunger) is now also true past `MountainProgressHandler.IsAtPeak` (z beyond the last progress point). Campfire-only logic (leg end, rewards, light) is unchanged. Wall: `SafeZoneWall.RefreshPeak`, a straight wall at that z across ±90 m, dropped onto `TerrainMap` every 1 m, joined where the ground doesn't jump > 4 m; rebuilt every 5 s until ≥ 12 ground points (the peak loads late). **Unverified:** where the last progress point sits on the map (the wall could be lower down than the summit area).
+- **Game won:** `RoundManager.HostGameOver` sets room key `otl.apt` (airport time = now + 15 s), publishes RunnersWon/ChasersWon and broadcasts `Notice.Petrify` (losing role). Each loser's own client sets `petrifyAmount` 100 (`CharacterData.SetPetrify`, synced) → `Character.HandleLife` passes them out and `DieInstantly` → statue. Runners' win with `PeakChasersDie`: chasers warped up first, petrified 2 s later (was `RPCA_Die`). HUD: big number + "RETURNING BACK TO AIRPORT IN...", winner in the toast. At 0 the host runs `AdminRestart.HostReturnToAirport` → Idle → `FreshStart` everywhere. "Wins on the peak" read as the game being won on the last leg; with the chasers' win the runners are already dead, so nobody is left to petrify.
+- Earlier request (gem cooldown 23.5 s, rainbow GAME OVER!) not included: this list replaced it.
+
+**Test checklist (1.9.0)**
+- [ ] Regular luggage: stones show up about as often as snowballs; a chaser can't pick one up.
+- [ ] Runner throws a stone at a chaser: chaser's injury +10% (log "hit by …'s stone"); at another runner: it passes through.
+- [ ] Runner snowball at another runner: passes through, no push.
+- [ ] Final leg: yellow wall where the peak begins (log "wall at the edge of the peak"); a runner past it can't be captured or freeze chasers.
+- [ ] All runners reach the peak: chasers brought up and turned to stone; 15 → 1 countdown; airport; fresh start.
+- [ ] All runners caught on the last leg: countdown, airport, fresh start.
+
+**1.9.0, second change list (2026-10-17)**
+
+- **Recommended difficulty:** added to the README (the Thunderstore page). The package's short description is already at 249/250 characters, so it isn't there.
+- **Blowgun petrify:** `BlowgunSystem.FireDartPostfix` (shooter's client): `AddPetrify(3)` with the cooldown. Cleared every leg like all petrification.
+- **Dash heal:** `RunnerDash.Heal` after the dash's petrify: for every `CharacterAfflictions.STATUSTYPE` except Weight and Petrify, `SubtractStatus(type, min(0.12, current))`. "Heal each negative effect by 12%" read as 12 points of the bar per status (not 12% of what you have). Hunger counts as a negative effect.
+- **Backpacks:** `LegLoadout.GiveRunnerBackpacks` now runs at every `LegStarted` (it skipped all but the first leg). Revives at the role window go through `RPCA_ReviveAtPosition`, which drops everything (`DropAllItems(includeBackpack: true)`), so revived runners came back without one. Not enforced mid-leg: a runner can still drop their backpack on purpose.
+- **Cold ascents:** "Ascent 5+ that implement the cold" = `Ascents.isNightCold` (RunSettings ColdNight). At the first leg (3 s after the start) each living runner gets a `Lantern_Faerie` spawned at their feet and picked up (`LegLoadout.Give`). "Weighs half its weight": `MilkRules.CarryWeightPostfix` halves `Item.CarryWeight` for **every** faerie lantern during a round (luggage ones included), since tracking the one handed out isn't worth it. **Unverified:** that `isNightCold` is on from Ascent 5 (it reads the run setting, which the ascent sets).
+- **Gem cooldown 23 s**, **runner regen 1.2**.
+
+**Test checklist (1.9.0, second list)**
+- [ ] Blowgun shot: chaser +3% petrification (log "shot: +3% petrify").
+- [ ] Dash while injured/hungry/cold: each bar drops by 12% (log "healed N status(es)").
+- [ ] Runner dies in a leg, is brought back at the campfire: has a backpack when the next leg starts.
+- [ ] Ascent 5+: every runner gets a faerie lantern at the start (log "faerie lanterns handed out"); weight bar shows it lighter. Ascent < 5: none.
+- [ ] Gem cooldown 23 → 0.
+
+**1.9.0, third change list (2026-10-17)**
+
+- **Zombies solo only:** `ZombieHunt.HostTick` also requires `PhotonNetwork.PlayerList.Length == 1` (a solo player is always a runner: `RoleManager` always leaves one runner).
+- **All chasers dead ends the leg:** `RoundManager.HostTick`, while chasing, if every player with the chaser role has a character and all are dead: `HostEndLeg(NextCampfire(), chasersWon: false)` (gather + revive + role window), first-runner reward marked as given. No unlit campfire left: `HostGameOver(RunnersWon)`. Checked after the all-runners-dead case, so both at once = the chasers' win.
+- **GAME OVER!:** airport time = now + `GameOverSeconds` 4 + `GameOverAirportSeconds` 15. HUD: while more than 15 s are left, "GAME OVER!" with a per-letter rainbow (TMP vertex colours, hue sliding over time) and "THE RUNNERS WIN" / "THE CHASERS WIN" under it; then the 15 → 1 countdown under "RETURNING BACK TO AIRPORT IN...". The losers are petrified when it starts. The winner toast is gone (GAME OVER! says it).
+
+**Test checklist (1.9.0, third list)**
+- [ ] 2+ players, mid leg, every chaser dies: "THE RUNNERS WIN THIS LEG", everyone at the next campfire, the dead revived, role window, next leg. No zombies at any point.
+- [ ] Solo: zombies still come 5 min after the head start.
+- [ ] Last leg, every chaser dies: rainbow GAME OVER! + THE RUNNERS WIN for 4 s, then 15 → 1, airport, fresh start.
+- [ ] Last leg, every runner caught / every runner at the peak: same, with the losers turned to stone.

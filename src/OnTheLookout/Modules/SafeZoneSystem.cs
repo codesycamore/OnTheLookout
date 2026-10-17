@@ -3,6 +3,7 @@ using System.Text;
 using HarmonyLib;
 using OnTheLookout.Core;
 using UnityEngine;
+using Zorro.Core;
 
 namespace OnTheLookout.Modules;
 
@@ -108,7 +109,28 @@ internal static class SafeZoneSystem
         return null;
     }
 
-    public static bool IsSafe(Vector3 position) => SafeZoneAt(position) != null;
+    public static bool IsSafe(Vector3 position) => SafeZoneAt(position) != null || InPeakZone(position);
+
+    /// <summary>
+    /// PEAK's last progress point (MountainProgressHandler.progressPoints): everything past it (higher z) is the peak,
+    /// as in MountainProgressHandler.IsAtPeak. Null before the map has its progress points.
+    /// </summary>
+    public static Transform? PeakPoint
+    {
+        get
+        {
+            MountainProgressHandler? progress = Singleton<MountainProgressHandler>.Instance;
+            return progress != null && progress.progressPoints is { Length: > 0 } points && points[points.Length - 1] != null
+                ? points[points.Length - 1].transform
+                : null;
+        }
+    }
+
+    /// <summary>The peak is a safe zone with the campfires' rules (PeakSafeZone), during a round.</summary>
+    public static bool PeakIsSafeZone => Enabled && RoundManager.IsActive && Plugin.ModConfig.PeakSafeZone.Synced();
+
+    public static bool InPeakZone(Vector3 position) =>
+        PeakIsSafeZone && Singleton<MountainProgressHandler>.Instance is { } progress && progress.IsAtPeak(position);
 
     public static bool EveryoneInRangePrefix(Campfire __instance, float range, ref bool __result)
     {

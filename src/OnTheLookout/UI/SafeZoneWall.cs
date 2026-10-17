@@ -13,6 +13,8 @@ namespace OnTheLookout.UI;
 /// stands where that sphere meets the ground: for each direction the ground is found with downward raycasts and the
 /// horizontal radius is shrunk until the ground point is CampfireSafeRadius from the campfire.
 /// A wall built before the ground around its campfire was there (far-away terrain) is rebuilt a few seconds later.
+/// The peak (PeakSafeZone) gets one too: everything past PEAK's last progress point is the peak, so its wall runs
+/// straight across the mountain along that line, following the ground.
 /// Purely local visuals (a generated mesh, no colliders): nobody is blocked by it.
 /// </summary>
 internal sealed class SafeZoneWall : MonoBehaviour
@@ -53,6 +55,7 @@ internal sealed class SafeZoneWall : MonoBehaviour
         {
             _nextScan = Time.time + 1f;
             Refresh();
+            RefreshPeak();
         }
 
         if (_material != null)
@@ -123,8 +126,112 @@ internal sealed class SafeZoneWall : MonoBehaviour
         _walls.Remove(fire);
     }
 
+    // ---------- The peak ----------
+
+    private const float PeakHalfWidth = 90f;
+    private const float PeakStep = 1f;
+    private const int PeakMinSamples = 12; // fewer ground points than this: the peak's terrain isn't there yet
+    private GameObject? _peakWall;
+    private Vector3 _peakAt;
+    private float _peakRetryAt;
+
+    /// <summary>Once a second: the peak's wall while the peak is a safe zone (rebuilt every 5 s until its ground is there).</summary>
+    private void RefreshPeak()
+    {
+        Transform? point = SafeZoneSystem.PeakIsSafeZone ? SafeZoneSystem.PeakPoint : null;
+        if (point == null)
+        {
+            RemovePeak();
+            return;
+        }
+
+        bool moved = (point.position - _peakAt).sqrMagnitude > 0.01f;
+        if (_peakWall != null && !moved && _peakRetryAt <= 0f) return; // built and complete
+        if (_peakWall != null && !moved && Time.time < _peakRetryAt) return;
+
+        RemovePeak();
+        _material ??= CreateMaterial();
+        if (_material == null)
+        {
+            _failed = true;
+            return;
+        }
+
+        _peakAt = point.position;
+        Mesh mesh = BuildPeakMesh(_peakAt, out int samples);
+        _peakWall = new GameObject("OTL_PeakWall");
+        _peakWall.transform.position = _peakAt;
+        _peakWall.AddComponent<MeshFilter>().sharedMesh = mesh;
+        var renderer = _peakWall.AddComponent<MeshRenderer>();
+        renderer.sharedMaterial = _material;
+        renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        renderer.receiveShadows = false;
+        _peakRetryAt = samples >= PeakMinSamples ? 0f : Time.time + RetrySeconds;
+        if (samples >= PeakMinSamples) Plugin.Log.LogInfo($"[OTL][SafeZone] wall at the edge of the peak (z {_peakAt.z:0.#}, {samples} ground points).");
+    }
+
+    private void RemovePeak()
+    {
+        if (_peakWall == null) return;
+        Destroy(_peakWall.GetComponent<MeshFilter>().sharedMesh);
+        Destroy(_peakWall);
+        _peakWall = null;
+    }
+
+    /// <summary>
+    /// The peak's edge: the line z = the last progress point's z, sampled every PeakStep metres across (x), dropped onto
+    /// the ground. Neighbouring points are joined into a wall unless the ground jumps between them (a cliff).
+    /// </summary>
+    private static Mesh BuildPeakMesh(Vector3 origin, out int samples)
+    {
+        int count = Mathf.RoundToInt(PeakHalfWidth * 2f / PeakStep) + 1;
+        var points = new Vector3?[count];
+        samples = 0;
+        int mask = HelperFunctions.GetMask(HelperFunctions.LayerType.TerrainMap);
+        for (int i = 0; i < count; i++)
+        {
+            Vector3 top = new(origin.x - PeakHalfWidth + i * PeakStep, origin.y + 120f, origin.z + 0.25f);
+            if (Physics.Raycast(top, Vector3.down, out RaycastHit hit, 300f, mask, QueryTriggerInteraction.Ignore) && Mathf.Abs(hit.point.y - origin.y) < 80f)
+            {
+                points[i] = hit.point - origin;
+                samples++;
+            }
+        }
+
+        var vertices = new List<Vector3>();
+        var colors = new List<Color>();
+        var triangles = new List<int>();
+        Color rim = new(Yellow.r, Yellow.g, Yellow.b, 0.95f);
+        Color wallBottom = new(Yellow.r, Yellow.g, Yellow.b, 0.45f);
+        Color wallTop = new(Yellow.r, Yellow.g, Yellow.b, 0f);
+        for (int i = 0; i + 1 < count; i++)
+        {
+            if (points[i] is not { } p || points[i + 1] is not { } q || Mathf.Abs(q.y - p.y) > 4f) continue;
+            int a = vertices.Count, b = a + 3;
+            foreach (Vector3 g in new[] { p, q })
+            {
+                vertices.Add(g + Vector3.up * 0.05f);
+                vertices.Add(g + Vector3.up * RimHeight);
+                vertices.Add(g + Vector3.up * WallHeight);
+                colors.Add(rim);
+                colors.Add(wallBottom);
+                colors.Add(wallTop);
+            }
+
+            triangles.AddRange(new[] { a, a + 1, b, b, a + 1, b + 1, a + 1, a + 2, b + 1, b + 1, a + 2, b + 2 });
+        }
+
+        var mesh = new Mesh { name = "OTL_PeakWall" };
+        mesh.SetVertices(vertices);
+        mesh.SetColors(colors);
+        mesh.SetTriangles(triangles, 0);
+        mesh.RecalculateBounds();
+        return mesh;
+    }
+
     private void HideAll()
     {
+        RemovePeak();
         _attempts.Clear();
         if (_walls.Count == 0) return;
         foreach (Campfire fire in _walls.Keys.ToList()) Remove(fire);

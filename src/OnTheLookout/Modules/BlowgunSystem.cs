@@ -66,6 +66,12 @@ internal static class BlowgunSystem
         if (ChasersBlowgun(__instance.item))
         {
             s_CooldownUntil = Time.time + Plugin.ModConfig.BlowgunCooldownSeconds.Synced();
+            int petrify = Mathf.RoundToInt(Plugin.ModConfig.BlowgunPetrify.Synced() * 100f);
+            if (petrify > 0 && __instance.item.holderCharacter is { IsLocal: true } shooter)
+            {
+                shooter.refs.afflictions.AddPetrify(petrify);
+                Plugin.Log.LogInfo($"[OTL][Blowgun] shot: +{petrify}% petrify.");
+            }
         }
     }
 

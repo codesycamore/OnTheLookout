@@ -34,6 +34,9 @@ internal enum Msg : byte
 
     /// <summary>snowball owner -> the scout it hit: [throwerActor, pushX, pushY, pushZ, bodypartType]</summary>
     SnowballHit = 10,
+
+    /// <summary>stone owner -> the chaser it hit: [throwerActor]</summary>
+    StoneHit = 11,
 }
 
 internal enum Notice : byte
@@ -47,6 +50,7 @@ internal enum Notice : byte
     MandrakeBoom = 7, // explosion sound at runner A
     GemReveal = 8, // chaser A used their gem: every runner smokes
     DashReveal = 9, // runner A dashed: every chaser smokes
+    Petrify = 10, // the game was won: every living scout of role A (the losers) turns to stone
 }
 
 /// <summary>

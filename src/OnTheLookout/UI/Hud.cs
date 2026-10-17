@@ -264,8 +264,28 @@ internal sealed class Hud : MonoBehaviour
         Color color = Color.white;
         Color subColor = Color.white;
         float alpha = 1f;
+        bool rainbow = false;
 
-        if (Time.time < _announceUntil)
+        if (RoundManager.IsGameOver && RoundManager.AirportSecondsLeft > 0f)
+        {
+            // The game was won: a rainbow GAME OVER!, then the countdown back to the airport (head-start countdown style).
+            float left = RoundManager.AirportSecondsLeft;
+            float countdown = Mathf.Max(1f, Plugin.ModConfig.GameOverAirportSeconds.Synced());
+            if (left > countdown)
+            {
+                bool runnersWon = RoundManager.State == RoundState.RunnersWon;
+                main = "GAME OVER!";
+                sub = runnersWon ? "THE RUNNERS WIN" : "THE CHASERS WIN";
+                subColor = runnersWon ? RunnerYellow : ChaserRed;
+                rainbow = true;
+            }
+            else
+            {
+                main = Mathf.CeilToInt(left).ToString();
+                sub = "RETURNING BACK TO AIRPORT IN...";
+            }
+        }
+        else if (Time.time < _announceUntil)
         {
             main = _announce;
             sub = _announceSub;
@@ -297,6 +317,12 @@ internal sealed class Hud : MonoBehaviour
         _centerSub.text = sub;
         _centerMain.color = new Color(color.r, color.g, color.b, alpha);
         _centerSub.color = new Color(subColor.r, subColor.g, subColor.b, alpha * 0.85f);
+        if (rainbow) Rainbow(_centerMain);
+        else if (_rainbowShown)
+        {
+            _rainbowShown = false;
+            _centerMain.ForceMeshUpdate(); // back to the plain colour
+        }
 
         // Chasers are blind during the reveal and head start; the blackness fades over the last 40%.
         float blind = 0f;
@@ -307,6 +333,26 @@ internal sealed class Hud : MonoBehaviour
         }
 
         _blind.color = new Color(0f, 0f, 0f, blind);
+    }
+
+    private bool _rainbowShown;
+
+    /// <summary>Each letter its own colour, the rainbow sliding along the text (like the sugar-rush stamina bar).</summary>
+    private void Rainbow(TextMeshProUGUI text)
+    {
+        _rainbowShown = true;
+        text.ForceMeshUpdate();
+        TMP_TextInfo info = text.textInfo;
+        for (int i = 0; i < info.characterCount; i++)
+        {
+            TMP_CharacterInfo ch = info.characterInfo[i];
+            if (!ch.isVisible) continue;
+            Color32 c = Color.HSVToRGB(Mathf.Repeat(i * 0.09f - Time.time * 0.6f, 1f), 0.75f, 1f);
+            Color32[] colors = info.meshInfo[ch.materialReferenceIndex].colors32;
+            for (int v = 0; v < 4; v++) colors[ch.vertexIndex + v] = c;
+        }
+
+        text.UpdateVertexData(TMP_VertexDataUpdateFlags.Colors32);
     }
 
     private void UpdateChaserList()
@@ -372,8 +418,8 @@ internal sealed class Hud : MonoBehaviour
 
     private void OnRoundEnded(RoundState result)
     {
-        if (result == RoundState.RunnersWon) Announce("THE RUNNERS ESCAPED", "EVERY RUNNER REACHED THE PEAK", RunnerYellow, 6f);
-        else Announce("THE CHASERS WIN", "EVERY RUNNER WAS CAUGHT", ChaserRed, 6f);
+        _announceUntil = 0f; // the centre shows GAME OVER! (with who won), then the airport countdown
+        Plugin.Log.LogInfo($"[OTL][UI] game over: {result}.");
     }
 
     private void OnNotice(Notice notice, int a, int b)

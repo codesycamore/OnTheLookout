@@ -71,6 +71,8 @@ public partial class Plugin : BaseUnityPlugin
         LegLoadout.Install();
         RoleSwap.Install();
         bool gems = RunnerDash.Install(_harmony);
+        bool throws = ThrowRules.Install(_harmony);
+        ModNetwork.NoticeReceived += (notice, a, _) => { if (notice == Notice.Petrify) RoundManager.OnPetrifyNotice((Role)a); };
         RewardSystem.Enabled = cfg.EnableRewards.Value;
 
         var ui = new GameObject("OnTheLookout_UI");
@@ -90,7 +92,7 @@ public partial class Plugin : BaseUnityPlugin
 
         Log.LogInfo($"[OTL] {Name} {Version} loaded. round={round} freeze={input && cfg.EnableFreeze.Value} " +
             $"suspend={FreezeSuspendPatch.HooksAvailable} campfire={campfire} tag={tag} fog={fog} items={items} " +
-            $"speed={speed} blowgun={blowgun} tweaks={tweaks} resilience={resilience} shroomberry={shroomberry} milk={milk} kit={kit} gems={gems} mandrakes={mandrakes} nameTags={nameTags} rewards={RewardSystem.Enabled}");
+            $"speed={speed} blowgun={blowgun} tweaks={tweaks} resilience={resilience} shroomberry={shroomberry} milk={milk} kit={kit} gems={gems} mandrakes={mandrakes} throws={throws} nameTags={nameTags} rewards={RewardSystem.Enabled}");
     }
 
     private static void StartRunPostfix()
