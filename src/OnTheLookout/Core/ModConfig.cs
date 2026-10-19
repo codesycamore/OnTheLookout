@@ -21,10 +21,12 @@ internal sealed class ModConfig
     {
         "HeadStartSeconds",
         "RunnersPerChaser",
+        "ChaserCount",
         "ZombieStartDelaySeconds",
         "ZombieWaveDelaySeconds",
         "ZombieLifetimeSeconds",
         "HeadStartBoostSeconds",
+        "RandomMap",
     };
 
     private const string VersionSection = "0. Version";
@@ -73,6 +75,12 @@ internal sealed class ModConfig
     public ConfigEntry<float> GameOverAirportSeconds { get; }
     public ConfigEntry<float> StoneChaserDamage { get; }
     public ConfigEntry<bool> PeakSafeZone { get; }
+    public ConfigEntry<float> ChaserCount { get; }
+    public ConfigEntry<bool> ResetItemsEachLeg { get; }
+    public ConfigEntry<bool> ClearItemsAtLegEnd { get; }
+    public ConfigEntry<bool> MandrakesOutOfSafeZones { get; }
+    public ConfigEntry<bool> NoPeakFlares { get; }
+    public ConfigEntry<bool> RunnersFaceNextCampfire { get; }
 
     public ConfigEntry<float> EnergyDrinkDrowsyMultiplier { get; }
     public ConfigEntry<float> BlowdartDrowsy { get; }
@@ -107,6 +115,8 @@ internal sealed class ModConfig
     public ConfigEntry<bool> GemInfiniteStamina { get; }
     public ConfigEntry<float> GemCooldownSeconds { get; }
     public ConfigEntry<float> GemPetrify { get; }
+    public ConfigEntry<float> GemXRaySeconds { get; }
+    public ConfigEntry<float> GemXRayRange { get; }
     public ConfigEntry<float> SnowballKnockbackBonus { get; }
     public ConfigEntry<bool> RunnerGem { get; }
     public ConfigEntry<string> RunnerGemItem { get; }
@@ -204,9 +214,13 @@ internal sealed class ModConfig
 
     // Admin (local)
     public ConfigEntry<bool> AdminKeys { get; }
+    public ConfigEntry<bool> RandomMap { get; }
     public ConfigEntry<Key> KeyRestartFromCampfire { get; }
     public ConfigEntry<Key> KeyHostMenu { get; }
     public ConfigEntry<Key> KeyChaserOdds { get; }
+    public ConfigEntry<Key> KeyRoleHint { get; }
+    public ConfigEntry<float> RoleHintSeconds { get; }
+    public ConfigEntry<bool> RunnersSeeLuggage { get; }
 
     public ModConfig(ConfigFile config)
     {
@@ -220,12 +234,13 @@ internal sealed class ModConfig
         EnableSafeZones = Local(mod, "EnableSafeZones", true, "Campfires are safe zones.");
         EnableFog = Local(mod, "EnableFog", true, "Fog never hurts chasers (fog, lava and gloom otherwise rise as in vanilla).");
         EnableItemRules = Local(mod, "EnableItemRules", true, "Chaser item restrictions and banned items.");
-        EnableRewards = Local(mod, "EnableRewards", true, "First runner into each campfire safe zone gets a reward item (see 9. Rewards).");
+        EnableRewards = Local(mod, "EnableRewards", false, "First runner into each campfire safe zone gets a reward item (see 9. Rewards). Off for now.");
 
         const string round = "2. Round";
-        RunnersPerChaser = Synced(round, "RunnersPerChaser", 4f, "At most one chaser for every this many runners (4 = 1 chaser in 5 players, 2 in 10). Chasers are drawn at random from the players who chose CHASER in the role menu; if nobody did, one random player becomes the chaser. Always leaves at least one runner.");
+        RunnersPerChaser = Synced(round, "RunnersPerChaser", 4f, "At most one chaser for every this many runners (4 = 1 chaser in 5 players, 2 in 10). Chasers are drawn at random from the players who chose CHASER in the role menu; if nobody did, one random player becomes the chaser. Always leaves at least one runner. Used when ChaserCount is 0 (AUTO).");
+        ChaserCount = Synced(round, "ChaserCount", 0f, "Exact number of chasers each leg (the host menu's CHASERS setting). 0 = AUTO (one per RunnersPerChaser runners). Chasers are drawn from the CHASER volunteers first, then from everyone else if there aren't enough. Always leaves at least one runner. A change applies from the next leg (or the next game).");
         RoleRevealSeconds = Synced(round, "RoleRevealSeconds", 4f, "Seconds the role (CHASER / RUNNER) is shown at the start of each leg. Chasers stay frozen and blind during it.");
-        HeadStartSeconds = Synced(round, "HeadStartSeconds", 23f, "Runner head start after the role reveal. Chasers stay frozen and blind until it ends.");
+        HeadStartSeconds = Synced(round, "HeadStartSeconds", 25f, "Runner head start after the role reveal. Chasers stay frozen and blind until it ends.");
         AutoStartRound = Synced(round, "AutoStartRound", true, "Start a round automatically once everyone has woken up on the beach (host).");
         ChaserPreferenceEnabled = Synced(round, "ChaserPreferenceEnabled", true, "Players choose RUNNER (default) or CHASER in the role menu (KeyChaserOdds) in the airport and in the role window after each leg. Chasers are drawn at random from the CHASER volunteers. Choices are private to the host. Off = chasers are drawn from everyone.");
         RoleWindowSeconds = Synced(round, "RoleWindowSeconds", 10f, "After a leg ends, everyone is brought to the campfire and frozen for this many seconds to update their role choice; then the campfire lights itself and the next leg starts with a new role draw.");
@@ -242,10 +257,11 @@ internal sealed class ModConfig
         MandrakeIntervalSeconds = Synced(round, "MandrakeIntervalSeconds", 45f, "After that, a mandrake is dropped at every living runner outside a safe zone this often (s).");
         MandrakeFirstScreamSeconds = Synced(round, "MandrakeFirstScreamSeconds", 0.75f, "A dropped mandrake screams for the first time this many seconds after it appears (PEAK's own wait for a new mandrake is much longer). Later screams keep PEAK's timing.");
         MandrakeLifetimeSeconds = Synced(round, "MandrakeLifetimeSeconds", 10f, "A dropped mandrake is removed this many seconds after it appears (if it is still lying on the ground). 0 = it stays.");
-        MandrakeLastSegment = Synced(round, "MandrakeLastSegment", 1, "Mandrakes are only dropped up to this map segment (0 = Shore, 1 = the second biome).");
+        MandrakeLastSegment = Synced(round, "MandrakeLastSegment", 2, "Mandrakes are only dropped up to this map segment (0 = Shore, 1 = the second biome, 2 = the third biome).");
+        MandrakesOutOfSafeZones = Synced(round, "MandrakesOutOfSafeZones", true, "No mandrake is ever inside a safe zone (campfires, the peak): the host removes any lying there, and a player carrying one into a safe zone loses it.");
         MandrakeNoRunnerSleep = Synced(round, "MandrakeNoRunnerSleep", true, "A screaming mandrake makes no runner drowsy (chasers are still affected).");
         MandrakeChaserSleepMultiplier = Synced(round, "MandrakeChaserSleepMultiplier", 0.9f, "Drowsiness a screaming mandrake gives a chaser, relative to vanilla (0.9 = 90%).");
-        HeadStartBoostSeconds = Synced(round, "HeadStartBoostSeconds", 4f, "Runners get an energy-drink speed boost (no drowsiness afterwards) for the last this-many seconds of their head start. 0 = off.");
+        HeadStartBoostSeconds = Synced(round, "HeadStartBoostSeconds", 7f, "Runners get an energy-drink speed boost (no drowsiness afterwards) for the last this-many seconds of their head start. 0 = off.");
         DisableScoutStatues = Synced(round, "DisableScoutStatues", true, "Scout statues do nothing during a round (no revives, no items). Everyone is brought back at the campfire after each leg instead.");
         PeakChasersDie = Synced(round, "PeakChasersDie", true, "When every living runner has reached the peak, the runners win and every living chaser is brought to the peak and petrified (turned to stone).");
         GameOverSeconds = Synced(round, "GameOverSeconds", 4f, "Once a side has won the game (last leg: every runner or every chaser dead, or every runner at the peak), the losing side is petrified and everyone sees a rainbow GAME OVER! for this long (s) ...");
@@ -257,12 +273,16 @@ internal sealed class ModConfig
         CaptureMoraleBoost = Synced(round, "CaptureMoraleBoost", true, "A chaser who captures a runner gets the morale boost of the Scoutmaster's bugle (the MORALE BOOST text and the bugle's extra stamina), for that chaser only.");
         GemCaptureBonus = Synced(round, "GemCaptureBonus", 0.017f, "Each capture makes that chaser's gem speed boost this much stronger for the rest of the leg (0.017 = +1.7% per capture), on top of GemCaptureExtraSeconds. Reset every leg.");
         GemCaptureExtraSeconds = Synced(round, "GemCaptureExtraSeconds", 0.25f, "Each capture makes that chaser's gem effects last this much longer (s) for the rest of the leg (2.25 -> 2.5 -> 2.75 ...). Reset every leg.");
-        RunnerStaminaRegenMultiplier = Synced(round, "RunnerStaminaRegenMultiplier", 1.2f, "Runner stamina regeneration multiplier (1.2 = 20% faster).");
+        RunnerStaminaRegenMultiplier = Synced(round, "RunnerStaminaRegenMultiplier", 1.4f, "Runner stamina regeneration multiplier (1.4 = 40% faster). Only the refill speed: PEAK's wait before regen starts (1 s, 2 s after running dry) is unchanged.");
         RunnerLegItems = Synced(round, "RunnerLegItems", "Snowball, Brown Berrynana, Fortified Milk", "At the start of each leg every runner gets ONE random item from this list (prefab or display names, comma separated). Empty = off.");
         RunnerBiomeItems = Synced(round, "RunnerBiomeItems", "Alpine:Heat Pack, Volcano:Sports Drink, Swamp:EarlyWorm, Mesa:Aloe Vera", "Extra item every runner gets at the start of a leg in that biome, as \"Biome:Item\" pairs. Biomes use PEAK's names (Caldera = Volcano; The Gloom is assumed to be Swamp).");
         FortifiedMilkWeightMultiplier = Synced(round, "FortifiedMilkWeightMultiplier", 2f, "Fortified milk weighs this many times its vanilla weight.");
         FortifiedMilkInvincibilityMultiplier = Synced(round, "FortifiedMilkInvincibilityMultiplier", 0.35f, "Fortified milk's invincibility lasts this fraction of its vanilla time (0.35 = 65% shorter). Also shortens its capture protection.");
         HungerRateMultiplier = Synced(round, "HungerRateMultiplier", 0.7f, "During a round hunger grows at this fraction of the vanilla rate (still scaled by the ascent like vanilla). Runners in a safe zone get no hungrier at all.");
+        ClearItemsAtLegEnd = Synced(round, "ClearItemsAtLegEnd", true, "When a leg ends, every living player's items are removed (hands, hotbar and backpack, with its contents), not dropped, so nothing piles up at the campfire and nothing is carried into the next leg.");
+        ResetItemsEachLeg = Synced(round, "ResetItemsEachLeg", true, "At the start of every leg (once the roles are drawn) every item a player still has (e.g. food picked up during the role window) is removed, not dropped; then chasers get the chaser kit and runners their backpack, gem and runner items.");
+        RunnersFaceNextCampfire = Synced(round, "RunnersFaceNextCampfire", true, "At the start of every leg (during the role reveal) every runner's view is turned to face the next campfire (or up the mountain if it isn't loaded yet), so they know which way to run. They can look around freely afterwards.");
+        NoPeakFlares = Synced(round, "NoPeakFlares", true, "No flare at the peak on any ascent (PEAK only leaves it out from Ascent 4 on); the host also removes any flare lying at the peak during a round.");
         RunnerBackpacks = Synced(round, "RunnerBackpacks", true, "At the start of every leg (after roles are drawn, and after the dead are brought back), every runner without a backpack gets one, worn.");
         ColdAscentLantern = Synced(round, "ColdAscentLantern", true, "On ascents with cold nights (Ascent 5+), every runner gets a faerie lantern at the start of the game.");
         FaerieLanternWeightMultiplier = Synced(round, "FaerieLanternWeightMultiplier", 0.5f, "Faerie lanterns weigh this much of their vanilla weight during a round (0.5 = half).");
@@ -282,8 +302,10 @@ internal sealed class ModConfig
         GemBoostSeconds = Synced(blowgun, "GemBoostSeconds", 2.25f, "Length of the chaser gem's effects (speed boost and unlimited stamina) (s).");
         GemDelaySeconds = Synced(blowgun, "GemDelaySeconds", 1f, "The chaser gem's effects start this long after it is used (s).");
         GemInfiniteStamina = Synced(blowgun, "GemInfiniteStamina", true, "The chaser gem also gives unlimited stamina (the rainbow stamina bar) for its duration, without drowsiness afterwards.");
-        GemCooldownSeconds = Synced(blowgun, "GemCooldownSeconds", 23f, "Cooldown of the chaser gem (s). It starts when the gem's effects wear off.");
+        GemCooldownSeconds = Synced(blowgun, "GemCooldownSeconds", 20f, "Cooldown of the chaser gem (s). It starts when the gem's effects wear off.");
         GemPetrify = Synced(blowgun, "GemPetrify", 0.05f, "Petrification each gem use adds to the chaser (0.05 = 5%).");
+        GemXRaySeconds = Synced(blowgun, "GemXRaySeconds", 2f, "The chaser gem also gives x-ray vision for this long (s), starting with its boost: the chaser sees every living runner within GemXRayRange through walls and terrain, blinking red with a solid red outline. 0 = off.");
+        GemXRayRange = Synced(blowgun, "GemXRayRange", 200f, "Range of the chaser gem's x-ray vision (m).");
         SnowballKnockbackBonus = Synced(blowgun, "SnowballKnockbackBonus", 0.1f, "Extra push a thrown snowball gives the scout it hits, as a fraction of its own impact (0.1 = 10% stronger).");
         RunnerGem = Synced(blowgun, "RunnerGem", true, "Runners carry a scout gem (Scout's Ambition) in their hotbar: using it dashes them DashDistance forward (where they look, horizontally), with a cooldown and some petrification as the cost. Its vanilla power is never used; chasers can't use it.");
         RunnerGemItem = Synced(blowgun, "RunnerGemItem", "Amulet_InfiniteStamina", "The scout gem item runners carry for the dash (prefab or display name). Amulet_InfiniteStamina = Scout's Ambition.");
@@ -372,6 +394,8 @@ internal sealed class ModConfig
         ChaserRedOutline = Synced(ui, "ChaserRedOutline", true, "Chasers' bodies glow red for everyone (PEAK's status glow, like the yellow glow of fortified milk's invincibility).");
         ChaserGlowIntensity = Synced(ui, "ChaserGlowIntensity", 1f, "Strength of the chasers' red glow (vanilla invincibility uses 1).");
         ShowChaserList = Local(ui, "ShowChaserList", true, "Show the chaser list under the ascent label (top right).");
+        RoleHintSeconds = Synced(ui, "RoleHintSeconds", 5f, "At the start of every leg (once the roles are drawn) a short list of your role's abilities shows at the bottom left, above the stamina bar, for this long (s), then fades away. KeyRoleHint shows or hides it at any time.");
+        RunnersSeeLuggage = Synced(ui, "RunnersSeeLuggage", true, "Runners see every unopened runner luggage on the map through walls and terrain, as a faint green glow that fades out as they come close (gone within reach) and disappears once the luggage is opened.");
         FreezeScreenFrost = Local(ui, "FreezeScreenFrost", true, "Play PEAK's cold screen effect on your own screen while you are frozen.");
         CountdownOpacity = Local(ui, "CountdownOpacity", 0.35f, "Opacity of the big head-start countdown on runners' screens (0-1).");
         CaptureSound = Local(ui, "CaptureSound", true, "Play an explosion sound when a runner is captured.");
@@ -386,9 +410,11 @@ internal sealed class ModConfig
 
         const string admin = "13. Admin";
         AdminKeys = Local(admin, "AdminKeys", true, "Enable host admin keys (work even with DebugKeys off).");
+        RandomMap = Local(admin, "RandomMap", false, "HOST: a new game started at the airport kiosk loads a random map from PEAK's map pool (never the same one twice in a row) instead of today's daily map. Also in the host menu.");
         KeyRestartFromCampfire = Local(admin, "KeyRestartFromCampfire", Key.F10, "HOST: quick restart - everyone back to the last lit campfire (or the start), dead players revived, statuses cleared, fresh leg with role reveal + head start. Roles are kept.");
         KeyHostMenu = Local(admin, "KeyHostMenu", Key.Equals, "HOST: open/close the host menu (restart at the airport or previous campfire, teleport everyone to the next campfire, debug hotkeys on/off).");
         KeyChaserOdds = Local(admin, "KeyChaserOdds", Key.Minus, "EVERYONE, in the airport and in the role window after a leg: open/close the role menu (runner / chaser).");
+        KeyRoleHint = Local(admin, "KeyRoleHint", Key.P, "EVERYONE, during a round: show/hide the hint with your role's abilities.");
 
         config.SettingChanged += (_, _) => ConfigSync.Publish();
     }

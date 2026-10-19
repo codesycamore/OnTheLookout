@@ -15,6 +15,10 @@ namespace OnTheLookout.Modules;
 /// Chasers also get the chaser gem (Scout's Initiative; see <see cref="ChaserKit"/>).
 /// Before a chaser gets an item their hands are cleared: whatever they hold is dropped in front of
 /// them (by their own client, the vanilla way), then the item is given.
+/// Items never carry over between legs: with ClearItemsAtLegEnd every living player's items (backpack included) are
+/// removed when a leg ends, and with ResetItemsEachLeg anything picked up since (role window food) is removed when the
+/// next leg starts, after the role draw; the hand-outs above wait for that (<see cref="ResetSettleSeconds"/>).
+/// Removed, not dropped: nothing piles up at the campfire and nothing can be picked up twice.
 /// </summary>
 internal static class LegLoadout
 {
@@ -24,11 +28,26 @@ internal static class LegLoadout
     {
         RoundManager.LegStarted += newRound =>
         {
-            Schedule(GiveLegItems());
-            Schedule(GiveRunnerBackpacks()); // every leg: the dead were brought back without their items
-            if (newRound) Schedule(GiveColdLanterns());
+            float wait = 0f;
+            if (Plugin.ModConfig.ResetItemsEachLeg.Synced() && RoundManager.IsActive)
+            {
+                wait = ResetSettleSeconds;
+                ModNetwork.Instance?.StartCoroutine(RemoveLocalItems("new leg")); // every client, its own inventory
+                if (Net.IsHost)
+                {
+                    foreach (int chaser in RoleManager.Chasers) HostDelayChaserKit(chaser, wait + 1f); // the kit after the drop
+                }
+            }
+
+            Schedule(GiveLegItems(wait));
+            Schedule(GiveRunnerBackpacks(wait)); // every leg: the dead were brought back without their items
+            if (newRound) Schedule(GiveColdLanterns(wait));
         };
-        RoundManager.LegCompleted += () => Schedule(StockCampfireFood());
+        RoundManager.LegCompleted += () =>
+        {
+            if (Plugin.ModConfig.ClearItemsAtLegEnd.Synced()) ModNetwork.Instance?.StartCoroutine(RemoveLocalItems("leg over"));
+            Schedule(StockCampfireFood());
+        };
         RoundManager.FreshStart += () =>
         {
             s_KitBusyUntil.Clear();
@@ -50,6 +69,8 @@ internal static class LegLoadout
     public static void HostEnsureChaserKits()
     {
         if (!Net.IsHost || !RoundManager.IsActive) return;
+        // Between legs (role window) everyone's items were just removed; the kit comes back when the next leg starts.
+        if (RoundManager.State == RoundState.LegComplete && Plugin.ModConfig.ClearItemsAtLegEnd.Synced()) return;
         Item? blowgun = Plugin.ModConfig.ChaserBlowgun.Synced() ? ItemCatalog.Blowgun : null;
         Item? gem = Plugin.ModConfig.ChaserGem.Synced() ? ChaserKit.GemPrefab : null;
         if (blowgun == null && gem == null) return;
@@ -77,9 +98,9 @@ internal static class LegLoadout
     /// Host, at the start of the game on an ascent with cold nights (Ascents.isNightCold, Ascent 5+): every runner
     /// gets a faerie lantern (LuggageRareExtraItems' runner item; half weight, FaerieLanternWeightMultiplier).
     /// </summary>
-    private static IEnumerator GiveColdLanterns()
+    private static IEnumerator GiveColdLanterns(float wait)
     {
-        yield return new WaitForSeconds(3f); // after the backpack, so it can go into a free slot
+        yield return new WaitForSeconds(wait + 3f); // after the backpack, so it can go into a free slot
         if (!Net.IsHost || !RoundManager.IsActive || !Plugin.ModConfig.ColdAscentLantern.Synced()) yield break;
         if (!Ascents.isNightCold)
         {
@@ -104,9 +125,9 @@ internal static class LegLoadout
     }
 
     /// <summary>Host, at every leg start: every runner without a backpack gets one, worn.</summary>
-    private static IEnumerator GiveRunnerBackpacks()
+    private static IEnumerator GiveRunnerBackpacks(float wait)
     {
-        yield return new WaitForSeconds(1.5f);
+        yield return new WaitForSeconds(wait + 1.5f);
         if (!Net.IsHost || !RoundManager.IsActive || !Plugin.ModConfig.RunnerBackpacks.Synced()) yield break;
 
         Backpack? backpack = ItemCatalog.PlainBackpack;
@@ -162,14 +183,53 @@ internal static class LegLoadout
         Plugin.Log.LogInfo($"[OTL][Loadout] HOST campfire food: {players} player(s), {present} already there, spawned {Mathf.Max(0, missing)}.");
     }
 
+    // ---------- Leg-start item reset ----------
+
+    /// <summary>How long the hand-outs wait at a leg start for everyone's item reset to land (s).</summary>
+    private const float ResetSettleSeconds = 1.5f;
+
+    /// <summary>
+    /// The local player's client, when a leg ends and when the next starts: the held item is put away, then every slot
+    /// is emptied with Player.EmptySlot (the hotbar, the temporary slot and the backpack with everything in it). The
+    /// items are removed, not dropped (PEAK's own DeleteMyBackpack does the same for the backpack).
+    /// </summary>
+    private static IEnumerator RemoveLocalItems(string why)
+    {
+        Character local = Character.localCharacter;
+        if (local == null || local.data.dead || local.player == null) yield break;
+        if (local.data.currentItem != null)
+        {
+            local.refs.items.EquipSlot(Optionable<byte>.None);
+            yield return new WaitForSeconds(0.3f);
+        }
+
+        local = Character.localCharacter;
+        if (local == null || local.data.dead || local.player == null || !RoundManager.IsActive) yield break;
+        var slots = new List<byte>();
+        for (byte i = 0; i < local.player.itemSlots.Length; i++) slots.Add(i);
+        slots.Add(3);   // backpack (BackpackSlot)
+        slots.Add(250); // temporary slot (TemporaryItemSlot)
+        int removed = 0;
+        foreach (byte id in slots)
+        {
+            ItemSlot? slot = local.player.GetItemSlot(id);
+            if (slot == null || slot.IsEmpty()) continue;
+            local.player.EmptySlot(Optionable<byte>.Some(id));
+            removed++;
+        }
+
+        local.refs.afflictions.UpdateWeight();
+        Plugin.Log.LogInfo($"[OTL][Loadout] {why}: {removed} item(s) removed.");
+    }
+
     private static void Schedule(IEnumerator routine)
     {
         if (Net.IsHost) ModNetwork.Instance?.StartCoroutine(routine);
     }
 
-    private static IEnumerator GiveLegItems()
+    private static IEnumerator GiveLegItems(float wait)
     {
-        yield return new WaitForSeconds(1f);
+        yield return new WaitForSeconds(wait + 1f);
         if (!Net.IsHost || !RoundManager.IsActive) yield break;
 
         HostEnsureChaserKits(); // blowgun + gem for every chaser, including runners who just became one

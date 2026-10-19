@@ -42,6 +42,9 @@ internal sealed class Hud : MonoBehaviour
     private BlowgunCooldownUI? _gemCooldown;
     private BlowgunCooldownUI? _dashCooldown;
     private TextMeshProUGUI? _chaserList;
+
+    /// <summary>PEAK's ascent label the chaser list sits under (null: the list uses the fallback spot).</summary>
+    private TextMeshProUGUI? _ascentText;
     private TextMeshProUGUI? _toast;
     private CanvasGroup? _toastGroup;
     private float _nextListRefresh;
@@ -160,6 +163,7 @@ internal sealed class Hud : MonoBehaviour
         AscentUI? ascent = Object.FindFirstObjectByType<AscentUI>(FindObjectsInactive.Include);
         TextMeshProUGUI? ascentText = ascent != null ? ascent.text : null;
 
+        _ascentText = null;
         if (ascentText != null && ascentText.gameObject.activeInHierarchy)
         {
             RectTransform a = ascentText.rectTransform;
@@ -169,7 +173,8 @@ internal sealed class Hud : MonoBehaviour
             rt.anchorMax = a.anchorMax;
             rt.pivot = new Vector2(a.pivot.x, 1f);
             rt.sizeDelta = new Vector2(Mathf.Max(a.rect.width, 420f), 400f);
-            rt.anchoredPosition = a.anchoredPosition - new Vector2(0f, a.rect.height * (1f - a.pivot.y) + 6f);
+            _ascentText = ascentText;
+            PlaceUnderAscent();
         }
         else
         {
@@ -182,6 +187,26 @@ internal sealed class Hud : MonoBehaviour
 
         _chaserList.verticalAlignment = VerticalAlignmentOptions.Top;
         _chaserList.text = "";
+    }
+
+    /// <summary>
+    /// Keeps the chaser list just below what the ascent label actually draws. The label's text can reach below its
+    /// own rect (and is set after the HUD is built), so the bottom of its rendered text (TMP textBounds, in its local
+    /// space) is used when it has any, else the bottom of its rect.
+    /// </summary>
+    private void PlaceUnderAscent()
+    {
+        if (_chaserList == null || _ascentText == null) return;
+        RectTransform a = _ascentText.rectTransform;
+        float bottom = a.rect.yMin;
+        if (!string.IsNullOrEmpty(_ascentText.text) && _ascentText.textBounds.size.y > 0f)
+        {
+            bottom = Mathf.Min(bottom, _ascentText.textBounds.min.y);
+        }
+
+        Vector3 under = a.localPosition + new Vector3(0f, bottom * a.localScale.y - 8f, 0f);
+        RectTransform rt = _chaserList.rectTransform;
+        if ((rt.localPosition - under).sqrMagnitude > 0.25f) rt.localPosition = under;
     }
 
     private void BuildToast(Transform canvas, TextMeshProUGUI style)
@@ -239,10 +264,28 @@ internal sealed class Hud : MonoBehaviour
 
     // ---------- Update ----------
 
+    private bool _mismatchShown;
+
+    /// <summary>Our version differs from the host's: say so on our own screen once per room (12 s).</summary>
+    private void CheckHostVersion()
+    {
+        if (!Net.InRoom)
+        {
+            _mismatchShown = false;
+            return;
+        }
+
+        if (_mismatchShown || ModNetwork.HostVersionMismatch is not { } host) return;
+        _mismatchShown = true;
+        Announce("DIFFERENT MOD VERSION", $"THE HOST HAS ONTHELOOKOUT {host}, YOU HAVE {Plugin.Version}: INSTALL {host} FROM THUNDERSTORE.IO", ChaserRed, 12f);
+    }
+
     private void Update()
     {
+        CheckHostVersion();
         UpdateCenter();
         ChaserKit.LocalTick();
+        MandrakeDrops.LocalTick();
         if (!EnsureHud()) return;
         if (_blowgunCooldown is { IsValid: true }) _blowgunCooldown.Update(GUIManager.instance);
         if (_gemCooldown is { IsValid: true }) _gemCooldown.Update(GUIManager.instance);
@@ -358,6 +401,20 @@ internal sealed class Hud : MonoBehaviour
     private void UpdateChaserList()
     {
         if (_chaserList == null) return;
+        if (_ascentText == null && Time.time >= _nextAscentLook)
+        {
+            // Built at the fallback spot (no ascent label yet): move under the label as soon as it shows up.
+            _nextAscentLook = Time.time + 2f;
+            AscentUI? ascent = Object.FindFirstObjectByType<AscentUI>();
+            if (ascent != null && ascent.text != null && ascent.text.gameObject.activeInHierarchy)
+            {
+                Destroy(_chaserList.gameObject);
+                _chaserList = null; // EnsureHud builds it again, under the label
+                return;
+            }
+        }
+
+        PlaceUnderAscent();
         if (!Plugin.ModConfig.ShowChaserList.Value || !RoundManager.IsActive)
         {
             _chaserList.text = "";
@@ -379,6 +436,7 @@ internal sealed class Hud : MonoBehaviour
     }
 
     private float _nextFreezeWarning;
+    private float _nextAscentLook;
 
     /// <summary>
     /// Whole seconds of a chaser's freeze left, for the chaser list. A freeze never stacks or extends (the host
@@ -435,9 +493,6 @@ internal sealed class Hud : MonoBehaviour
                 Toast($"{Net.NameOf(a)} has joined the chasers");
                 if (a == me) Announce("CHASER", "YOU HAVE JOINED THE CHASERS", ChaserRed, 4f);
                 break;
-            case Notice.Rewarded:
-                Toast($"{Net.NameOf(a)} reached the safe zone first - energy drink!");
-                break;
             case Notice.Restarted:
                 Toast("The host restarted from the last campfire");
                 AdminRestart.OnRestartNotice();
@@ -448,7 +503,12 @@ internal sealed class Hud : MonoBehaviour
                 LavaAlert.Play();
                 break;
             case Notice.MissingMod:
-                Toast($"{Net.NameOf(a)} doesn't have OnTheLookout {Plugin.Version}");
+                Toast(b == 0
+                    ? $"{Net.NameOf(a)} doesn't have OnTheLookout: they need to install it from thunderstore.io"
+                    : $"{Net.NameOf(a)} has a different OnTheLookout version: they need {Plugin.Version} from thunderstore.io");
+                break;
+            case Notice.ModInstalled:
+                Toast($"{Net.NameOf(a)} now has OnTheLookout {Plugin.Version}");
                 break;
         }
     }

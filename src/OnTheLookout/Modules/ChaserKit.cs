@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using HarmonyLib;
 using OnTheLookout.Core;
+using OnTheLookout.UI;
 using Peak.Afflictions;
 using UnityEngine;
 using Zorro.Core;
@@ -12,7 +13,8 @@ namespace OnTheLookout.Modules;
 /// <summary>
 /// Chaser and runner kit rules that act on the local player's own client:
 /// - the chaser gem (Scout's Initiative by default, ChaserGemItem): using it as a chaser never activates its
-///   vanilla power; instead it gives a short energy-drink speed boost and unlimited stamina (no drowsiness),
+///   vanilla power; instead it gives a short energy-drink speed boost and unlimited stamina (no drowsiness) and
+///   GemXRaySeconds of x-ray vision on the runners (<see cref="XRayVision"/>),
 ///   starting GemDelaySeconds after use, with a GemCooldownSeconds cooldown once the effects wear off, at the
 ///   cost of GemPetrify petrification. Each capture takes CapturePetrifyRelief of it away again;
 /// - each capture gives the chaser the Scoutmaster's bugle's morale boost (CaptureMoraleBoost), and makes their gem's
@@ -240,16 +242,54 @@ internal static class ChaserKit
         Mathf.Max(0f, Plugin.ModConfig.GemBoostSeconds.Synced())
         + Mathf.Max(0f, Plugin.ModConfig.GemCaptureExtraSeconds.Synced()) * CapturesThisLeg;
 
-    /// <summary>Every client, each frame (from Hud): runners' boost at the tail end of their head start.</summary>
+    /// <summary>
+    /// Every client, each frame (from Hud): the unlimited-stamina guard, and runners' boost at the tail end of their
+    /// head start.
+    /// </summary>
     public static void LocalTick()
     {
         Character local = Character.localCharacter;
+        GuardInfiniteStamina(local);
         if (local == null || local.data.dead || !RoleManager.IsRunner(local) || !RoundManager.InCountdown) return;
         float seconds = Plugin.ModConfig.HeadStartBoostSeconds.Synced();
         if (seconds <= 0f || RoundManager.HoldSecondsLeft > seconds || s_BoostedLeg == RoundManager.LegKey) return;
         s_BoostedLeg = RoundManager.LegKey;
         ApplyBoost(local, RoundManager.HoldSecondsLeft + 0.25f);
         Plugin.Log.LogInfo("[OTL][Kit] head start boost.");
+    }
+
+    // ---------- Unlimited stamina guard ----------
+
+    private static float s_NextStaminaGuard;
+
+    /// <summary>
+    /// During a round, unlimited stamina (Character.infiniteStam) must only be on while an Affliction_InfiniteStamina
+    /// is running: that affliction switches it on in OnApplied and off in OnRemoved. If the flag is still on without
+    /// one (the gem's stamina was seen to stay unlimited after its effects ended), it is switched off and PEAK's
+    /// rainbow bar is ended, as OnRemoved would.
+    /// </summary>
+    private static void GuardInfiniteStamina(Character? local)
+    {
+        if (local == null || !local.infiniteStam || !RoundManager.IsActive || Time.time < s_NextStaminaGuard) return;
+        s_NextStaminaGuard = Time.time + 0.25f;
+        if (local.refs.afflictions.HasAfflictionType(Affliction.AfflictionType.InfiniteStamina, out _)) return;
+        local.infiniteStam = false;
+        GUIManager.instance?.EndSugarRush();
+        Plugin.Log.LogWarning("[OTL][Kit] unlimited stamina was still on with no sugar rush running; switched it off.");
+    }
+
+    /// <summary>The gem's effects are over: its unlimited stamina ends now too, even if PEAK's own timer hasn't run out.</summary>
+    private static void EndGemStamina(Character chaser)
+    {
+        if (chaser == null || !chaser.IsLocal) return;
+        CharacterAfflictions afflictions = chaser.refs.afflictions;
+        if (afflictions.HasAfflictionType(Affliction.AfflictionType.InfiniteStamina, out Affliction stamina)
+            && stamina.totalTime - stamina.timeElapsed <= 0.5f)
+        {
+            afflictions.RemoveAffliction(stamina); // OnRemoved: infiniteStam off, rainbow bar ended
+        }
+
+        GuardInfiniteStamina(chaser);
     }
 
     // ---------- Chaser gem ----------
@@ -316,10 +356,12 @@ internal static class ChaserKit
         float strength = GemStrength;
         if (cfg.GemInfiniteStamina.Synced()) ApplySugarRush(chaser, seconds, strength);
         else ApplyBoost(chaser, seconds, strength);
+        XRayVision.Begin(cfg.GemXRaySeconds.Synced(), cfg.GemXRayRange.Synced()); // runners through walls, on this chaser's screen
 
         Plugin.Log.LogInfo($"[OTL][Kit] chaser gem: boost x{strength:0.###}{(cfg.GemInfiniteStamina.Synced() ? " + unlimited stamina" : "")} for {seconds:0.##}s ({CapturesThisLeg} captures this leg).");
 
         if (seconds > 0f) yield return new WaitForSeconds(seconds);
+        EndGemStamina(chaser);
         StartGemCooldown();
     }
 

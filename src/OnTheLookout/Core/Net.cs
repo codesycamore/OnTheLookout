@@ -23,7 +23,7 @@ internal enum Msg : byte
     /// <summary>client -> host only: [ChaserPref] this player's role choice (never broadcast)</summary>
     ChaserPreference = 6,
 
-    /// <summary>host -> one player: [] you became a chaser: drop every item and your backpack</summary>
+    /// <summary>host -> one player: [backpackOnly?] you became a chaser: drop every item and your backpack (only the backpack when the leg-start item reset drops the rest)</summary>
     DropAllItems = 7,
 
     /// <summary>host -> one player: [] you became a runner: drop the blowgun and chaser gem</summary>
@@ -44,13 +44,14 @@ internal enum Notice : byte
     Captured = 1, // A captured B
     Converted = 2, // A became a chaser
     Rewarded = 3, // A reached a campfire first
-    MissingMod = 4, // A has no / a different OnTheLookout version (host only)
+    MissingMod = 4, // A has no OnTheLookout (B = 0) or a different version (B = 1) (host only, raised locally)
     Restarted = 5, // the host (A) restarted from the last campfire
     ZombieHunt = 6, // a zombie was sent after runner A (all chasers are dead)
     MandrakeBoom = 7, // explosion sound at runner A
     GemReveal = 8, // chaser A used their gem: every runner smokes
     DashReveal = 9, // runner A dashed: every chaser smokes
     Petrify = 10, // the game was won: every living scout of role A (the losers) turns to stone
+    ModInstalled = 11, // A, warned about earlier, now has the host's OnTheLookout version (host only, raised locally)
 }
 
 /// <summary>

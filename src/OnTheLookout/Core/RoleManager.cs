@@ -33,22 +33,35 @@ internal static class RoleManager
 
     public static bool IsRunner(Character? c) => c != null && !c.isBot && RoundManager.IsActive && RoleOf(Net.Actor(c)) == Role.Runner;
 
-    public static IEnumerable<int> Chasers => s_Roles.Where(kv => kv.Value == Role.Chaser).Select(kv => kv.Key);
+    /// <summary>Chasers still in the room (a player who left keeps no role, even before the host's update arrives).</summary>
+    public static IEnumerable<int> Chasers => s_Roles.Where(kv => kv.Value == Role.Chaser && InRoom(kv.Key)).Select(kv => kv.Key);
+
+    private static bool InRoom(int actor) => PhotonNetwork.CurrentRoom?.GetPlayer(actor) is { IsInactive: false };
 
     /// <summary>
     /// Host, at the start of every leg: draw the chasers from the players who chose CHASER in the role menu
-    /// (<see cref="ChaserPreference"/>), at most <see cref="MaxChasers"/>. If nobody volunteered, one random
-    /// player becomes the chaser. Always leaves at least one runner (a solo player stays a runner).
+    /// (<see cref="ChaserPreference"/>).
+    /// - AUTO (ChaserCount 0): at most <see cref="MaxChasers"/> volunteers; if nobody volunteered, one random player.
+    /// - ChaserCount N: exactly N, the volunteers first, then random other players to make up the number.
+    /// Always leaves at least one runner (a solo player stays a runner).
     /// </summary>
     public static void AssignFromPreferences()
     {
         if (!Net.IsHost) return;
         List<int> actors = PhotonNetwork.PlayerList.Select(p => p.ActorNumber).ToList();
-        int max = Math.Min(MaxChasers(actors.Count), actors.Count - 1);
+        int fixedCount = FixedChaserCount;
+        int max = Math.Min(fixedCount > 0 ? fixedCount : MaxChasers(actors.Count), actors.Count - 1);
 
         List<int> volunteers = actors.Where(ChaserPreference.WantsChaser).OrderBy(_ => s_Rng.Next()).ToList();
         List<int> chosen = volunteers.Take(Math.Max(0, max)).ToList();
-        if (chosen.Count == 0 && max > 0) chosen.Add(actors[s_Rng.Next(actors.Count)]);
+        if (fixedCount > 0)
+        {
+            chosen.AddRange(actors.Except(chosen).OrderBy(_ => s_Rng.Next()).Take(Math.Max(0, max - chosen.Count)));
+        }
+        else if (chosen.Count == 0 && max > 0)
+        {
+            chosen.Add(actors[s_Rng.Next(actors.Count)]);
+        }
 
         s_Roles.Clear();
         foreach (int actor in actors)
@@ -56,9 +69,12 @@ internal static class RoleManager
             s_Roles[actor] = chosen.Contains(actor) ? Role.Chaser : Role.Runner;
         }
 
-        Plugin.Log.LogInfo($"[OTL][Roles] HOST drew {chosen.Count} chaser(s) of max {max} ({volunteers.Count} volunteer(s)): {string.Join(", ", Chasers.Select(Net.NameOf))}");
+        Plugin.Log.LogInfo($"[OTL][Roles] HOST drew {chosen.Count} chaser(s) of {(fixedCount > 0 ? "exactly" : "max")} {max} ({volunteers.Count} volunteer(s)): {string.Join(", ", Chasers.Select(Net.NameOf))}");
         Publish();
     }
+
+    /// <summary>The host menu's CHASERS setting (ChaserCount): 0 = AUTO.</summary>
+    public static int FixedChaserCount => Math.Max(0, (int)Math.Round(Plugin.ModConfig.ChaserCount.Synced()));
 
     /// <summary>At most one chaser per RunnersPerChaser runners: floor(players / (RunnersPerChaser + 1)), at least 1.</summary>
     public static int MaxChasers(int players)
@@ -93,6 +109,14 @@ internal static class RoleManager
     {
         if (!Net.IsHost) return;
         s_Roles.Clear();
+        Publish();
+    }
+
+    /// <summary>Host: a player left the room; their role is dropped from the table everyone reads.</summary>
+    public static void HostForget(int actor)
+    {
+        if (!Net.IsHost || !s_Roles.Remove(actor)) return;
+        Plugin.Log.LogInfo($"[OTL][Roles] HOST: actor {actor} left; role removed.");
         Publish();
     }
 

@@ -57,7 +57,7 @@ internal static class RoleSwap
             if (!before.TryGetValue(p.ActorNumber, out Role old)) continue; // joined during the window: nothing to swap
             Role now = RoleManager.RoleOf(p.ActorNumber);
             if (old == now) continue;
-            HostOnSwap(p.ActorNumber, now);
+            HostOnSwap(p.ActorNumber, now, legStart: true);
             changed++;
         }
 
@@ -65,26 +65,36 @@ internal static class RoleSwap
     }
 
     /// <summary>Host: <paramref name="actor"/>'s role just changed to <paramref name="now"/>.</summary>
-    public static void HostOnSwap(int actor, Role now)
+    /// <summary>
+    /// <paramref name="legStart"/>: the swap was found when a leg started. With ResetItemsEachLeg everyone's items
+    /// are already being removed then (<see cref="LegLoadout"/>), so there is nothing to drop.
+    /// </summary>
+    public static void HostOnSwap(int actor, Role now, bool legStart = false)
     {
         if (!Net.IsHost || !RoundManager.IsActive) return;
-        if (now == Role.Chaser) HostBecameChaser(actor);
-        else HostBecameRunner(actor);
+        bool hotbarReset = legStart && Plugin.ModConfig.ResetItemsEachLeg.Synced();
+        if (now == Role.Chaser) HostBecameChaser(actor, hotbarReset);
+        else HostBecameRunner(actor, hotbarReset);
     }
 
-    private static void HostBecameChaser(int actor)
+    private static void HostBecameChaser(int actor, bool hotbarReset)
     {
-        Plugin.Log.LogInfo($"[OTL][Swap] HOST: {Net.NameOf(actor)} is now a chaser: dropping everything, then the chaser kit.");
+        Plugin.Log.LogInfo($"[OTL][Swap] HOST: {Net.NameOf(actor)} is now a chaser: {(hotbarReset ? "items removed by the leg reset" : "dropping everything")}, then the chaser kit.");
         LegLoadout.HostDelayChaserKit(actor, DropSettleSeconds); // the kit comes after the drop has landed
+        if (hotbarReset) return;
         if (Net.CharacterOf(actor) is { IsLocal: true }) DropAllLocal();
         else Net.SendToActor(actor, Msg.DropAllItems);
     }
 
-    private static void HostBecameRunner(int actor)
+    private static void HostBecameRunner(int actor, bool hotbarReset)
     {
         Plugin.Log.LogInfo($"[OTL][Swap] HOST: {Net.NameOf(actor)} is now a runner: dropping the chaser kit, backpack if needed.");
-        if (Net.CharacterOf(actor) is { IsLocal: true }) DropChaserKitLocal();
-        else Net.SendToActor(actor, Msg.DropChaserKit);
+        if (!hotbarReset)
+        {
+            if (Net.CharacterOf(actor) is { IsLocal: true }) DropChaserKitLocal();
+            else Net.SendToActor(actor, Msg.DropChaserKit);
+        }
+
         ModNetwork.Instance?.StartCoroutine(RunnerKitLater(actor));
     }
 
@@ -125,13 +135,25 @@ internal static class RoleSwap
         }
     }
 
-    private static bool IsChaserKit(Item item) => ItemCatalog.IsBlowgun(item) || ChaserKit.IsGem(item);
+    public static bool IsChaserKit(Item item) => ItemCatalog.IsBlowgun(item) || ChaserKit.IsGem(item);
 
-    /// <summary>The local player's client: drop every item and the backpack (PEAK's own drop-everything, as on death).</summary>
-    public static void DropAllLocal()
+    /// <summary>
+    /// The local player's client: drop every item and the backpack (PEAK's own drop-everything, as on death), or with
+    /// <paramref name="backpackOnly"/> just the backpack (the leg-start item reset empties the hotbar).
+    /// </summary>
+    public static void DropAllLocal(bool backpackOnly = false)
     {
         Character local = Character.localCharacter;
         if (local == null || local.data.dead || local.player == null) return;
+        if (backpackOnly)
+        {
+            if (local.player.backpackSlot.IsEmpty()) return;
+            Vector3 spot = local.Center + local.data.lookDirection_Flat * 0.8f + Vector3.up * 0.3f;
+            local.refs.items.photonView.RPC("DropItemFromSlotRPC", RpcTarget.All, (byte)3, spot);
+            Plugin.Log.LogInfo("[OTL][Swap] now a chaser: dropped the backpack.");
+            return;
+        }
+
         local.refs.items.DropAllItems(includeBackpack: true);
         local.refs.items.EquipSlot(Optionable<byte>.None);
         Plugin.Log.LogInfo("[OTL][Swap] now a chaser: dropped all items and the backpack.");

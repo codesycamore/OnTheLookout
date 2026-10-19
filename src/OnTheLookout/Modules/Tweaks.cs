@@ -1,4 +1,5 @@
 using HarmonyLib;
+using Photon.Pun;
 using OnTheLookout.Core;
 using UnityEngine;
 
@@ -6,7 +7,7 @@ namespace OnTheLookout.Modules;
 
 /// <summary>
 /// Small rule tweaks: runner stamina regen, no Scoutmaster, no revival curse, energy drink drowsiness, slower hunger
-/// (none for runners in a safe zone).
+/// (none for runners in a safe zone), no flare at the peak on any ascent.
 /// </summary>
 internal static class Tweaks
 {
@@ -44,6 +45,11 @@ internal static class Tweaks
         // Interaction.DoInteractableRaycasts(out IInteractible, ...) (prefix). Why: finds what the player
         // can interact with each frame; returning nothing blocks every interaction and prompt.
         ok &= SafePatch.Prefix(harmony, typeof(Interaction), nameof(Interaction.DoInteractableRaycasts), typeof(Tweaks), nameof(InteractRaycastPrefix), m);
+
+        // Ascents.shouldSpawnFlare (getter, postfix). Why: PEAK's peak flare (Peak.EndgameFlareSpawner and
+        // DestroyFlareDuringAscentChallenge) only exists while this is true (below Ascent 4, or a custom run's setting).
+        ok &= SafePatch.Postfix(harmony, typeof(Ascents), "get_shouldSpawnFlare", typeof(Tweaks), nameof(ShouldSpawnFlarePostfix), m);
+        ModNetwork.HostTicked += HostRemovePeakFlares;
         return ok;
     }
 
@@ -102,6 +108,44 @@ internal static class Tweaks
 
     public static bool SetTargetPrefix(Character setCurrentTarget) =>
         setCurrentTarget == null || !Plugin.ModConfig.DisableScoutmaster.Synced();
+
+    // ---------- No flare at the peak ----------
+
+    /// <summary>On the mountain in a game of this mode (the host runs it): not in the airport, a run going.</summary>
+    private static bool InModeRun =>
+        Plugin.ModConfig.NoPeakFlares.Synced() && Net.InRoom && Net.GetRoom(ConfigSync.RoomKey) != null
+        && RunManager.Instance != null && RunManager.Instance.runStarted
+        && !(Character.localCharacter != null && Character.localCharacter.inAirport);
+
+    public static void ShouldSpawnFlarePostfix(ref bool __result)
+    {
+        if (__result && InModeRun) __result = false;
+    }
+
+    private static float s_NextFlareSweep;
+
+    /// <summary>
+    /// Host, every 2 s during a game: a flare lying at the peak (past PEAK's last progress point, or within 10 m of the
+    /// peak's flare spawner) is removed, e.g. one spawned before the round started.
+    /// </summary>
+    private static void HostRemovePeakFlares()
+    {
+        if (!Net.IsHost || !InModeRun || Time.time < s_NextFlareSweep) return;
+        s_NextFlareSweep = Time.time + 2f;
+        MountainProgressHandler? progress = Zorro.Core.Singleton<MountainProgressHandler>.Instance;
+        Peak.EndgameFlareSpawner[] spawners = Object.FindObjectsByType<Peak.EndgameFlareSpawner>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (Flare flare in Object.FindObjectsByType<Flare>(FindObjectsSortMode.None))
+        {
+            Item? item = flare != null ? flare.GetComponent<Item>() : null;
+            if (item == null || item.itemState != ItemState.Ground || item.view == null) continue;
+            Vector3 pos = item.transform.position;
+            bool atPeak = (progress != null && progress.IsAtPeak(pos))
+                || System.Array.Exists(spawners, s => s != null && Vector3.Distance(s.transform.position, pos) <= 10f);
+            if (!atPeak) continue;
+            PhotonNetwork.Destroy(item.gameObject);
+            Plugin.Log.LogInfo("[OTL][Tweaks] HOST removed a flare at the peak.");
+        }
+    }
 
     public static bool PostReviveStatusPrefix() =>
         !(RoundManager.IsActive && Plugin.ModConfig.NoReviveCurse.Synced());

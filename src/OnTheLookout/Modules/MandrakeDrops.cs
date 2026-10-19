@@ -15,6 +15,8 @@ namespace OnTheLookout.Modules;
 /// never remove it. Drops vanish after MandrakeLifetimeSeconds and stop after MandrakeLastSegment.
 /// Mandrakes never make runners drowsy, and chasers get MandrakeChaserSleepMultiplier of their drowsiness.
 /// Separately (currently switched off), a dynamite boom at every runner every two minutes.
+/// With MandrakesOutOfSafeZones no mandrake is ever inside a safe zone (campfires, the peak): the host removes any
+/// lying in one, and a player's own client takes away a mandrake they carry into one.
 /// </summary>
 internal static class MandrakeDrops
 {
@@ -24,6 +26,7 @@ internal static class MandrakeDrops
     public static bool Install(Harmony harmony)
     {
         ModNetwork.HostTicked += HostTick;
+        ModNetwork.HostTicked += HostClearSafeZones;
         RoundManager.FreshStart += () =>
         {
             s_LegKey = -1;
@@ -158,6 +161,52 @@ internal static class MandrakeDrops
         }
 
         Plugin.Log.LogInfo($"[OTL][Mandrake] HOST explosion {boom}: {booms} runner(s).");
+    }
+
+    // ---------- No mandrakes in safe zones ----------
+
+    private static float s_NextSafeSweep, s_NextLocalCheck;
+
+    private static bool KeepOutOfSafeZones => RoundManager.IsActive && Plugin.ModConfig.MandrakesOutOfSafeZones.Synced();
+
+    /// <summary>Host, about once a second: every mandrake lying in a safe zone is removed (the master client may destroy any networked object).</summary>
+    private static void HostClearSafeZones()
+    {
+        if (!Net.IsHost || !KeepOutOfSafeZones || Time.time < s_NextSafeSweep) return;
+        s_NextSafeSweep = Time.time + 1f;
+        int removed = 0;
+        foreach (Mandrake m in Object.FindObjectsByType<Mandrake>(FindObjectsSortMode.None))
+        {
+            Item? item = m != null ? m.GetComponentInParent<Item>() : null;
+            if (item == null || item.itemState != ItemState.Ground || item.view == null || !SafeZoneSystem.IsSafe(item.transform.position)) continue;
+            PhotonNetwork.Destroy(item.gameObject);
+            removed++;
+        }
+
+        if (removed > 0) Plugin.Log.LogInfo($"[OTL][Mandrake] HOST removed {removed} mandrake(s) from a safe zone.");
+    }
+
+    /// <summary>Every client, each frame (from Hud): the local player loses any mandrake they carry into a safe zone.</summary>
+    public static void LocalTick()
+    {
+        if (!KeepOutOfSafeZones || Time.time < s_NextLocalCheck) return;
+        s_NextLocalCheck = Time.time + 0.5f;
+        Character local = Character.localCharacter;
+        if (local == null || local.data.dead || local.player == null || !SafeZoneSystem.IsSafe(local.Center)) return;
+        for (byte i = 0; i < local.player.itemSlots.Length; i++)
+        {
+            ItemSlot slot = local.player.itemSlots[i];
+            if (slot == null || slot.IsEmpty() || slot.prefab == null || slot.prefab.GetComponentInChildren<Mandrake>(true) == null) continue;
+            if (local.refs.items.currentSelectedSlot.IsSome && local.refs.items.currentSelectedSlot.Value == i)
+            {
+                local.refs.items.EquipSlot(Zorro.Core.Optionable<byte>.None); // put it away first: the held object goes with the slot
+                s_NextLocalCheck = Time.time + 0.3f; // empty the slot on the next check
+                return;
+            }
+
+            local.player.EmptySlot(Zorro.Core.Optionable<byte>.Some(i));
+            Plugin.Log.LogInfo($"[OTL][Mandrake] carried a mandrake into a safe zone: removed it from slot {i}.");
+        }
     }
 
     // ---------- Drops ----------

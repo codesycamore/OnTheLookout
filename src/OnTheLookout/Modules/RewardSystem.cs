@@ -52,7 +52,7 @@ internal static class RewardSystem
         Net.SetRoom(RoomKey, s_Rewarded.ToArray());
 
         int actor = Net.Actor(runner);
-        int spawned = 0;
+        int spawned = 0, rewardId = -1;
         try
         {
             // One random pick from RewardItems per count (default: one fortified milk), into the inventory
@@ -60,7 +60,9 @@ internal static class RewardSystem
             var pool = ItemCatalog.FindByNames(Plugin.ModConfig.RewardItems.Synced());
             for (int i = 0; pool.Count > 0 && i < Mathf.Max(1, Plugin.ModConfig.RewardItemCount.Synced()); i++)
             {
-                LegLoadout.Give(runner, pool[UnityEngine.Random.Range(0, pool.Count)]);
+                Item reward = pool[UnityEngine.Random.Range(0, pool.Count)];
+                LegLoadout.Give(runner, reward);
+                rewardId = reward.itemID;
                 spawned++;
             }
         }
@@ -70,7 +72,7 @@ internal static class RewardSystem
         }
 
         Plugin.Log.LogInfo($"[OTL][Reward] HOST: {Net.NameOf(actor)} reached a campfire first; gave {spawned} item(s).");
-        ModNetwork.Broadcast(Notice.Rewarded, actor, spawned);
+        ModNetwork.Broadcast(Notice.Rewarded, actor, rewardId); // the toast names the item
     }
 
     /// <summary>Host: <paramref name="fire"/> pays out no reward (e.g. every runner died and the chasers were sent there).</summary>

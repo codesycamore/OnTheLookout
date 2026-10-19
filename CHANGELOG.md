@@ -1,5 +1,28 @@
 # Changelog
 
+## 2.0.0
+
+- **Chaser gem x-ray vision:** using the gem also gives **2 s** of x-ray vision, starting with its boost (`GemXRaySeconds`). Every living runner within **200 m** (`GemXRayRange`) is drawn through walls, terrain and every object as a blinking red fill with a solid red outline, on that chaser's screen only.
+- **Chaser gem cooldown back to 20 s** (was 23; `GemCooldownSeconds`).
+- **Items cleared between legs:** when a leg ends, every living player's items are **removed** (not dropped): hands, hotbar and backpack with everything in it (`ClearItemsAtLegEnd`). Nothing piles up at the campfire and nothing can be picked up twice; chasers get no kit during the role window. When the next leg starts (after the role draw), anything picked up since, like the campfire food, is removed too (`ResetItemsEachLeg`); then chasers get the chaser kit and runners a backpack, their gem, leg item and biome item.
+- **First-runner reward switched off** for now (`EnableRewards` off), and with it its notice.
+- **Runner luggage is never empty:** a spot in regular luggage that would spawn nothing, or an item the mod removes right away (amulets, gems, jetpacks, gliders, hidden items), is rerolled from the luggage's loot pool, or else filled with a runner extra.
+- **Mandrakes in the first three biomes** (was two; `MandrakeLastSegment` 2).
+- **No mandrakes in safe zones:** the host removes any mandrake lying in a safe zone (campfires and the peak), and a player who carries one into a safe zone loses it (`MandrakesOutOfSafeZones`).
+- **No flare at the peak** on any ascent (PEAK only leaves it out from Ascent 4 on); the host also removes any flare lying at the peak (`NoPeakFlares`).
+- **Head start 25 s** (was 23) with a **7 s** speed boost at its end (was 4).
+- **Runner stamina regeneration +40%** (was +20%). Only the refill speed; PEAK's wait before regen starts (1 s, 2 s after running dry) is unchanged.
+- **Host menu: CHASERS** replaces RUNNERS PER CHASER: AUTO (one chaser per 4 runners, as before) or an exact number of chasers (`ChaserCount`), drawn from the volunteers first, then from random players. A change applies from the next role draw (next leg, or the next game).
+- **Random map (host menu: MAP):** with RANDOM, a new game started at the airport kiosk loads a random map from PEAK's map pool, never the same one twice in a row, instead of today's daily map (`RandomMap`, off by default). Only the host picks; PEAK's own kiosk message tells everyone which map to load.
+- **Runners face the next campfire:** at the start of every leg, during the role reveal, every runner's view is turned toward the next campfire (or straight up the mountain if it isn't loaded yet), so they know which way to run (`RunnersFaceNextCampfire`). Chasers are left as they are.
+- **Role hint:** a few lines on your role's abilities at the bottom left, above the stamina bar (stacked above the host's + tip), on a translucent plate, the same text size for both roles, with lighter bold labels. A small "PRESS HOTKEY (P) FOR YOUR ROLE HINT" tip always shows during a round. It shows for **5 s** after the roles are drawn at the start of every leg, then fades (`RoleHintSeconds`); **P** shows or hides it any time during a round (`KeyRoleHint`).
+- **Luggage glow for runners:** every unopened runner luggage on the map (not clown luggage) glows a faint green through walls and terrain at any distance. It fades out from 15 m and is gone within 3.5 m, so it never covers the climb, and stops for good once the luggage is open (`RunnersSeeLuggage`).
+- **Missing-mod notices (host only, as before):** the host's notice now says whether a player has no OnTheLookout or a different version, and the host is told when a warned player's version turns out right after all. A player with another version also sees on their own screen which version the host has.
+- **Fixed:** the missing-mod check read the player as they were at join time; it now reads them from the room after 10 s and skips players who have left. A player who rejoined with a different version (for example the Thunderstore release against a newer host) was reported as not having the mod at all; the notice now says it's a different version.
+- **Fixed:** a chaser who left mid-game stayed in the chaser list as "Player N". The host now drops a leaving player's role, and the list only shows chasers still in the lobby.
+- **Fixed:** the chaser gem's unlimited stamina could keep going after its effects ended. The gem now ends its own unlimited stamina when its effects end, and during a round unlimited stamina is switched off whenever no sugar rush is running.
+- **Fixed:** the chaser list overlapped the ascent label in the top right. It now sits under the label's actual text, and moves there once the label appears.
+
 ## 1.9.0
 
 - **Recommended difficulty:** the description now says the mode is meant for PEAK's base difficulty but works on any ascent (the runners just have it harder).

@@ -486,3 +486,45 @@ Debug keys (host, bottom-left hint): **F7** start or restart a round, **F6** swa
 - [ ] Solo: zombies still come 5 min after the head start.
 - [ ] Last leg, every chaser dies: rainbow GAME OVER! + THE RUNNERS WIN for 4 s, then 15 → 1, airport, fresh start.
 - [ ] Last leg, every runner caught / every runner at the peak: same, with the losers turned to stone.
+
+## 2.0.0 (2026-10-18)
+
+- **X-ray vision** (`UI/XRayVision.cs`): copies of each runner's `SkinnedMeshRenderer`s (sharing mesh, bones and rootBone) and `MeshRenderer`s, with a `UI/Default` material, `unity_GUIZTestMode = Always`, render queue 4000, alpha blinking at 3 Hz. Unverified: that UI/Default draws through terrain in PEAK's pipeline, and that the character meshes have white (or no) vertex colours (UI/Default multiplies by them; black vertex colours would hide the copy).
+- **Item clearing** (`LegLoadout.RemoveLocalItems`): each living client, on `LegCompleted` (ClearItemsAtLegEnd) and again on `LegStarted` (ResetItemsEachLeg), unequips, then `Player.EmptySlot` on slots 0-2, 3 (backpack) and 250 (temporary). Nothing is dropped. `HostEnsureChaserKits` skips the `LegComplete` state. The host's hand-outs wait 1.5 s longer at a leg start; chaser kits wait 2.5 s. The dead dropped their items where they died (vanilla), and their revive at the campfire (`RPCA_ReviveAtPosition` -> `DropAllItems`) drops an empty inventory.
+- **First-runner reward off:** `EnableRewards` default false (a fixed setting); the `Notice.Rewarded` toast is removed.
+- **Luggage refill** (`ItemRules.FillRunnerLuggage`): the `Spawner.GetObjectsToSpawn` postfix now takes `spawnCount` and pads and fixes the list. The empty luggage was most likely banned loot that `SpawnItemsPostfix` destroyed right after it spawned (unverified).
+- **Peak flare:** postfix on `Ascents.get_shouldSpawnFlare` (used by `Peak.EndgameFlareSpawner` and `DestroyFlareDuringAscentChallenge`) returns false on a run in this mode; the host also destroys ground `Flare`s at the peak or within 10 m of an `EndgameFlareSpawner`.
+- **Stamina bug:** no definite cause found in code. `Affliction_InfiniteStamina` sets `Character.infiniteStam` in OnApplied and clears it in OnRemoved. Added a guard (`ChaserKit.GuardInfiniteStamina`) plus an explicit end of the gem's rush. Log line to watch: `unlimited stamina was still on with no sugar rush running`.
+
+- **Missing-mod notice for the player themselves:** not possible. A player without the mod runs vanilla PEAK, and vanilla has no RPC that shows host-supplied text (the only string RPCs are emotes, item/resource spawns and the run id; the kicked modal's text is fixed and localized). The notice stays host-only. A player with another version does have the mod and compares against the room property `otl.hver`.
+- **Rejoin bug:** PEAK's rooms have no PlayerTtl (`NetworkingUtilities.HostRoomOptions`), so a rejoin is a new actor and the old check should have stopped. The most likely cause is a version mismatch reported as "doesn't have OnTheLookout X" (unverified). With `KickPlayersWithoutMod` on, `PlayerHandler.Kick` also bans the player for the session (`IsBanned`), so they couldn't rejoin.
+- **Luggage glow** (`UI/LuggageHighlight.cs`): `Luggage.ALL_LUGGAGE` (PEAK removes opened luggage from it), `OverlayCopies` with a green UI/Default material, per-copy alpha through a MaterialPropertyBlock. Unverified: the cost with every loaded luggage, and that luggage meshes have usable vertex colours.
+- **Role hint** (`UI/RoleHint.cs`): placed like the host tip (top-left of `GUIManager.bar.fullBar`), stacked above it (`HostMenu.HintHeight`): host tip, then the P tip, then the hint. Thinner bold via a material instance with `_WeightBold` 0.3 (unverified: TMP may reset it from the font asset's boldStyle).
+- **X-ray outline:** the fill copies write stencil bit 64; each runner mesh (skinned ones baked every frame) is drawn 8 more times, shifted 3 px in screen directions, with stencil NotEqual 64, so only the rim shows. Unverified: that PEAK's camera target has a stencil buffer (without one the outline becomes a solid red silhouette behind the fill).
+
+- **Random map** (`Modules/RandomMap.cs`): prefix on `AirportCheckInKiosk.LoadIslandMaster` (host): `MapBaker.GetLevel(random index)` sent through PEAK's own `BeginIslandLoadRPC`. Unverified: the pool size and that every scene in `MapBaker.ScenePaths` loads (they come from the downloaded map bundle). The log lists the pool once (`map pool: N map(s)`).
+
+- **Face the next campfire** (`Modules/FaceNextCampfire.cs`): each runner's client, 0.5 s after `LegStarted`, sets `CharacterData.lookValues = HelperFunctions.DirectionToLook(dir)` and calls `Character.RecalculateLookDirections`. Unverified: that the camera takes it while input is held during the reveal.
+
+### 2.0.0 test checklist
+- [ ] Leg start: every runner's camera turns toward the next campfire during the reveal (log `[OTL][Face]`); chasers don't turn.
+- [ ] Host menu MAP: RANDOM, start at the kiosk: everyone lands on the same, non-daily map; the next game picks a different one. Log: `random map i of N`. MAP: TODAY'S MAP gives the daily map.
+- [ ] A chaser leaves mid-leg: they disappear from the chaser list (no "Player N"). Log: `role removed`.
+- [ ] Leg start: the role hint shows above the P tip (and the host tip) for 5 s, then fades; P shows and hides it; the text matches the role and is the same size for both roles; bold labels look lighter. The P tip always shows during a round.
+- [ ] Runner: unopened luggage glows faint green through terrain, fading out close up and gone within reach; opened luggage stops glowing; clown luggage never glows; chasers see nothing.
+- [ ] Join without the mod: only the host sees "... doesn't have OnTheLookout". Leave, install, rejoin with the same version: no warning for them (and "now has OnTheLookout" if their version arrived late).
+- [ ] Join with another version: the joiner sees DIFFERENT MOD VERSION with the host's version; others see the different-version notice.
+- [ ] Chaser gem: runners within 200 m blink red with a solid red outline through terrain for 2 s, only on the chaser's screen; the copies vanish afterwards. Log: `[OTL][XRay] material ready`.
+- [ ] Gem cooldown shows 20 s.
+- [ ] Leg end: every living player's hands, hotbar and backpack are emptied, with nothing dropped at the campfire; chasers don't get their kit back during the role window. Log: `leg over: N item(s) removed`.
+- [ ] Leg start: food picked up in the role window is gone; chasers get the blowgun and gem, runners a backpack, dash gem, leg item and biome item.
+- [ ] No first-runner reward and no reward notice.
+- [ ] Open 10+ regular luggages: none empty. Log: `empty or banned spot(s) ... refilled`.
+- [ ] Mandrakes still drop in the third biome (Alpine/Mesa).
+- [ ] A mandrake dropped or carried into a campfire's safe zone disappears.
+- [ ] Ascent 0-3: no flare at the peak.
+- [ ] Head start 25 s, runner speed boost for the last 7 s.
+- [ ] Host menu CHASERS: AUTO / 1 / 2 ...; the next leg draws that many.
+- [ ] After the gem's effects end, the stamina bar drains normally again.
+- [ ] The chaser list sits under the ascent label without overlapping (also on Ascent 0, where the label is empty).
+

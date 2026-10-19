@@ -29,6 +29,7 @@ internal sealed class HostMenu : MonoBehaviour
     private Canvas? _canvas;
     private RectTransform? _panel;
     private TextMeshProUGUI? _debugLabel;
+    private TextMeshProUGUI? _randomMapLabel;
     private readonly Dictionary<TextMeshProUGUI, string> _labels = new();
     private TextMeshProUGUI? _pendingLabel;
     private Action? _pendingAction;
@@ -90,6 +91,7 @@ internal sealed class HostMenu : MonoBehaviour
         RectTransform? bar = gui != null && gui.bar != null ? gui.bar.fullBar : null;
         show &= bar != null && bar.gameObject.activeInHierarchy;
         if (show && _hintCanvas == null) BuildHint(gui!);
+        HintHeight = 0f;
         if (_hintCanvas == null) return;
         if (_hintCanvas.gameObject.activeSelf != show) _hintCanvas.gameObject.SetActive(show);
         if (!show) return;
@@ -109,7 +111,12 @@ internal sealed class HostMenu : MonoBehaviour
         {
             _hintPlate!.anchoredPosition = local + new Vector2(0f, 12f);
         }
+
+        HintHeight = _hintPlate!.sizeDelta.y;
     }
+
+    /// <summary>Height of the host tip above the stamina bar while it shows (0 when hidden); the role tips stack above it.</summary>
+    public static float HintHeight { get; private set; }
 
     private void BuildHint(GUIManager gui)
     {
@@ -190,6 +197,7 @@ internal sealed class HostMenu : MonoBehaviour
         AddButton(template, "RESTART AT PREVIOUS CAMPFIRE", confirm: true, AdminRestart.HostRestartFromCampfire);
         AddButton(template, "TELEPORT EVERYONE TO NEXT CAMPFIRE", confirm: false, AdminRestart.HostTeleportToNextCampfire);
         AddButton(template, "SETTINGS", confirm: false, () => ShowPage(settings: true), closeAfter: false);
+        _randomMapLabel = AddButton(template, "", confirm: false, ToggleRandomMap, closeAfter: false);
         _debugLabel = AddButton(template, "", confirm: false, ToggleDebugKeys, closeAfter: false);
         AddButton(template, "CLOSE", confirm: false, () => { });
         CollectPage(_mainPage, first);
@@ -277,6 +285,7 @@ internal sealed class HostMenu : MonoBehaviour
         public Func<BepInEx.Configuration.ConfigEntry<float>> Entry = null!;
         public float Step, Min, Max;
         public bool Seconds = true;
+        public Func<float, string>? Format;
         public TextMeshProUGUI? Text;
     }
 
@@ -288,7 +297,9 @@ internal sealed class HostMenu : MonoBehaviour
         _settings.Clear();
         _settings.Add(new SettingRow { Label = "HEAD START", Entry = () => cfg.HeadStartSeconds, Step = 5f, Min = 0f, Max = 120f });
         _settings.Add(new SettingRow { Label = "HEAD-START SPEED BOOST", Entry = () => cfg.HeadStartBoostSeconds, Step = 1f, Min = 0f, Max = 20f });
-        _settings.Add(new SettingRow { Label = "RUNNERS PER CHASER", Entry = () => cfg.RunnersPerChaser, Step = 1f, Min = 1f, Max = 10f, Seconds = false });
+        // CHASERS: AUTO (0, one per RunnersPerChaser runners) or an exact count; used from the next role draw on.
+        _settings.Add(new SettingRow { Label = "CHASERS", Entry = () => cfg.ChaserCount, Step = 1f, Min = 0f, Max = 10f, Seconds = false,
+            Format = v => v < 0.5f ? $"AUTO (1 PER {Mathf.RoundToInt(cfg.RunnersPerChaser.Value)} RUNNERS)" : v.ToString("0") });
         _settings.Add(new SettingRow { Label = "ZOMBIES START AFTER", Entry = () => cfg.ZombieStartDelaySeconds, Step = 30f, Min = 0f, Max = 1200f });
         _settings.Add(new SettingRow { Label = "ZOMBIE WAVE COOLDOWN", Entry = () => cfg.ZombieWaveDelaySeconds, Step = 15f, Min = 0f, Max = 600f });
         _settings.Add(new SettingRow { Label = "ZOMBIE LIFETIME", Entry = () => cfg.ZombieLifetimeSeconds, Step = 15f, Min = 15f, Max = 600f });
@@ -351,7 +362,8 @@ internal sealed class HostMenu : MonoBehaviour
         {
             if (row.Text == null) continue;
             float value = row.Entry().Value;
-            row.Text.text = $"{row.Label}: {(row.Seconds ? FormatSeconds(value) : value.ToString("0"))}";
+            string shown = row.Format != null ? row.Format(value) : row.Seconds ? FormatSeconds(value) : value.ToString("0");
+            row.Text.text = $"{row.Label}: {shown}";
         }
     }
 
@@ -367,8 +379,24 @@ internal sealed class HostMenu : MonoBehaviour
         Plugin.Log.LogInfo($"[OTL][HostMenu] debug hotkeys {(Plugin.ModConfig.DebugKeys.Value ? "enabled" : "disabled")}.");
     }
 
+    // ---------- Random map toggle ----------
+
+    private void ToggleRandomMap()
+    {
+        Plugin.ModConfig.RandomMap.Value = !Plugin.ModConfig.RandomMap.Value;
+        RefreshDebugLabel();
+        Plugin.Log.LogInfo($"[OTL][HostMenu] random map {(Plugin.ModConfig.RandomMap.Value ? "on" : "off (today's map)")}.");
+    }
+
     private void RefreshDebugLabel()
     {
+        if (_randomMapLabel != null)
+        {
+            string map = $"MAP: {(Plugin.ModConfig.RandomMap.Value ? "RANDOM" : "TODAY'S MAP")}";
+            _randomMapLabel.text = map;
+            _labels[_randomMapLabel] = map;
+        }
+
         if (_debugLabel == null) return;
         string label = $"DEBUG HOTKEYS: {(Plugin.ModConfig.DebugKeys.Value ? "ON" : "OFF")}";
         _debugLabel.text = label;

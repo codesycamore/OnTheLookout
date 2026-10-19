@@ -105,13 +105,14 @@ internal static class ItemRules
         }
     }
 
-    public static void GetObjectsToSpawnPostfix(Spawner __instance, ref List<GameObject> __result)
+    public static void GetObjectsToSpawnPostfix(Spawner __instance, int spawnCount, ref List<GameObject> __result)
     {
         if (__result == null || __instance is not Luggage luggage || luggage is RespawnChest) return;
         RemoveExcluded(luggage, __result);
         if (!IsClownLuggage(luggage))
         {
             AddLuggageExtras(__result);
+            FillRunnerLuggage(luggage, __result, spawnCount);
             return;
         }
 
@@ -191,6 +192,42 @@ internal static class ItemRules
         }
 
         if (swapped > 0) Plugin.Log.LogInfo($"[OTL][Items] luggage: {swapped} of {spawns.Count} item(s) swapped for runner extras.");
+    }
+
+    /// <summary>
+    /// Regular (runner) luggage during a round never opens empty: every spot that would spawn nothing (an excluded
+    /// item that couldn't be rerolled, a loot pool that ran out) or an item the host would remove right after it
+    /// spawns (banned: amulets, gems, jetpacks, gliders, hidden items ... see <see cref="SpawnItemsPostfix"/>) is
+    /// rerolled from the luggage's own pool, and if that keeps failing, filled with a random LuggageExtraItems item.
+    /// The list is also padded to the luggage's spawn count (LootData.GetRandomItems can return fewer).
+    /// </summary>
+    private static void FillRunnerLuggage(Luggage luggage, List<GameObject> spawns, int spawnCount)
+    {
+        if (!RoundManager.IsActive || !Net.IsHost) return;
+        string excluded = Plugin.ModConfig.LuggageExcludedItems.Synced();
+        bool Usable(GameObject? go) => go != null && go.GetComponent<Item>() is { } item
+            && !ItemCatalog.RemoveFromWorld(item) && !ItemCatalog.MatchesNames(item, excluded);
+
+        while (spawns.Count < spawnCount) spawns.Add(null!);
+        List<Item> extras = ItemCatalog.FindByNames(Plugin.ModConfig.LuggageExtraItems.Synced()).Where(i => !ItemCatalog.RemoveFromWorld(i)).ToList();
+        int refilled = 0;
+        for (int i = 0; i < spawns.Count; i++)
+        {
+            if (Usable(spawns[i])) continue;
+            GameObject? replacement = null;
+            for (int attempt = 0; attempt < 8 && replacement == null; attempt++)
+            {
+                List<GameObject> roll = LootData.GetRandomItems(luggage.GetSpawnPool(), 1, true, luggage.fallbackSpawn);
+                if (roll.Count > 0 && Usable(roll[0])) replacement = roll[0];
+            }
+
+            if (replacement == null && extras.Count > 0) replacement = extras[UnityEngine.Random.Range(0, extras.Count)].gameObject;
+            if (replacement == null) continue;
+            spawns[i] = replacement;
+            refilled++;
+        }
+
+        if (refilled > 0) Plugin.Log.LogInfo($"[OTL][Items] luggage: {refilled} empty or banned spot(s) of {spawns.Count} refilled.");
     }
 
     // ---------- Real items ----------
@@ -273,7 +310,7 @@ internal static class ItemRules
     // ---------- Clown luggage ----------
 
     /// <summary>PEAK tags clown luggage "ClownLuggage" (see AchievementManager); the spawn pool is a fallback.</summary>
-    private static bool IsClownLuggage(Luggage luggage) =>
+    public static bool IsClownLuggage(Luggage luggage) =>
         luggage is not RespawnChest
         && (luggage.CompareTag("ClownLuggage") || (luggage.GetSpawnPool() & SpawnPool.LuggageClown) != 0);
 
