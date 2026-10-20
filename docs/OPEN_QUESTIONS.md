@@ -506,6 +506,16 @@ Debug keys (host, bottom-left hint): **F7** start or restart a round, **F6** swa
 
 - **Face the next campfire** (`Modules/FaceNextCampfire.cs`): each runner's client, 0.5 s after `LegStarted`, sets `CharacterData.lookValues = HelperFunctions.DirectionToLook(dir)` and calls `Character.RecalculateLookDirections`. Unverified: that the camera takes it while input is held during the reveal.
 
+### 2.0.1 test checklist
+
+- [ ] A leg won by either side: chaser gem, blowgun, dash and freeze cooldowns are all ready during the role window.
+- [ ] Head-start boost lasts 10 s in biomes 1-4 and 7 s on the Kiln leg (log: `[OTL][Kit] head start boost.`).
+- [ ] Chaser list text is bigger and still sits cleanly under the ascent label.
+- [ ] Restart at previous campfire after the fog started moving: fog is back to full size and waits until players move on (log `[OTL][Hazards] fog reset`); same on a client.
+- [ ] Restart in the Kiln after the lava rose: lava surface drops back down on host and clients, "THE LAVA RISES" shows again when it restarts.
+- [ ] Restart in the gloom biome after the gloom rose: the darkening lifts and rises again later.
+- [ ] After a restart, every cooldown is ready.
+
 ### 2.0.0 test checklist
 - [ ] Leg start: every runner's camera turns toward the next campfire during the reveal (log `[OTL][Face]`); chasers don't turn.
 - [ ] Host menu MAP: RANDOM, start at the kiosk: everyone lands on the same, non-daily map; the next game picks a different one. Log: `random map i of N`. MAP: TODAY'S MAP gives the daily map.

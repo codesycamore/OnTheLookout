@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.1
+
+- **Cooldowns cleared when a leg is won:** as soon as a side wins a leg and everyone is brought to the campfire (or the peak), every cooldown is cleared: chaser gem, blowgun, runner dash and every chaser's freeze cooldown. A running x-ray ends too.
+- **Head-start boost 10 s** in the first four biomes (was 7; `HeadStartBoostSeconds`), and still **7 s** on the last leg from the Kiln to the peak (`HeadStartBoostLastBiomeSeconds`). The host menu's boost row sets the first-four-biomes value.
+- **Bigger chaser list** text under the ascent label.
+- **Restart at previous campfire starts the biome over:** every cooldown and freeze is cleared, and once everyone is back at the campfire the biome's **fog**, **rising lava** and **rising gloom** go back to how they were when that campfire was lit: the fog full size and waiting until players move on, the lava back down, the gloom lifted.
+
 ## 2.0.0
 
 - **Chaser gem x-ray vision:** using the gem also gives **2 s** of x-ray vision, starting with its boost (`GemXRaySeconds`). Every living runner within **200 m** (`GemXRayRange`) is drawn through walls, terrain and every object as a blinking red fill with a solid red outline, on that chaser's screen only.

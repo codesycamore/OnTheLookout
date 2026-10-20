@@ -71,6 +71,7 @@ public partial class Plugin : BaseUnityPlugin
         LegLoadout.Install();
         RoleSwap.Install();
         FaceNextCampfire.Install();
+        HazardReset.Install();
         bool gems = RunnerDash.Install(_harmony);
         bool throws = ThrowRules.Install(_harmony);
         bool randomMap = RandomMap.Install(_harmony);

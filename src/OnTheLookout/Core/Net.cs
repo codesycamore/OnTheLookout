@@ -52,6 +52,7 @@ internal enum Notice : byte
     DashReveal = 9, // runner A dashed: every chaser smokes
     Petrify = 10, // the game was won: every living scout of role A (the losers) turns to stone
     ModInstalled = 11, // A, warned about earlier, now has the host's OnTheLookout version (host only, raised locally)
+    HazardsReset = 12, // the host restarted from the last campfire and everyone is there: this biome's fog, lava and gloom start over
 }
 
 /// <summary>

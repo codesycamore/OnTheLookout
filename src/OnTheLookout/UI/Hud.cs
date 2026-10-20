@@ -167,7 +167,7 @@ internal sealed class Hud : MonoBehaviour
         if (ascentText != null && ascentText.gameObject.activeInHierarchy)
         {
             RectTransform a = ascentText.rectTransform;
-            _chaserList = NewText("OTL_ChaserList", a.parent, ascentText, ascentText.fontSize * 0.7f, ascentText.alignment);
+            _chaserList = NewText("OTL_ChaserList", a.parent, ascentText, ascentText.fontSize * 0.85f, ascentText.alignment);
             RectTransform rt = _chaserList.rectTransform;
             rt.anchorMin = a.anchorMin;
             rt.anchorMax = a.anchorMax;
@@ -178,7 +178,7 @@ internal sealed class Hud : MonoBehaviour
         }
         else
         {
-            _chaserList = NewText("OTL_ChaserList", canvas, fallbackStyle, fallbackStyle.fontSize * 0.8f, TextAlignmentOptions.TopRight);
+            _chaserList = NewText("OTL_ChaserList", canvas, fallbackStyle, fallbackStyle.fontSize * 0.95f, TextAlignmentOptions.TopRight);
             RectTransform rt = _chaserList.rectTransform;
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1f, 1f);
             rt.sizeDelta = new Vector2(420f, 400f);

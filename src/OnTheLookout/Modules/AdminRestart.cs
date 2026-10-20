@@ -1,5 +1,6 @@
 using System.Collections;
 using OnTheLookout.Core;
+using OnTheLookout.Freeze;
 using Photon.Pun;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -9,7 +10,8 @@ namespace OnTheLookout.Modules;
 /// <summary>
 /// Host "admin" quick restart: brings everyone back to the last campfire the runners lit (or PEAK's
 /// base-camp spawn before any campfire), revives the dead, clears statuses and starts a fresh leg
-/// (role reveal, blind/frozen chasers, head start). Roles are kept.
+/// (role reveal, blind/frozen chasers, head start). Roles are kept. Every cooldown is cleared, and this biome's fog,
+/// lava and gloom start over as if the campfire had just been lit (<see cref="HazardReset"/>).
 /// The last lit campfire is kept in the room property <see cref="RoomKey"/> so a new host can use it.
 /// </summary>
 internal sealed class AdminRestart : MonoBehaviour
@@ -106,6 +108,7 @@ internal sealed class AdminRestart : MonoBehaviour
 
         Plugin.Log.LogInfo($"[OTL][Admin] HOST restarting from the last campfire at {point.Value}.");
         ModNetwork.Broadcast(Notice.Restarted, PhotonNetwork.LocalPlayer.ActorNumber, 0);
+        FreezeState.HostReset(); // nobody frozen or on a freeze cooldown during the move
 
         int i = 0;
         foreach (Character c in Character.AllCharacters.ToArray())
@@ -118,6 +121,7 @@ internal sealed class AdminRestart : MonoBehaviour
         }
 
         yield return new WaitForSeconds(1.5f); // let warps and revives land before the reveal starts
+        ModNetwork.Broadcast(Notice.HazardsReset, 0, 0); // after the warps, so the fog doesn't see everyone still up ahead
         RoundManager.HostRestartLeg();
     }
 
@@ -126,6 +130,7 @@ internal sealed class AdminRestart : MonoBehaviour
     {
         Character local = Character.localCharacter;
         if (local != null && !local.data.dead) local.refs.afflictions.ClearAllStatus(excludeCurse: false, excludePetrify: false);
+        ChaserKit.ResetCooldowns();
     }
 
 }

@@ -458,6 +458,7 @@ internal static class RoundManager
         // Flags before the state change, so clients see them together with LegCompleted.
         HostSetFlags(FlagRoleWindow | (chasersWon ? FlagChasersWonLeg : 0));
         HostSetState(RoundState.LegComplete);
+        FreezeState.HostReset(); // every cooldown is cleared when a leg is won
         if (chasersWon) RewardSystem.HostMarkRewarded(fire); // nobody earned the first-runner reward
         ZombieHunt.HostDespawnAll();
         HostGatherAt(fire.transform.position);

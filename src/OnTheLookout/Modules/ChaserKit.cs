@@ -89,7 +89,11 @@ internal static class ChaserKit
             ResetCooldowns();
             ClearPetrify("new leg");
         };
-        RoundManager.LegCompleted += () => ClearPetrify("leg over");
+        RoundManager.LegCompleted += () =>
+        {
+            ResetCooldowns(); // the leg was won and everyone is brought to the campfire (or the peak)
+            ClearPetrify("leg over");
+        };
         return ok;
     }
 
@@ -251,11 +255,22 @@ internal static class ChaserKit
         Character local = Character.localCharacter;
         GuardInfiniteStamina(local);
         if (local == null || local.data.dead || !RoleManager.IsRunner(local) || !RoundManager.InCountdown) return;
-        float seconds = Plugin.ModConfig.HeadStartBoostSeconds.Synced();
+        float seconds = HeadStartBoostSeconds();
         if (seconds <= 0f || RoundManager.HoldSecondsLeft > seconds || s_BoostedLeg == RoundManager.LegKey) return;
         s_BoostedLeg = RoundManager.LegKey;
         ApplyBoost(local, RoundManager.HoldSecondsLeft + 0.25f);
         Plugin.Log.LogInfo("[OTL][Kit] head start boost.");
+    }
+
+    /// <summary>
+    /// Length of the runners' head-start boost this leg: HeadStartBoostSeconds in the first four biomes,
+    /// HeadStartBoostLastBiomeSeconds on the last leg (the Kiln to the peak).
+    /// </summary>
+    private static float HeadStartBoostSeconds()
+    {
+        var cfg = Plugin.ModConfig;
+        int segment = SafeZoneSystem.LastLitSegment >= 0 ? SafeZoneSystem.LastLitSegment : (int)MapHandler.CurrentSegmentNumber;
+        return segment >= (int)Segment.TheKiln ? cfg.HeadStartBoostLastBiomeSeconds.Synced() : cfg.HeadStartBoostSeconds.Synced();
     }
 
     // ---------- Unlimited stamina guard ----------
@@ -373,16 +388,18 @@ internal static class ChaserKit
     }
 
     /// <summary>
-    /// Every client, when a leg starts: every ability cooldown of the local player is refreshed (chaser gem, blowgun,
-    /// runner dash). Freeze cooldowns are the host's and are reset by RoundManager.HostStartLeg.
+    /// Every client, when a leg ends, when the host restarts from the previous campfire and when a leg starts: every ability cooldown of the local player is refreshed (chaser gem, blowgun,
+    /// runner dash) and the x-ray ends. Freeze cooldowns are the host's and are reset by RoundManager (leg end, restart, leg start).
     /// </summary>
-    private static void ResetCooldowns()
+    public static void ResetCooldowns()
     {
         s_GemActive = false;
+        s_GemLeg = -1; // a gem boost still pending won't start a cooldown when it ends
+        XRayVision.Stop();
         s_GemReadyAt = 0f;
         BlowgunSystem.ResetCooldown();
         RunnerDash.ResetCooldown();
-        Plugin.Log.LogInfo("[OTL][Kit] new leg: ability cooldowns refreshed.");
+        Plugin.Log.LogInfo("[OTL][Kit] ability cooldowns refreshed.");
     }
 
     /// <summary>Every client, when a leg ends and when the next one starts: the local player's petrification is cleared.</summary>

@@ -69,6 +69,7 @@ internal sealed class ModConfig
     public ConfigEntry<bool> MandrakeNoRunnerSleep { get; }
     public ConfigEntry<float> MandrakeChaserSleepMultiplier { get; }
     public ConfigEntry<float> HeadStartBoostSeconds { get; }
+    public ConfigEntry<float> HeadStartBoostLastBiomeSeconds { get; }
     public ConfigEntry<bool> DisableScoutStatues { get; }
     public ConfigEntry<bool> PeakChasersDie { get; }
     public ConfigEntry<float> GameOverSeconds { get; }
@@ -261,7 +262,8 @@ internal sealed class ModConfig
         MandrakesOutOfSafeZones = Synced(round, "MandrakesOutOfSafeZones", true, "No mandrake is ever inside a safe zone (campfires, the peak): the host removes any lying there, and a player carrying one into a safe zone loses it.");
         MandrakeNoRunnerSleep = Synced(round, "MandrakeNoRunnerSleep", true, "A screaming mandrake makes no runner drowsy (chasers are still affected).");
         MandrakeChaserSleepMultiplier = Synced(round, "MandrakeChaserSleepMultiplier", 0.9f, "Drowsiness a screaming mandrake gives a chaser, relative to vanilla (0.9 = 90%).");
-        HeadStartBoostSeconds = Synced(round, "HeadStartBoostSeconds", 7f, "Runners get an energy-drink speed boost (no drowsiness afterwards) for the last this-many seconds of their head start. 0 = off.");
+        HeadStartBoostSeconds = Synced(round, "HeadStartBoostSeconds", 10f, "Runners get an energy-drink speed boost (no drowsiness afterwards) for the last this-many seconds of their head start, in the first four biomes. 0 = off.");
+        HeadStartBoostLastBiomeSeconds = Synced(round, "HeadStartBoostLastBiomeSeconds", 7f, "The same boost in the last biome (the leg from the Kiln to the peak). 0 = off.");
         DisableScoutStatues = Synced(round, "DisableScoutStatues", true, "Scout statues do nothing during a round (no revives, no items). Everyone is brought back at the campfire after each leg instead.");
         PeakChasersDie = Synced(round, "PeakChasersDie", true, "When every living runner has reached the peak, the runners win and every living chaser is brought to the peak and petrified (turned to stone).");
         GameOverSeconds = Synced(round, "GameOverSeconds", 4f, "Once a side has won the game (last leg: every runner or every chaser dead, or every runner at the peak), the losing side is petrified and everyone sees a rainbow GAME OVER! for this long (s) ...");

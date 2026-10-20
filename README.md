@@ -2,7 +2,7 @@
 
 **Chasers vs Runners for PEAK.** Every leg, a few scouts become **chasers** and hunt everyone else up the mountain. **Runners** have to make it from campfire to campfire, and finally to the peak, without getting caught. A runner's best defence is to turn around and **look at a chaser** to freeze them in place.
 
-> **New in 2.0.0:** the chaser gem now also gives **2 s of x-ray vision**: every runner within **200 m** shows through walls and terrain, blinking red with a solid red outline. The gem's cooldown is back to **20 s**. When a leg ends **everyone's items are removed** (backpacks included), so nothing piles up at the campfire, and each leg starts with the new role's items. The **first-runner reward is switched off** for now. **Runner luggage is never empty.** Mandrakes now drop in the **first three biomes**, and none are ever left in a safe zone. **No flare at the peak** on any ascent. The head start is **25 s** with a **7 s** speed boost, and runners regain stamina **40% faster**. The host menu sets the **number of chasers** directly. A short **role hint** with your abilities shows at the start of every leg (**P** shows it again), and runners see every **unopened luggage glow faintly green** through walls. Runners are turned to **face the next campfire** at the start of every leg. The host menu can also start new games on a **random map** instead of today's. The host's notice about a player without the mod no longer goes stale when they rejoin with it. Also fixed: the chaser gem's unlimited stamina could keep going after its effects ended, and the chaser list overlapped the ascent label. See the changelog for earlier versions.
+> **New in 2.0.1:** every cooldown is **cleared when a side wins a leg**. The runners' head-start boost is **10 s** in the first four biomes (still 7 s on the last leg). The chaser list text is bigger. **Restart at previous campfire** now starts the biome over: cooldowns cleared, and the **fog, rising lava and rising gloom** go back to how they were when the campfire was lit. See the changelog for earlier versions.
 
 > **Recommended difficulty: PEAK.** The mode is balanced for PEAK's base difficulty, but it isn't limited to it: on harder ascents everything still works, the runners just have a tougher climb.
 
@@ -149,7 +149,7 @@ The host changes these in the **host menu's SETTINGS page** (during the game), o
 |---|---|---|
 | `HeadStartSeconds` | 25 | Runner head start each leg (chasers frozen and blind). |
 | `RandomMap` | false | New games from the airport load a random map instead of today's (host menu: MAP). |
-| `HeadStartBoostSeconds` | 7 | Runners' speed boost (no drowsiness) at the end of the head start. 0 = off. |
+| `HeadStartBoostSeconds` | 10 | Runners' speed boost (no drowsiness) at the end of the head start, in the first four biomes (7 s on the last leg, built in). 0 = off. |
 | `RunnersPerChaser` | 4 | At most one chaser per this many runners (1 in 5 players, 2 in 10). Drawn from the CHASER volunteers; nobody volunteered = one random player. Always leaves a runner. Used when `ChaserCount` is 0. |
 | `ChaserCount` | 0 | Exact number of chasers each leg (host menu: CHASERS). 0 = AUTO (`RunnersPerChaser`). Volunteers first, then random players. Always leaves a runner. |
 | `ZombieStartDelaySeconds` | 300 | Solo play: zombies start coming this long after the head start ends (each leg). |
