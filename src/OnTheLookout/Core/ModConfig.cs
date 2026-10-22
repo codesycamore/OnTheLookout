@@ -53,6 +53,7 @@ internal sealed class ModConfig
     public ConfigEntry<bool> ChaserPreferenceEnabled { get; }
     public ConfigEntry<float> RoleWindowSeconds { get; }
     public ConfigEntry<float> ChaserStatusMultiplier { get; }
+    public ConfigEntry<float> ChaserStatusMultiplierCaldera { get; }
     public ConfigEntry<float> ChaserFallDamageMultiplier { get; }
     public ConfigEntry<bool> ZombiesIgnoreChasers { get; }
     public ConfigEntry<bool> ZombiesWhenChasersDead { get; }
@@ -69,7 +70,7 @@ internal sealed class ModConfig
     public ConfigEntry<bool> MandrakeNoRunnerSleep { get; }
     public ConfigEntry<float> MandrakeChaserSleepMultiplier { get; }
     public ConfigEntry<float> HeadStartBoostSeconds { get; }
-    public ConfigEntry<float> HeadStartBoostLastBiomeSeconds { get; }
+    public ConfigEntry<bool> HeadStartInvincibility { get; }
     public ConfigEntry<bool> DisableScoutStatues { get; }
     public ConfigEntry<bool> PeakChasersDie { get; }
     public ConfigEntry<float> GameOverSeconds { get; }
@@ -245,7 +246,8 @@ internal sealed class ModConfig
         AutoStartRound = Synced(round, "AutoStartRound", true, "Start a round automatically once everyone has woken up on the beach (host).");
         ChaserPreferenceEnabled = Synced(round, "ChaserPreferenceEnabled", true, "Players choose RUNNER (default) or CHASER in the role menu (KeyChaserOdds) in the airport and in the role window after each leg. Chasers are drawn at random from the CHASER volunteers. Choices are private to the host. Off = chasers are drawn from everyone.");
         RoleWindowSeconds = Synced(round, "RoleWindowSeconds", 10f, "After a leg ends, everyone is brought to the campfire and frozen for this many seconds to update their role choice; then the campfire lights itself and the next leg starts with a new role draw.");
-        ChaserStatusMultiplier = Synced(round, "ChaserStatusMultiplier", 0.5f, "Chasers take this fraction of every negative status (injury, cold, poison, drowsy, ...) they would get in vanilla at the current ascent. Hunger is not reduced.");
+        ChaserStatusMultiplier = Synced(round, "ChaserStatusMultiplier", 0.5f, "Chasers take this fraction of every negative status (injury, cold, poison, drowsy, ...) they would get in vanilla at the current ascent. Hunger is not reduced. Not in the Caldera biome or the swamp (gloom) biome that can replace it: see ChaserStatusMultiplierCaldera.");
+        ChaserStatusMultiplierCaldera = Synced(round, "ChaserStatusMultiplierCaldera", 0.75f, "The same fraction in the fourth biome: the Caldera, or the swamp (gloom) biome on maps that have it instead (0.75 = 75% of vanilla). Fall damage is unchanged (ChaserFallDamageMultiplier).");
         ChaserFallDamageMultiplier = Synced(round, "ChaserFallDamageMultiplier", 0.333f, "Fraction of vanilla fall damage chasers take (0.333 = 1/3). Still scales with the ascent like vanilla, and a big fall still knocks them down. 0 = no fall damage.");
         ZombiesIgnoreChasers = Synced(round, "ZombiesIgnoreChasers", true, "Mushroom zombies don't target or bite chasers.");
         ZombiesWhenChasersDead = Synced(round, "ZombiesWhenChasersDead", true, "Solo play only (you alone in the lobby, so there is no chaser): mushroom zombies hunt random runners outside the safe zones (ZombiesByPlayerCount per wave), wave after wave, until the runners reach the campfire or a chaser is back.");
@@ -262,8 +264,8 @@ internal sealed class ModConfig
         MandrakesOutOfSafeZones = Synced(round, "MandrakesOutOfSafeZones", true, "No mandrake is ever inside a safe zone (campfires, the peak): the host removes any lying there, and a player carrying one into a safe zone loses it.");
         MandrakeNoRunnerSleep = Synced(round, "MandrakeNoRunnerSleep", true, "A screaming mandrake makes no runner drowsy (chasers are still affected).");
         MandrakeChaserSleepMultiplier = Synced(round, "MandrakeChaserSleepMultiplier", 0.9f, "Drowsiness a screaming mandrake gives a chaser, relative to vanilla (0.9 = 90%).");
-        HeadStartBoostSeconds = Synced(round, "HeadStartBoostSeconds", 10f, "Runners get an energy-drink speed boost (no drowsiness afterwards) for the last this-many seconds of their head start, in the first four biomes. 0 = off.");
-        HeadStartBoostLastBiomeSeconds = Synced(round, "HeadStartBoostLastBiomeSeconds", 7f, "The same boost in the last biome (the leg from the Kiln to the peak). 0 = off.");
+        HeadStartBoostSeconds = Synced(round, "HeadStartBoostSeconds", 10f, "Runners get an energy-drink speed boost (no drowsiness afterwards) for the last this-many seconds of their head start, in every biome. 0 = off.");
+        HeadStartInvincibility = Synced(round, "HeadStartInvincibility", true, "Runners are invincible during their whole head start, like fortified milk (gold glow, no negative statuses or fall damage), until the head start runs out.");
         DisableScoutStatues = Synced(round, "DisableScoutStatues", true, "Scout statues do nothing during a round (no revives, no items). Everyone is brought back at the campfire after each leg instead.");
         PeakChasersDie = Synced(round, "PeakChasersDie", true, "When every living runner has reached the peak, the runners win and every living chaser is brought to the peak and petrified (turned to stone).");
         GameOverSeconds = Synced(round, "GameOverSeconds", 4f, "Once a side has won the game (last leg: every runner or every chaser dead, or every runner at the peak), the losing side is petrified and everyone sees a rainbow GAME OVER! for this long (s) ...");
@@ -277,7 +279,7 @@ internal sealed class ModConfig
         GemCaptureExtraSeconds = Synced(round, "GemCaptureExtraSeconds", 0.25f, "Each capture makes that chaser's gem effects last this much longer (s) for the rest of the leg (2.25 -> 2.5 -> 2.75 ...). Reset every leg.");
         RunnerStaminaRegenMultiplier = Synced(round, "RunnerStaminaRegenMultiplier", 1.4f, "Runner stamina regeneration multiplier (1.4 = 40% faster). Only the refill speed: PEAK's wait before regen starts (1 s, 2 s after running dry) is unchanged.");
         RunnerLegItems = Synced(round, "RunnerLegItems", "Snowball, Brown Berrynana, Fortified Milk", "At the start of each leg every runner gets ONE random item from this list (prefab or display names, comma separated). Empty = off.");
-        RunnerBiomeItems = Synced(round, "RunnerBiomeItems", "Alpine:Heat Pack, Volcano:Sports Drink, Swamp:EarlyWorm, Mesa:Aloe Vera", "Extra item every runner gets at the start of a leg in that biome, as \"Biome:Item\" pairs. Biomes use PEAK's names (Caldera = Volcano; The Gloom is assumed to be Swamp).");
+        RunnerBiomeItems = Synced(round, "RunnerBiomeItems", "Alpine:Heat Pack, Volcano:Sports Drink, Swamp:Lantern_Faerie, Mesa:Aloe Vera", "Extra item every runner gets at the start of a leg in that biome, as \"Biome:Item\" pairs. Biomes use PEAK's names (Caldera = Volcano; The Gloom is assumed to be Swamp).");
         FortifiedMilkWeightMultiplier = Synced(round, "FortifiedMilkWeightMultiplier", 2f, "Fortified milk weighs this many times its vanilla weight.");
         FortifiedMilkInvincibilityMultiplier = Synced(round, "FortifiedMilkInvincibilityMultiplier", 0.35f, "Fortified milk's invincibility lasts this fraction of its vanilla time (0.35 = 65% shorter). Also shortens its capture protection.");
         HungerRateMultiplier = Synced(round, "HungerRateMultiplier", 0.7f, "During a round hunger grows at this fraction of the vanilla rate (still scaled by the ascent like vanilla). Runners in a safe zone get no hungrier at all.");
@@ -306,7 +308,7 @@ internal sealed class ModConfig
         GemInfiniteStamina = Synced(blowgun, "GemInfiniteStamina", true, "The chaser gem also gives unlimited stamina (the rainbow stamina bar) for its duration, without drowsiness afterwards.");
         GemCooldownSeconds = Synced(blowgun, "GemCooldownSeconds", 20f, "Cooldown of the chaser gem (s). It starts when the gem's effects wear off.");
         GemPetrify = Synced(blowgun, "GemPetrify", 0.05f, "Petrification each gem use adds to the chaser (0.05 = 5%).");
-        GemXRaySeconds = Synced(blowgun, "GemXRaySeconds", 2f, "The chaser gem also gives x-ray vision for this long (s), starting with its boost: the chaser sees every living runner within GemXRayRange through walls and terrain, blinking red with a solid red outline. 0 = off.");
+        GemXRaySeconds = Synced(blowgun, "GemXRaySeconds", 1.65f, "The chaser gem also gives x-ray vision for this long (s), starting with its boost: the chaser sees every living runner within GemXRayRange through walls and terrain, blinking red with a solid red outline. 0 = off.");
         GemXRayRange = Synced(blowgun, "GemXRayRange", 200f, "Range of the chaser gem's x-ray vision (m).");
         SnowballKnockbackBonus = Synced(blowgun, "SnowballKnockbackBonus", 0.1f, "Extra push a thrown snowball gives the scout it hits, as a fraction of its own impact (0.1 = 10% stronger).");
         RunnerGem = Synced(blowgun, "RunnerGem", true, "Runners carry a scout gem (Scout's Ambition) in their hotbar: using it dashes them DashDistance forward (where they look, horizontally), with a cooldown and some petrification as the cost. Its vanilla power is never used; chasers can't use it.");

@@ -21,7 +21,8 @@ namespace OnTheLookout.Modules;
 ///   speed boost GemCaptureBonus stronger and its effects GemCaptureExtraSeconds longer for the rest of the leg;
 /// - everyone's petrification is cleared when a leg ends (ClearPetrifyEachLeg);
 /// - a chaser can't drop or throw their blowgun (role swaps drop the kit: <see cref="RoleSwap"/>);
-/// - runners get the same short boost for the last HeadStartBoostSeconds of their head start;
+/// - runners get the same short boost for the last HeadStartBoostSeconds of their head start, and are invincible
+///   (fortified milk's invincibility) for all of it (HeadStartInvincibility);
 /// - a thrown snowball pushes whoever it hits SnowballKnockbackBonus harder, and a runner's snowball blinds the
 ///   chaser it hits (blue-flower blindness) for SnowballBlindSeconds;
 /// - every ability cooldown is refreshed at the start of each leg;
@@ -33,6 +34,7 @@ internal static class ChaserKit
 {
     private static float s_GemReadyAt;
     private static int s_BoostedLeg = -1;
+    private static int s_InvincibleLeg = -1;
     private static Affliction_FasterBoi? s_EnergyDrink;
     private static bool s_EnergyDrinkLooked;
 
@@ -58,6 +60,7 @@ internal static class ChaserKit
             ResetCooldowns();
             s_GemLeg = -1;
             s_BoostedLeg = -1;
+            s_InvincibleLeg = -1;
             s_Captures = 0;
             s_CapturesLeg = -1;
             s_SnowballHits.Clear();
@@ -247,15 +250,16 @@ internal static class ChaserKit
         + Mathf.Max(0f, Plugin.ModConfig.GemCaptureExtraSeconds.Synced()) * CapturesThisLeg;
 
     /// <summary>
-    /// Every client, each frame (from Hud): the unlimited-stamina guard, and runners' boost at the tail end of their
-    /// head start.
+    /// Every client, each frame (from Hud): the unlimited-stamina guard, runners' invincibility for their head start,
+    /// and their boost at its tail end.
     /// </summary>
     public static void LocalTick()
     {
         Character local = Character.localCharacter;
         GuardInfiniteStamina(local);
         if (local == null || local.data.dead || !RoleManager.IsRunner(local) || !RoundManager.InCountdown) return;
-        float seconds = HeadStartBoostSeconds();
+        HeadStartInvincibility(local);
+        float seconds = Plugin.ModConfig.HeadStartBoostSeconds.Synced();
         if (seconds <= 0f || RoundManager.HoldSecondsLeft > seconds || s_BoostedLeg == RoundManager.LegKey) return;
         s_BoostedLeg = RoundManager.LegKey;
         ApplyBoost(local, RoundManager.HoldSecondsLeft + 0.25f);
@@ -263,14 +267,27 @@ internal static class ChaserKit
     }
 
     /// <summary>
-    /// Length of the runners' head-start boost this leg: HeadStartBoostSeconds in the first four biomes,
-    /// HeadStartBoostLastBiomeSeconds on the last leg (the Kiln to the peak).
+    /// Once per leg, when the head start begins: fortified milk's invincibility (Affliction_Invincibility with
+    /// isFromMilk, so the gold glow, blocked statuses and the milk's capture protection all apply) until it ends.
+    /// Afflictions are replicated by PEAK, so everyone sees the glow. MilkRules doesn't shorten this one.
     /// </summary>
-    private static float HeadStartBoostSeconds()
+    private static void HeadStartInvincibility(Character local)
     {
-        var cfg = Plugin.ModConfig;
-        int segment = SafeZoneSystem.LastLitSegment >= 0 ? SafeZoneSystem.LastLitSegment : (int)MapHandler.CurrentSegmentNumber;
-        return segment >= (int)Segment.TheKiln ? cfg.HeadStartBoostLastBiomeSeconds.Synced() : cfg.HeadStartBoostSeconds.Synced();
+        if (s_InvincibleLeg == RoundManager.LegKey || !Plugin.ModConfig.HeadStartInvincibility.Synced()) return;
+        float seconds = RoundManager.HoldSecondsLeft;
+        if (seconds <= 0.1f) return;
+        s_InvincibleLeg = RoundManager.LegKey;
+        MilkRules.KeepLength = true;
+        try
+        {
+            local.refs.afflictions.AddAffliction(new Affliction_Invincibility { totalTime = seconds, isFromMilk = true });
+        }
+        finally
+        {
+            MilkRules.KeepLength = false;
+        }
+
+        Plugin.Log.LogInfo($"[OTL][Kit] head start invincibility for {seconds:0.#}s.");
     }
 
     // ---------- Unlimited stamina guard ----------

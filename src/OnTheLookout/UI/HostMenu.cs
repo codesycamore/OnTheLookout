@@ -296,7 +296,7 @@ internal sealed class HostMenu : MonoBehaviour
         var cfg = Plugin.ModConfig;
         _settings.Clear();
         _settings.Add(new SettingRow { Label = "HEAD START", Entry = () => cfg.HeadStartSeconds, Step = 5f, Min = 0f, Max = 120f });
-        _settings.Add(new SettingRow { Label = "HEAD-START BOOST (BIOMES 1-4)", Entry = () => cfg.HeadStartBoostSeconds, Step = 1f, Min = 0f, Max = 20f });
+        _settings.Add(new SettingRow { Label = "HEAD-START SPEED BOOST", Entry = () => cfg.HeadStartBoostSeconds, Step = 1f, Min = 0f, Max = 20f });
         // CHASERS: AUTO (0, one per RunnersPerChaser runners) or an exact count; used from the next role draw on.
         _settings.Add(new SettingRow { Label = "CHASERS", Entry = () => cfg.ChaserCount, Step = 1f, Min = 0f, Max = 10f, Seconds = false,
             Format = v => v < 0.5f ? $"AUTO (1 PER {Mathf.RoundToInt(cfg.RunnersPerChaser.Value)} RUNNERS)" : v.ToString("0") });

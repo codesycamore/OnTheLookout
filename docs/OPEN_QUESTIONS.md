@@ -506,6 +506,14 @@ Debug keys (host, bottom-left hint): **F7** start or restart a round, **F6** swa
 
 - **Face the next campfire** (`Modules/FaceNextCampfire.cs`): each runner's client, 0.5 s after `LegStarted`, sets `CharacterData.lookValues = HelperFunctions.DirectionToLook(dir)` and calls `Character.RecalculateLookDirections`. Unverified: that the camera takes it while input is held during the reveal.
 
+### 2.0.2 test checklist
+
+- [ ] Head-start boost lasts 10 s on the Kiln leg too.
+- [ ] Head start: every runner glows gold (seen by everyone) and takes no damage or statuses (try a fall) until the countdown ends, then it stops (log: `head start invincibility for Ns`). Chasers don't get it.
+- [ ] Chaser gem x-ray lasts about 1.65 s.
+- [ ] Swamp (Gloom) leg start: every runner gets a faerie lantern, no early worm (log: `leg biome Swamp: runners get ...`).
+- [ ] Chaser in the Caldera: heat/injury build up at 75% of vanilla; in the swamp (gloom) biome the same (the swamp takes the Caldera's slot, segment 3: `AmbienceAudio` plays the "Caldera or Gloom" stinger there, and the Citadel instead of the Kiln after it). In the Kiln and earlier biomes, still 50%. Fall damage still 1/3.
+
 ### 2.0.1 test checklist
 
 - [ ] A leg won by either side: chaser gem, blowgun, dash and freeze cooldowns are all ready during the role window.

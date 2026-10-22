@@ -57,9 +57,12 @@ internal static class MilkRules
         return s_IsLantern[item.itemID] = ItemCatalog.MatchesNames(ItemCatalog.Effective(item), "Lantern_Faerie");
     }
 
+    /// <summary>Set while the mod adds its own milk-like invincibility (the runners' head start), which keeps its full length.</summary>
+    public static bool KeepLength;
+
     public static void AddAfflictionPostfix(CharacterAfflictions __instance, Affliction affliction)
     {
-        if (__instance.character == null || !__instance.character.IsLocal) return;
+        if (KeepLength || __instance.character == null || !__instance.character.IsLocal) return;
         if (affliction is Affliction_Invincibility { isFromMilk: true })
         {
             Shorten<Affliction_Invincibility>(__instance, affliction, Plugin.ModConfig.FortifiedMilkInvincibilityMultiplier.Synced());

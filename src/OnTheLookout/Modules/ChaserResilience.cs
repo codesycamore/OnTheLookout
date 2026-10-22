@@ -6,8 +6,8 @@ namespace OnTheLookout.Modules;
 
 /// <summary>
 /// Chasers are tougher than runners during a round:
-/// - they take only a fraction (default 1/3) of every negative status they would get in vanilla
-///   (injury, cold, poison, drowsy, ...; ascent scaling is already in the vanilla amount). Hunger is
+/// - they take only a fraction (ChaserStatusMultiplier, 1/2; 3/4 in the Caldera or swamp biome) of every negative
+///   status they would get in vanilla (injury, cold, poison, drowsy, ...; ascent scaling is already in the vanilla amount). Hunger is
 ///   left exactly as vanilla, the same as for runners;
 /// - fall damage is reduced (default 1/3 of vanilla, still scaled by the ascent like vanilla);
 /// - (runners) no fall damage at all shortly after a dash (<see cref="RunnerDash"/>);
@@ -79,8 +79,37 @@ internal static class ChaserResilience
         bool fromFall = statusType == CharacterAfflictions.STATUSTYPE.Injury && s_FallFrame == Time.frameCount;
         float multiplier = fromFall
             ? Plugin.ModConfig.ChaserFallDamageMultiplier.Synced()
-            : Plugin.ModConfig.ChaserStatusMultiplier.Synced();
+            : InCalderaBiome()
+                ? Plugin.ModConfig.ChaserStatusMultiplierCaldera.Synced()
+                : Plugin.ModConfig.ChaserStatusMultiplier.Synced();
         amount *= Mathf.Clamp01(multiplier);
+    }
+
+    private static int s_BiomeFrame = -1;
+    private static bool s_InCaldera;
+
+    /// <summary>
+    /// This leg is in the fourth biome: the Caldera (Biome.BiomeType.Volcano) or the swamp, the gloom biome some maps
+    /// have in its place (Biome.BiomeType.Swamp). The Kiln is not included. Checked once per frame.
+    /// </summary>
+    private static bool InCalderaBiome()
+    {
+        if (s_BiomeFrame == Time.frameCount) return s_InCaldera;
+        s_BiomeFrame = Time.frameCount;
+        s_InCaldera = false;
+        try
+        {
+            int segment = SafeZoneSystem.LastLitSegment >= 0 ? SafeZoneSystem.LastLitSegment : (int)MapHandler.CurrentSegmentNumber;
+            if (segment != (int)Segment.Caldera || !MapHandler.Exists) return false;
+            Biome.BiomeType biome = MapHandler.Instance.segments[segment].biome;
+            s_InCaldera = biome is Biome.BiomeType.Volcano or Biome.BiomeType.Swamp;
+        }
+        catch
+        {
+            // no map
+        }
+
+        return s_InCaldera;
     }
 
     public static void ZombieTargetPostfix(Character target, ref bool __result)

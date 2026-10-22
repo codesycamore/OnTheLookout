@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.2
+
+- **Head-start boost 10 s in every biome**, the last leg included (was 7 s there).
+- **Runners are invincible during the head start**, like fortified milk (gold glow, no negative statuses or fall damage), until the head start runs out (`HeadStartInvincibility`). Fortified milk's shorter invincibility doesn't apply to it.
+- **Chaser gem x-ray 1.65 s** (was 2 s; `GemXRaySeconds`).
+- **Chasers feel more in the fourth biome:** in the Caldera, or the swamp (gloom) biome on maps that have it instead, chasers take **75%** of vanilla negative statuses (was 50%, which still applies everywhere else; `ChaserStatusMultiplierCaldera`). Fall damage is unchanged (1/3 of vanilla), and hunger stays vanilla as before.
+- **Swamp (Gloom) biome item:** runners now get a **faerie lantern** there instead of an early worm (`RunnerBiomeItems`).
+
 ## 2.0.1
 
 - **Cooldowns cleared when a leg is won:** as soon as a side wins a leg and everyone is brought to the campfire (or the peak), every cooldown is cleared: chaser gem, blowgun, runner dash and every chaser's freeze cooldown. A running x-ray ends too.
