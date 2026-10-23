@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.3
+
+- **Scout cannon banned:** it no longer spawns in luggage or the world during a round (luggage rerolls that slot), and can't be picked up or used (`BannedItems`).
+- **Cold-ascent lanterns every leg:** on ascents with cold nights (Ascent 5+), every runner now gets a **faerie lantern** at the start of **every leg in the first three biomes**, not only at the start of the game, since items are removed between legs (`ColdLanternLastSegment`). None in the fourth biome or the last: in the Caldera runners get just its biome item (the sports drink), and in the swamp the faerie lantern is the biome item anyway.
+- **Chasers get a lantern on cold ascents:** on Ascent 5+, every chaser gets a regular **lantern** at the start of every leg in the first three biomes (`ColdAscentChaserLantern`). Chasers may now use regular lanterns, and regular lanterns weigh **1/3** of vanilla during a round (`LanternWeightMultiplier`).
+- **Kiln biome item:** runners now get a **sports drink** at the start of the Kiln leg too (`RunnerKilnItem`). The Citadel on swamp maps is unchanged.
+- **Chaser gem heals:** each use of the chaser gem also heals every negative status the chaser has by **5%** (injury, hunger, cold, poison, drowsiness, ...; not petrification or weight; `GemHeal`).
+
 ## 2.0.2
 
 - **Head-start boost 10 s in every biome**, the last leg included (was 7 s there).

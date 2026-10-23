@@ -95,6 +95,7 @@ internal sealed class ModConfig
     public ConfigEntry<float> RunnerStaminaRegenMultiplier { get; }
     public ConfigEntry<string> RunnerLegItems { get; }
     public ConfigEntry<string> RunnerBiomeItems { get; }
+    public ConfigEntry<string> RunnerKilnItem { get; }
     public ConfigEntry<float> FortifiedMilkWeightMultiplier { get; }
     public ConfigEntry<float> FortifiedMilkInvincibilityMultiplier { get; }
     public ConfigEntry<float> HungerRateMultiplier { get; }
@@ -132,6 +133,10 @@ internal sealed class ModConfig
     public ConfigEntry<float> BlowgunPetrify { get; }
     public ConfigEntry<bool> ColdAscentLantern { get; }
     public ConfigEntry<float> FaerieLanternWeightMultiplier { get; }
+    public ConfigEntry<int> ColdLanternLastSegment { get; }
+    public ConfigEntry<bool> ColdAscentChaserLantern { get; }
+    public ConfigEntry<float> LanternWeightMultiplier { get; }
+    public ConfigEntry<float> GemHeal { get; }
     public ConfigEntry<bool> ClearPetrifyEachLeg { get; }
     public ConfigEntry<float> DashLiftFactor { get; }
     public ConfigEntry<float> DashFallMomentumCancel { get; }
@@ -280,6 +285,7 @@ internal sealed class ModConfig
         RunnerStaminaRegenMultiplier = Synced(round, "RunnerStaminaRegenMultiplier", 1.4f, "Runner stamina regeneration multiplier (1.4 = 40% faster). Only the refill speed: PEAK's wait before regen starts (1 s, 2 s after running dry) is unchanged.");
         RunnerLegItems = Synced(round, "RunnerLegItems", "Snowball, Brown Berrynana, Fortified Milk", "At the start of each leg every runner gets ONE random item from this list (prefab or display names, comma separated). Empty = off.");
         RunnerBiomeItems = Synced(round, "RunnerBiomeItems", "Alpine:Heat Pack, Volcano:Sports Drink, Swamp:Lantern_Faerie, Mesa:Aloe Vera", "Extra item every runner gets at the start of a leg in that biome, as \"Biome:Item\" pairs. Biomes use PEAK's names (Caldera = Volcano; The Gloom is assumed to be Swamp).");
+        RunnerKilnItem = Synced(round, "RunnerKilnItem", "Sports Drink", "Biome item every runner gets at the start of the Kiln leg (the last leg on maps with the Caldera; not the Citadel on swamp maps), whatever biome PEAK files the Kiln under. Empty = the RunnerBiomeItems rule.");
         FortifiedMilkWeightMultiplier = Synced(round, "FortifiedMilkWeightMultiplier", 2f, "Fortified milk weighs this many times its vanilla weight.");
         FortifiedMilkInvincibilityMultiplier = Synced(round, "FortifiedMilkInvincibilityMultiplier", 0.35f, "Fortified milk's invincibility lasts this fraction of its vanilla time (0.35 = 65% shorter). Also shortens its capture protection.");
         HungerRateMultiplier = Synced(round, "HungerRateMultiplier", 0.7f, "During a round hunger grows at this fraction of the vanilla rate (still scaled by the ascent like vanilla). Runners in a safe zone get no hungrier at all.");
@@ -288,7 +294,10 @@ internal sealed class ModConfig
         RunnersFaceNextCampfire = Synced(round, "RunnersFaceNextCampfire", true, "At the start of every leg (during the role reveal) every runner's view is turned to face the next campfire (or up the mountain if it isn't loaded yet), so they know which way to run. They can look around freely afterwards.");
         NoPeakFlares = Synced(round, "NoPeakFlares", true, "No flare at the peak on any ascent (PEAK only leaves it out from Ascent 4 on); the host also removes any flare lying at the peak during a round.");
         RunnerBackpacks = Synced(round, "RunnerBackpacks", true, "At the start of every leg (after roles are drawn, and after the dead are brought back), every runner without a backpack gets one, worn.");
-        ColdAscentLantern = Synced(round, "ColdAscentLantern", true, "On ascents with cold nights (Ascent 5+), every runner gets a faerie lantern at the start of the game.");
+        ColdAscentLantern = Synced(round, "ColdAscentLantern", true, "On ascents with cold nights (Ascent 5+), every runner gets a faerie lantern at the start of every leg up to ColdLanternLastSegment.");
+        ColdLanternLastSegment = Synced(round, "ColdLanternLastSegment", 2, "Cold-ascent lanterns (ColdAscentLantern, ColdAscentChaserLantern) are handed out at the start of every leg up to this map segment (0 = Shore, 1 = the second biome, 2 = the third biome). None in the fourth biome (the Caldera, or the swamp, whose biome item is a faerie lantern) or the last.");
+        ColdAscentChaserLantern = Synced(round, "ColdAscentChaserLantern", true, "On ascents with cold nights (Ascent 5+), every chaser gets a regular lantern (not a faerie lantern) at the start of every leg up to ColdLanternLastSegment.");
+        LanternWeightMultiplier = Synced(round, "LanternWeightMultiplier", 0.333f, "Regular lanterns weigh this much of their vanilla weight during a round (0.333 = 1/3).");
         FaerieLanternWeightMultiplier = Synced(round, "FaerieLanternWeightMultiplier", 0.5f, "Faerie lanterns weigh this much of their vanilla weight during a round (0.5 = half).");
         CampfireFoodItems = Synced(round, "CampfireFoodItems", "Marshmallow, Glizzy", "When the chase of a leg ends at a campfire, the host makes sure there is one of these per living player near the fire (random pick each; spawns only what is missing). Glizzy = the hot dog. Empty = off.");
         ClearStatusesAtCampfire = Synced(round, "ClearStatusesAtCampfire", true, "When a campfire is lit, every player near it is cleared of negative statuses (incl. curse).");
@@ -308,6 +317,7 @@ internal sealed class ModConfig
         GemInfiniteStamina = Synced(blowgun, "GemInfiniteStamina", true, "The chaser gem also gives unlimited stamina (the rainbow stamina bar) for its duration, without drowsiness afterwards.");
         GemCooldownSeconds = Synced(blowgun, "GemCooldownSeconds", 20f, "Cooldown of the chaser gem (s). It starts when the gem's effects wear off.");
         GemPetrify = Synced(blowgun, "GemPetrify", 0.05f, "Petrification each gem use adds to the chaser (0.05 = 5%).");
+        GemHeal = Synced(blowgun, "GemHeal", 0.05f, "Each gem use heals every negative status the chaser has (injury, hunger, cold, poison, drowsiness, ...) by this much (0.05 = 5% of the bar each). Not petrification or weight.");
         GemXRaySeconds = Synced(blowgun, "GemXRaySeconds", 1.65f, "The chaser gem also gives x-ray vision for this long (s), starting with its boost: the chaser sees every living runner within GemXRayRange through walls and terrain, blinking red with a solid red outline. 0 = off.");
         GemXRayRange = Synced(blowgun, "GemXRayRange", 200f, "Range of the chaser gem's x-ray vision (m).");
         SnowballKnockbackBonus = Synced(blowgun, "SnowballKnockbackBonus", 0.1f, "Extra push a thrown snowball gives the scout it hits, as a fraction of its own impact (0.1 = 10% stronger).");
@@ -361,7 +371,7 @@ internal sealed class ModConfig
 
 
         const string items = "7. Items";
-        ChaserAllowedItems = Synced(items, "ChaserAllowedItems", "Remedy Fungus, Cactus, Dynamite, Mandrake", "Extra item names chasers may pick up/use (comma separated, prefab or display name).");
+        ChaserAllowedItems = Synced(items, "ChaserAllowedItems", "Remedy Fungus, Cactus, Dynamite, Mandrake, Lantern", "Extra item names chasers may pick up/use (comma separated, prefab or display name).");
         ChaserForbiddenItems = Synced(items, "ChaserForbiddenItems", "Snowball, Energy Drink, Big Lollipop, Bounce Fungus, Cloud Fungus, Shelf Fungus, Warp Fungus, Blue Shroomberry, Green Shroomberry, Purple Shroomberry, Red Shroomberry, Yellow Shroomberry", "Items chasers may never pick up or use, even though they are food or healing (comma separated, display or prefab names). Also kept out of clown luggage.");
         ShroomberryEffectSeconds = Synced(items, "ShroomberryEffectSeconds", 1f, "How long a shroomberry's effects last (s). The hunger it cures is unchanged.");
         ChaserAutoAllowHealing = Synced(items, "ChaserAutoAllowHealing", true, "Chasers may pick up and use items that heal injury.");
@@ -382,7 +392,7 @@ internal sealed class ModConfig
         AllowGliders = Synced(items, "AllowGliders", false, "Allow gliders. Off = removed from the game (not spawned, can't be picked up).");
         BanHiddenItems = Synced(items, "BanHiddenItems", true, "Remove hidden items that never spawn in normal PEAK (not in any spawn pool and not produced by another item). Check the log for what was detected.");
         AllowedHiddenItems = Synced(items, "AllowedHiddenItems", "Napberry, Kingberry, Clusterberry, Shroomberry, Cactus", "Items never treated as hidden, so everyone can use them (comma separated; matches any item whose name contains an entry, so \"Kingberry\" covers every colour).");
-        BannedItems = Synced(items, "BannedItems", "Weird Shroom", "Extra banned item names (comma separated, prefab or display name).");
+        BannedItems = Synced(items, "BannedItems", "Weird Shroom, ScoutCannonItem", "Extra banned item names (comma separated, prefab or display name).");
         BanGoldenBingBong = Synced(items, "BanGoldenBingBong", true, "Remove the golden Bing Bong (the one that makes its holder invincible) and switch off its shield.");
 
         const string reward = "9. Rewards";

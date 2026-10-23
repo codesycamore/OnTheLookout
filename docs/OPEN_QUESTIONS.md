@@ -506,6 +506,22 @@ Debug keys (host, bottom-left hint): **F7** start or restart a round, **F6** swa
 
 - **Face the next campfire** (`Modules/FaceNextCampfire.cs`): each runner's client, 0.5 s after `LegStarted`, sets `CharacterData.lookValues = HelperFunctions.DirectionToLook(dir)` and calls `Character.RecalculateLookDirections`. Unverified: that the camera takes it while input is held during the reveal.
 
+### 2.0.3 test checklist
+
+- [ ] No scout cannon in any luggage during a round (log `Scout Cannon (prefab ScoutCannonItem ...): banned=BannedItems list`); one lying around can't be picked up ("This item is banned").
+- [ ] Ascent 5+: every leg in biomes 1-3, runners get a faerie lantern and chasers a regular lantern (log `faerie lantern(s) and N lantern(s) handed out`); none for anyone in the fourth biome or the last (log `past the last lantern leg`). Caldera: runners get only the sports drink. Swamp: runners have only the biome item's faerie lantern.
+- [ ] A runner with a full hotbar gets the faerie lantern in their hands (temporary slot), not lost.
+- [ ] Chaser can hold and use the lantern; its weight is about 1/3 of vanilla.
+- [ ] Kiln leg: every runner gets a sports drink (log `Kiln leg (biome X): runners get Sports Drink`); the log also shows which biome PEAK files the Kiln under. The Citadel gets nothing new.
+- [ ] Chaser gem use: every negative status bar drops by 5% (log `[OTL][Kit] healed N status(es) by 0.05`).
+
+### PEAK 3.0.0 compatibility (build 26134529, 2026-10-22)
+
+Checked against a fresh decompile (`decompiled/_3.0.0/`): the mod compiles against 3.0.0 with no errors; all 67 Harmony targets, 9 RPCs and 3 reflected `LavaRising` fields exist with unchanged signatures; Unity is unchanged (6000.3.15f1). Relevant game changes: maps now load from bundles (`MapBundleService`), which `LoadingScreenHandler.EnsureBundleLoaded` loads from the scene name on every client, so Random Map should still work; warps now lock statuses for every client, not only the local one; revives push afflictions/statuses to others after 1-2 s; PEAK now shows a "modded game" notice (`ModUtility`) at the main menu.
+- [ ] BepInEx and OnTheLookout load on 3.0.0 (log: no `[OTL]` patch errors).
+- [ ] Random Map: the host's random pick loads for everyone (log: `[MapBundleService]` loading the right bundle).
+- [ ] A full leg: role reveal, head start, capture, leg end gather and revive, next leg.
+
 ### 2.0.2 test checklist
 
 - [ ] Head-start boost lasts 10 s on the Kiln leg too.

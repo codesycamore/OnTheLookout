@@ -41,7 +41,7 @@ internal static class LegLoadout
 
             Schedule(GiveLegItems(wait));
             Schedule(GiveRunnerBackpacks(wait)); // every leg: the dead were brought back without their items
-            if (newRound) Schedule(GiveColdLanterns(wait));
+            Schedule(GiveColdLanterns(wait));
         };
         RoundManager.LegCompleted += () =>
         {
@@ -95,33 +95,53 @@ internal static class LegLoadout
     public static void HostDelayChaserKit(int actor, float seconds) => s_KitBusyUntil[actor] = Time.time + seconds;
 
     /// <summary>
-    /// Host, at the start of the game on an ascent with cold nights (Ascents.isNightCold, Ascent 5+): every runner
-    /// gets a faerie lantern (LuggageRareExtraItems' runner item; half weight, FaerieLanternWeightMultiplier).
+    /// Host, at the start of every leg up to ColdLanternLastSegment (the third biome) on an ascent with cold nights
+    /// (Ascents.isNightCold, Ascent 5+): every runner gets a faerie lantern (half weight, FaerieLanternWeightMultiplier)
+    /// and every chaser a regular lantern (1/3 weight, LanternWeightMultiplier). Items are removed between legs, so
+    /// they get a new one each leg. With a full hotbar it lands in their hands (PEAK's temporary slot), as any
+    /// fourth item would.
     /// </summary>
     private static IEnumerator GiveColdLanterns(float wait)
     {
-        yield return new WaitForSeconds(wait + 3f); // after the backpack, so it can go into a free slot
-        if (!Net.IsHost || !RoundManager.IsActive || !Plugin.ModConfig.ColdAscentLantern.Synced()) yield break;
+        yield return new WaitForSeconds(wait + 3f); // after the backpack and the kit, so it can go into a free slot
+        var cfg = Plugin.ModConfig;
+        if (!Net.IsHost || !RoundManager.IsActive || !(cfg.ColdAscentLantern.Synced() || cfg.ColdAscentChaserLantern.Synced())) yield break;
         if (!Ascents.isNightCold)
         {
-            Plugin.Log.LogInfo($"[OTL][Loadout] ascent {Ascents.currentAscent}: no cold nights, no faerie lanterns.");
+            Plugin.Log.LogInfo($"[OTL][Loadout] ascent {Ascents.currentAscent}: no cold nights, no lanterns.");
             yield break;
         }
 
-        Item? lantern = ItemCatalog.FindByNames("Lantern_Faerie").FirstOrDefault();
-        if (lantern == null)
+        int segment = SafeZoneSystem.LastLitSegment >= 0 ? SafeZoneSystem.LastLitSegment : (int)MapHandler.CurrentSegmentNumber;
+        if (segment > cfg.ColdLanternLastSegment.Synced())
         {
-            Plugin.Log.LogWarning("[OTL][Loadout] no faerie lantern item found.");
+            Plugin.Log.LogInfo($"[OTL][Loadout] segment {segment}: past the last lantern leg, no lanterns.");
             yield break;
         }
 
+        Item? faerie = cfg.ColdAscentLantern.Synced() ? ItemCatalog.FindByNames("Lantern_Faerie").FirstOrDefault() : null;
+        Item? plain = cfg.ColdAscentChaserLantern.Synced() ? ItemCatalog.FindByNames("Lantern").FirstOrDefault() : null;
+        if (cfg.ColdAscentLantern.Synced() && faerie == null) Plugin.Log.LogWarning("[OTL][Loadout] no faerie lantern item found.");
+        if (cfg.ColdAscentChaserLantern.Synced() && plain == null) Plugin.Log.LogWarning("[OTL][Loadout] no lantern item found.");
+        if (faerie != null && BiomeItemForLeg() == faerie) faerie = null; // the swamp's biome item is a faerie lantern already
+
+        int runners = 0, chasers = 0;
         foreach (Character c in Character.AllCharacters.ToArray())
         {
-            if (!RoleManager.IsRunner(c) || c.data.dead || c.player == null) continue;
-            Give(c, lantern);
+            if (c == null || c.data.dead || c.player == null) continue;
+            if (RoleManager.IsRunner(c) && faerie != null)
+            {
+                Give(c, faerie);
+                runners++;
+            }
+            else if (RoleManager.IsChaser(c) && plain != null)
+            {
+                Give(c, plain);
+                chasers++;
+            }
         }
 
-        Plugin.Log.LogInfo($"[OTL][Loadout] HOST: ascent {Ascents.currentAscent} has cold nights; faerie lanterns handed out.");
+        Plugin.Log.LogInfo($"[OTL][Loadout] HOST: ascent {Ascents.currentAscent} has cold nights; {runners} faerie lantern(s) and {chasers} lantern(s) handed out (segment {segment}).");
     }
 
     /// <summary>Host, at every leg start: every runner without a backpack gets one, worn.</summary>
@@ -288,6 +308,14 @@ internal static class LegLoadout
         return segment >= 0 && segment < map.segments.Length ? map.segments[segment].biome : null;
     }
 
+    /// <summary>This leg is the Kiln: segment TheKiln on a map without the swamp (where that segment is the Citadel).</summary>
+    private static bool IsKilnLeg()
+    {
+        MapHandler map = Zorro.Core.Singleton<MapHandler>.Instance;
+        int segment = SafeZoneSystem.LastLitSegment >= 0 ? SafeZoneSystem.LastLitSegment : (int)MapHandler.CurrentSegmentNumber;
+        return map != null && segment == (int)Segment.TheKiln && !map.BiomeIsPresent(Biome.BiomeType.Swamp);
+    }
+
     /// <summary>"Biome:Item" pairs from RunnerBiomeItems, as (biome, item name).</summary>
     public static IEnumerable<(string Biome, string Item)> BiomeItemPairs() =>
         Plugin.ModConfig.RunnerBiomeItems.Synced().Split(',')
@@ -300,6 +328,13 @@ internal static class LegLoadout
     {
         Biome.BiomeType? biome = LegBiome();
         if (biome == null) return null;
+        if (IsKilnLeg() && Plugin.ModConfig.RunnerKilnItem.Synced() is { Length: > 0 } kilnItem)
+        {
+            Item? kiln = ItemCatalog.FindByNames(kilnItem).FirstOrDefault();
+            Plugin.Log.LogInfo($"[OTL][Loadout] Kiln leg (biome {biome.Value}): runners get {(kiln != null ? ItemCatalog.NameOf(kiln) : $"nothing ('{kilnItem}' not found)")}.");
+            return kiln;
+        }
+
         foreach ((string key, string itemName) in BiomeItemPairs())
         {
             if (!System.Enum.TryParse(key, true, out Biome.BiomeType wanted) || wanted != biome.Value) continue;

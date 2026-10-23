@@ -47,9 +47,21 @@ internal static class MilkRules
         {
             __result = Mathf.RoundToInt(__result * Mathf.Max(0f, Plugin.ModConfig.FaerieLanternWeightMultiplier.Synced()));
         }
+        else if (RoundManager.IsActive && IsLantern(__instance))
+        {
+            __result = Mathf.RoundToInt(__result * Mathf.Max(0f, Plugin.ModConfig.LanternWeightMultiplier.Synced()));
+        }
     }
 
     private static readonly Dictionary<ushort, bool> s_IsLantern = new();
+    private static readonly Dictionary<ushort, bool> s_IsPlainLantern = new();
+
+    /// <summary>A regular lantern (prefab "Lantern"; the faerie lantern is Lantern_Faerie).</summary>
+    private static bool IsLantern(Item item)
+    {
+        if (s_IsPlainLantern.TryGetValue(item.itemID, out bool cached)) return cached;
+        return s_IsPlainLantern[item.itemID] = ItemCatalog.MatchesNames(ItemCatalog.Effective(item), "Lantern");
+    }
 
     private static bool IsFaerieLantern(Item item)
     {

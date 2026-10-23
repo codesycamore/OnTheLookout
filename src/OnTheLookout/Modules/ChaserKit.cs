@@ -16,7 +16,7 @@ namespace OnTheLookout.Modules;
 ///   vanilla power; instead it gives a short energy-drink speed boost and unlimited stamina (no drowsiness) and
 ///   GemXRaySeconds of x-ray vision on the runners (<see cref="XRayVision"/>),
 ///   starting GemDelaySeconds after use, with a GemCooldownSeconds cooldown once the effects wear off, at the
-///   cost of GemPetrify petrification. Each capture takes CapturePetrifyRelief of it away again;
+///   cost of GemPetrify petrification; each use also heals every negative status by GemHeal. Each capture takes CapturePetrifyRelief of it away again;
 /// - each capture gives the chaser the Scoutmaster's bugle's morale boost (CaptureMoraleBoost), and makes their gem's
 ///   speed boost GemCaptureBonus stronger and its effects GemCaptureExtraSeconds longer for the rest of the leg;
 /// - everyone's petrification is cleared when a leg ends (ClearPetrifyEachLeg);
@@ -348,6 +348,7 @@ internal static class ChaserKit
         s_GemLeg = RoundManager.LegKey;
         int petrify = Mathf.RoundToInt(cfg.GemPetrify.Synced() * 100f);
         if (petrify > 0) holder.refs.afflictions.AddPetrify(petrify);
+        RunnerDash.Heal(holder, Mathf.Clamp01(cfg.GemHeal.Synced()), "Kit"); // every negative status -GemHeal
         Plugin.Log.LogInfo($"[OTL][Kit] chaser gem used: +{petrify}% petrify, boost in {cfg.GemDelaySeconds.Synced():0.##}s.");
         ModNetwork.Instance?.StartCoroutine(GemBoostLater(holder));
         ModNetwork.Broadcast(Notice.GemReveal, Net.Actor(holder), 0); // every runner smokes for GemRevealSeconds

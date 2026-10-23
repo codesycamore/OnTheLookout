@@ -75,8 +75,8 @@ internal static class RunnerDash
     /// Local runner using the runner gem (Item.StartUse*/ContinueUse*, via ItemRules.UsePrefix): dash when ready.
     /// Returns true when the vanilla use must be skipped (always, for the runner gem).
     /// </summary>
-    /// <summary>Every negative status the runner has goes down by <paramref name="amount"/> (petrification and weight excluded).</summary>
-    private static void Heal(Character c, float amount)
+    /// <summary>Every negative status <paramref name="c"/> has goes down by <paramref name="amount"/> (petrification and weight excluded).</summary>
+    public static void Heal(Character c, float amount, string tag = "Dash")
     {
         if (amount <= 0f) return;
         int healed = 0;
@@ -89,7 +89,7 @@ internal static class RunnerDash
             healed++;
         }
 
-        if (healed > 0) Plugin.Log.LogInfo($"[OTL][Dash] healed {healed} status(es) by {amount:0.##}.");
+        if (healed > 0) Plugin.Log.LogInfo($"[OTL][{tag}] healed {healed} status(es) by {amount:0.##}.");
     }
 
     public static bool HandleUse(Item item)
